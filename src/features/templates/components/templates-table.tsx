@@ -9,6 +9,7 @@ import {
 import type { CertificateTemplate } from "@/types/template";
 import { ORG_ID } from "@/lib/org";
 import { usePagination, Paginator } from "@/components/ui/paginator";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 type FilterKey = "all" | "with-description" | "without-description";
 type SortKey = "name-asc" | "name-desc" | "created-desc" | "created-asc";
@@ -161,9 +162,7 @@ export default function TemplatesTable() {
         </div>
       </div>
 
-      {loading && (
-        <p className="text-muted-foreground text-sm">Loading templates...</p>
-      )}
+      {loading && <SkeletonTable rows={6} />}
 
       {!loading && loaded && filtered.length === 0 && (
         <div className="tbl-container">

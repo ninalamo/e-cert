@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
 import { getEventsAction, deleteEventAction } from "@/features/events/server/event.actions";
 import type { Event } from "@/types/event";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 const statusColors: Record<string, string> = {
   draft: "status-pill status-draft",
@@ -48,7 +49,7 @@ export default function EventsList() {
         </Link>
       </div>
 
-      {!ready && <p className="text-muted-foreground text-sm">Loading events...</p>}
+      {!ready && <SkeletonTable rows={5} />}
 
       {ready && events.length === 0 && (
         <div className="border rounded-md p-8 text-center">

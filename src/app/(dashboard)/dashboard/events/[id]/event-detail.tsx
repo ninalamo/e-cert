@@ -10,11 +10,12 @@ import { getTemplatesAction } from "@/features/templates/server/template.actions
 import type { Event } from "@/types/event";
 import type { Certificate } from "@/types/certificate";
 import type { CertificateTemplate } from "@/types/template";
+import { SkeletonDetail } from "@/components/ui/skeleton";
 
 const statusColors: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-700",
-  published: "bg-green-100 text-green-700",
-  completed: "bg-blue-100 text-blue-700",
+  draft: "status-pill status-draft",
+  published: "status-pill status-active",
+  completed: "status-pill status-info",
 };
 
 interface EventDetailData {
@@ -85,7 +86,7 @@ export default function EventDetail({ eventId }: { eventId: string }) {
   }
 
   if (loading) {
-    return <p className="text-muted-foreground text-sm">Loading event...</p>;
+    return <SkeletonDetail />;
   }
 
   if (!data) {
@@ -111,12 +112,12 @@ export default function EventDetail({ eventId }: { eventId: string }) {
           >
             Issue Certificate
           </Link>
-          <Link
-            href={`/dashboard/events/${eventId}/upload`}
-            className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
-          >
-            Upload CSV
-          </Link>
+            <Link
+              href={`/dashboard/events/${eventId}/upload`}
+              className="btn-brand-soft"
+            >
+              Upload CSV
+            </Link>
         </div>
       </div>
 
@@ -124,7 +125,7 @@ export default function EventDetail({ eventId }: { eventId: string }) {
         <div className="rounded-md border p-4">
           <p className="font-medium text-muted-foreground">Status</p>
           <div className="mt-1 flex items-center gap-2">
-            <span className={`rounded-full px-2 py-0.5 text-xs ${statusColors[event.status] ?? "bg-gray-100"}`}>
+            <span className={statusColors[event.status] ?? "status-pill status-draft"}>
               {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
             </span>
             <select

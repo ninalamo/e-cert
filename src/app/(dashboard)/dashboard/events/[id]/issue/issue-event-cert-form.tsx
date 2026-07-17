@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
 import { getEventAction, issueEventCertificateAction } from "@/features/events/server/event.actions";
 import type { Event } from "@/types/event";
+import { SkeletonDetail } from "@/components/ui/skeleton";
 
 export default function IssueEventCertForm({ eventId }: { eventId: string }) {
   const [event, setEvent] = useState<Event | null>(null);
@@ -49,7 +50,7 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
   }
 
   if (!event) {
-    return <p className="text-muted-foreground text-sm">Loading event...</p>;
+    return <SkeletonDetail />;
   }
 
   return (

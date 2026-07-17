@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ORG_ID } from "@/lib/org";
 import { getRecentActivityAction } from "../server/dashboard.actions";
+import { SkeletonList } from "@/components/ui/skeleton";
 
 interface Activity {
   type: "certificate_issued" | "email_sent";
@@ -29,7 +30,7 @@ export default function ActivityFeed() {
   }, []);
 
   if (loading) {
-    return <p className="text-muted-foreground text-sm">Loading activity...</p>;
+    return <SkeletonList rows={4} />;
   }
 
   if (activities.length === 0) {

@@ -8,6 +8,7 @@ import { getTemplateAction } from "@/features/templates/server/template.actions"
 import EmailHistory from "@/features/certificates/components/email-history";
 import type { Certificate } from "@/types/certificate";
 import type { CertificateTemplate } from "@/types/template";
+import { SkeletonDetail } from "@/components/ui/skeleton";
 
 export default function CertificateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -39,7 +40,7 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ id
   }, [id]);
 
   if (loading) {
-    return <p className="text-muted-foreground text-sm">Loading...</p>;
+    return <SkeletonDetail />;
   }
 
   if (error || !certificate) {

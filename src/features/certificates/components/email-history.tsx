@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { getEmailLogsAction, sendCertificateEmailAction } from "../server/certificate.actions";
 import type { CertificateEmailLog } from "@/types/certificate-email";
+import { SkeletonList } from "@/components/ui/skeleton";
 
 export default function EmailHistory({ certificateId }: { certificateId: string }) {
   const [logs, setLogs] = useState<CertificateEmailLog[]>([]);
@@ -58,7 +59,7 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
         <div className="rounded-md bg-green-50 p-3 text-sm text-green-600">{success}</div>
       )}
 
-      {loading && <p className="text-muted-foreground text-sm">Loading...</p>}
+      {loading && <SkeletonList rows={3} />}
 
       {!loading && logs.length === 0 && (
         <p className="text-muted-foreground text-sm">No emails sent yet.</p>

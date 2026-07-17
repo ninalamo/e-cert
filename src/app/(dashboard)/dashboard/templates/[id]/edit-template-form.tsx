@@ -7,6 +7,7 @@ import {
   updateTemplateAction,
 } from "@/features/templates/server/template.actions";
 import type { CertificateTemplate } from "@/types/template";
+import { SkeletonForm } from "@/components/ui/skeleton";
 
 export default function EditTemplateForm({ id }: { id: string }) {
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
@@ -23,11 +24,11 @@ export default function EditTemplateForm({ id }: { id: string }) {
 
   if (!loaded && !loading) {
     loadTemplate();
-    return <p className="text-muted-foreground text-sm">Loading template...</p>;
+    return <SkeletonForm />;
   }
 
   if (loading) {
-    return <p className="text-muted-foreground text-sm">Loading template...</p>;
+    return <SkeletonForm />;
   }
 
   if (!template) {

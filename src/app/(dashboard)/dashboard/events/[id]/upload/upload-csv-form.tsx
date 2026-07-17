@@ -8,6 +8,7 @@ import {
   bulkIssueEventCertificatesAction,
 } from "@/features/events/server/event.actions";
 import type { Event } from "@/types/event";
+import { SkeletonDetail } from "@/components/ui/skeleton";
 
 interface Recipient {
   name: string;
@@ -101,7 +102,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
   }
 
   if (!event) {
-    return <p className="text-muted-foreground text-sm">Loading event...</p>;
+    return <SkeletonDetail />;
   }
 
   const successCount = results?.filter((r) => r.success).length ?? 0;

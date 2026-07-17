@@ -124,8 +124,16 @@ export default function VerifyPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="min-h-screen bg-surface-muted light-override flex items-center justify-center p-4">
+          <div className="w-full max-w-md app-card p-6 space-y-4" aria-hidden="true">
+            <div className="mx-auto h-12 w-12 animate-shimmer rounded-xl" />
+            <div className="space-y-2">
+              <div className="animate-shimmer h-4 w-2/3 rounded-lg" />
+              <div className="animate-shimmer h-3 w-1/2 rounded-lg" />
+            </div>
+            <div className="animate-shimmer h-10 w-full rounded-lg" />
+            <div className="animate-shimmer h-10 w-full rounded-lg" />
+          </div>
         </div>
       }
     >

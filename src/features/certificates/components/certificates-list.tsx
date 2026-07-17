@@ -8,6 +8,7 @@ import {
   revokeCertificateAction,
 } from "../server/certificate.actions";
 import type { Certificate } from "@/types/certificate";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 export default function CertificatesList({ initialQuery = "" }: { initialQuery?: string }) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -62,7 +63,7 @@ export default function CertificatesList({ initialQuery = "" }: { initialQuery?:
         </Link>
       </div>
 
-      {!ready && <p className="text-muted-foreground text-sm">Loading certificates...</p>}
+      {!ready && <SkeletonTable rows={6} />}
 
       {ready && filtered.length === 0 && (
         <div className="border rounded-md p-8 text-center">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ORG_ID } from "@/lib/org";
 import { getDashboardStatsAction } from "../server/dashboard.actions";
+import { SkeletonCards } from "@/components/ui/skeleton";
 
 interface Stats {
   totalCertificates: number;
@@ -29,16 +30,7 @@ export default function StatsCards() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="app-card animate-pulse p-4">
-            <div className="h-4 bg-gray-200 rounded w-20 mb-2" />
-            <div className="h-8 bg-gray-200 rounded w-12" />
-          </div>
-        ))}
-      </div>
-    );
+    return <SkeletonCards count={4} />;
   }
 
   if (!stats) return null;

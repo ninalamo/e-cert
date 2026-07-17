@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { getOrganizationMembersAction, removeMemberAction } from "../server/organization.actions";
 import { getCurrentUser } from "@/features/auth/server/auth.actions";
 import { ORG_ID } from "@/lib/org";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 interface Member {
   id: string;
@@ -49,9 +50,7 @@ export default function MembersList() {
         </button>
       )}
 
-      {loading && (
-        <p className="text-muted-foreground text-sm">Loading members...</p>
-      )}
+      {loading && <SkeletonTable rows={5} />}
 
       {!loading && loaded && members.length === 0 && (
         <p className="text-muted-foreground text-sm">No members found.</p>
