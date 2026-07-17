@@ -12,10 +12,11 @@ import type { Certificate } from "@/types/certificate";
 function CertificatesListInner() {
   const searchParams = useSearchParams();
   const orgId = searchParams.get("org");
+  const initialQuery = searchParams.get("q") || "";
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialQuery);
 
   const loadCertificates = useCallback(async () => {
     if (!orgId) return;
