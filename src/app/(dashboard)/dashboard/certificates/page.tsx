@@ -12,7 +12,7 @@ export default async function CertificatesPage({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Certificates</CardTitle>
+        <CardTitle className="text-brand-700">Certificates</CardTitle>
       </CardHeader>
       <CardContent>
         <Suspense fallback={<p className="text-muted-foreground text-sm">Loading...</p>}>

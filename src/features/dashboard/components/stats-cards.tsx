@@ -32,7 +32,7 @@ export default function StatsCards() {
     return (
       <div className="grid grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-md border p-4 animate-pulse">
+          <div key={i} className="app-card animate-pulse p-4">
             <div className="h-4 bg-gray-200 rounded w-20 mb-2" />
             <div className="h-8 bg-gray-200 rounded w-12" />
           </div>
@@ -44,7 +44,7 @@ export default function StatsCards() {
   if (!stats) return null;
 
   const cards = [
-    { label: "Total Certificates", value: stats.totalCertificates, color: "text-gray-900" },
+    { label: "Total Certificates", value: stats.totalCertificates, color: "text-brand-700" },
     { label: "Active", value: stats.activeCertificates, color: "text-green-600" },
     { label: "Revoked", value: stats.revokedCertificates, color: "text-red-600" },
     { label: "Emails Sent", value: stats.totalEmails, color: "text-blue-600" },
@@ -53,7 +53,7 @@ export default function StatsCards() {
   return (
     <div className="grid grid-cols-4 gap-4">
       {cards.map((card) => (
-        <div key={card.label} className="rounded-md border p-4">
+        <div key={card.label} className="app-card app-card-hover p-4">
           <p className="text-sm text-muted-foreground">{card.label}</p>
           <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
         </div>

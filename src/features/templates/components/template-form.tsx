@@ -176,13 +176,13 @@ export default function TemplateForm({
         >
           Cancel
         </Link>
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800 disabled:opacity-50"
-        >
-          {loading ? "Saving..." : submitLabel}
-        </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-brand disabled:opacity-50"
+          >
+            {loading ? "Saving..." : submitLabel}
+          </button>
       </div>
     </form>
   );

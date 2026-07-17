@@ -191,7 +191,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
             <button
               onClick={handleUpload}
               disabled={loading || recipients.length === 0}
-              className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800 disabled:opacity-50"
+              className="btn-brand disabled:opacity-50"
             >
               {loading
                 ? "Issuing..."
@@ -210,33 +210,33 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
             )}
           </div>
 
-          <div className="border rounded-md">
-            <table className="w-full text-sm">
+          <div className="tbl-container">
+            <table className="tbl">
               <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="px-4 py-2 text-left">Name</th>
-                  <th className="px-4 py-2 text-left">Email</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                  <th className="px-4 py-2 text-left">Certificate #</th>
+                <tr>
+                  <th className="text-left">Name</th>
+                  <th className="text-left">Email</th>
+                  <th className="text-left">Status</th>
+                  <th className="text-left">Certificate #</th>
                 </tr>
               </thead>
               <tbody>
                 {results.map((r, i) => (
-                  <tr key={i} className="border-b last:border-0">
-                    <td className="px-4 py-2">{r.name}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{r.email}</td>
-                    <td className="px-4 py-2">
+                  <tr key={i}>
+                    <td>{r.name}</td>
+                    <td className="text-tertiary">{r.email}</td>
+                    <td>
                       {r.success ? (
-                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                        <span className="status-pill status-active">
                           Issued
                         </span>
                       ) : (
-                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+                        <span className="status-pill status-revoked">
                           Failed
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs">
+                    <td className="font-mono text-xs">
                       {r.certNumber ?? r.error ?? "—"}
                     </td>
                   </tr>
@@ -259,7 +259,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                 setFileName(null);
                 if (fileRef.current) fileRef.current.value = "";
               }}
-              className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+              className="btn-brand"
             >
               Upload More
             </button>

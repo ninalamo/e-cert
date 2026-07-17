@@ -58,35 +58,35 @@ export default function MembersList() {
       )}
 
       {!loading && loaded && members.length > 0 && (
-        <div className="border rounded-md">
-          <table className="w-full text-sm">
+        <div className="tbl-container">
+          <table className="tbl">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-2 text-left">User ID</th>
-                <th className="px-4 py-2 text-left">Role</th>
-                <th className="px-4 py-2 text-left">Joined</th>
-                <th className="px-4 py-2 text-right">Actions</th>
+              <tr>
+                <th className="text-left">User ID</th>
+                <th className="text-left">Role</th>
+                <th className="text-left">Joined</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {members.map((member) => (
-                <tr key={member.id} className="border-b last:border-0">
-                  <td className="px-4 py-2 font-mono text-xs">
+                <tr key={member.id}>
+                  <td className="font-mono text-xs">
                     {member.user_id.slice(0, 8)}...
                   </td>
-                  <td className="px-4 py-2">
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
+                  <td>
+                    <span className="status-pill status-draft">
                       {member.role}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground">
+                  <td className="text-tertiary">
                     {new Date(member.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="text-right">
                     {member.user_id !== currentUserId && member.role !== "OWNER" && (
                       <button
                         onClick={() => handleRemove(member.user_id)}
-                        className="text-xs text-red-600 hover:underline"
+                        className="text-xs text-danger hover:underline"
                       >
                         Remove
                       </button>

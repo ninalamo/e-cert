@@ -56,7 +56,7 @@ export default function CertificatesList({ initialQuery = "" }: { initialQuery?:
         />
         <Link
           href="/dashboard/certificates/issue"
-          className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+          className="btn-brand"
         >
           Issue Certificate
         </Link>
@@ -71,49 +71,49 @@ export default function CertificatesList({ initialQuery = "" }: { initialQuery?:
       )}
 
       {ready && filtered.length > 0 && (
-        <div className="border rounded-md">
-          <table className="w-full text-sm">
+        <div className="tbl-container">
+          <table className="tbl">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-2 text-left">Number</th>
-                <th className="px-4 py-2 text-left">Recipient</th>
-                <th className="px-4 py-2 text-left">Email</th>
-                <th className="px-4 py-2 text-left">Issued</th>
-                <th className="px-4 py-2 text-left">Status</th>
-                <th className="px-4 py-2 text-right">Actions</th>
+              <tr>
+                <th className="text-left">Number</th>
+                <th className="text-left">Recipient</th>
+                <th className="text-left">Email</th>
+                <th className="text-left">Issued</th>
+                <th className="text-left">Status</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((cert) => (
-                <tr key={cert.id} className="border-b last:border-0">
-                  <td className="px-4 py-2 font-mono text-xs">{cert.certificate_number}</td>
-                  <td className="px-4 py-2">{cert.recipient_name}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{cert.recipient_email}</td>
-                  <td className="px-4 py-2 text-muted-foreground">
+                <tr key={cert.id}>
+                  <td className="font-mono text-xs">{cert.certificate_number}</td>
+                  <td>{cert.recipient_name}</td>
+                  <td className="text-tertiary">{cert.recipient_email}</td>
+                  <td className="text-tertiary">
                     {new Date(cert.issued_at).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-2">
+                  <td>
                     {cert.revoked_at ? (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+                      <span className="status-pill status-revoked">
                         Revoked
                       </span>
                     ) : (
-                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                      <span className="status-pill status-active">
                         Active
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="text-right">
                     <Link
                       href={`/dashboard/certificates/${cert.id}`}
-                      className="text-xs text-blue-600 hover:underline mr-3"
+                      className="text-xs text-info hover:underline mr-3"
                     >
                       View
                     </Link>
                     {!cert.revoked_at && (
                       <button
                         onClick={() => handleRevoke(cert.id, cert.certificate_number)}
-                        className="text-xs text-red-600 hover:underline"
+                        className="text-xs text-danger hover:underline"
                       >
                         Revoke
                       </button>

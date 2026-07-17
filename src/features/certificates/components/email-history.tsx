@@ -65,35 +65,35 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
       )}
 
       {!loading && logs.length > 0 && (
-        <div className="border rounded-md">
-          <table className="w-full text-sm">
+        <div className="tbl-container">
+          <table className="tbl">
             <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="px-4 py-2 text-left">Sent At</th>
-                <th className="px-4 py-2 text-left">To</th>
-                <th className="px-4 py-2 text-left">Status</th>
-                <th className="px-4 py-2 text-left">Error</th>
+              <tr>
+                <th className="text-left">Sent At</th>
+                <th className="text-left">To</th>
+                <th className="text-left">Status</th>
+                <th className="text-left">Error</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
-                <tr key={log.id} className="border-b last:border-0">
-                  <td className="px-4 py-2">
+                <tr key={log.id}>
+                  <td>
                     {new Date(log.sent_at).toLocaleString()}
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground">{log.sent_to}</td>
-                  <td className="px-4 py-2">
+                  <td className="text-tertiary">{log.sent_to}</td>
+                  <td>
                     {log.status === "sent" ? (
-                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
+                      <span className="status-pill status-active">
                         Sent
                       </span>
                     ) : (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
+                      <span className="status-pill status-revoked">
                         Failed
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground text-xs">
+                  <td className="text-tertiary text-xs">
                     {log.error_message ?? "—"}
                   </td>
                 </tr>

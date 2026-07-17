@@ -26,7 +26,7 @@ export default function DashboardSearch() {
       />
       <button
         type="submit"
-        className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+        className="btn-brand"
       >
         Search
       </button>

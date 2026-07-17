@@ -120,7 +120,7 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800 disabled:opacity-50"
+            className="btn-brand disabled:opacity-50"
           >
             {loading ? "Issuing..." : "Issue Certificate"}
           </button>

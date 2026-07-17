@@ -73,7 +73,7 @@ export default function NewEventPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">New Event</h1>
+        <h1 className="text-2xl font-bold text-brand-700">New Event</h1>
         <p className="text-muted-foreground text-sm">Create a new event</p>
       </div>
 
@@ -217,7 +217,7 @@ export default function NewEventPage() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800 disabled:opacity-50"
+            className="btn-brand disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create Event"}
           </button>
@@ -226,3 +226,4 @@ export default function NewEventPage() {
     </div>
   );
 }
+
