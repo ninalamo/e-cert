@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -7,7 +7,7 @@ type SupabaseInsert = Record<string, any>;
 
 export abstract class BaseRepository<T extends Record<string, unknown>> {
   protected table: string;
-  protected client = supabase;
+  protected client = supabaseAdmin;
 
   constructor(table: string) {
     this.table = table;

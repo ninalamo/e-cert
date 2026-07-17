@@ -1,3 +1,3 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
-export { supabase };
+export { supabaseAdmin };
