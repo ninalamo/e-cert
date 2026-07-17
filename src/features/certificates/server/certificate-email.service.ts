@@ -21,8 +21,9 @@ export async function sendCertificateEmail(
   let pdfBuffer: Buffer;
   try {
     pdfBuffer = await getCertificatePdfBuffer(certificate);
-  } catch {
-    return { success: false, error: "Failed to generate PDF" };
+  } catch (err) {
+    console.error("[EmailService] Failed to generate PDF:", err);
+    return { success: false, error: `Failed to generate PDF: ${err instanceof Error ? err.message : "Unknown"}` };
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
@@ -72,6 +73,7 @@ export async function sendCertificateEmail(
 
     return { success: true };
   } catch (error) {
+    console.error("[EmailService] Failed to send email:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
     await emailRepo.create({
@@ -83,7 +85,7 @@ export async function sendCertificateEmail(
       error_message: errorMessage,
     } as Partial<CertificateEmailLog>);
 
-    return { success: false, error: "Failed to send email" };
+    return { success: false, error: errorMessage };
   }
 }
 

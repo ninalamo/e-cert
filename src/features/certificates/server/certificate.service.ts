@@ -27,6 +27,7 @@ ${rendered}
 
 export async function issueCertificate(data: {
   organization_id: string;
+  event_id?: string;
   template_id?: string;
   recipient_name: string;
   recipient_email: string;
@@ -40,6 +41,7 @@ export async function issueCertificate(data: {
 
   const certificate = await certRepo.create({
     organization_id: data.organization_id,
+    event_id: data.event_id ?? null,
     template_id: data.template_id ?? null,
     recipient_name: data.recipient_name,
     recipient_email: data.recipient_email,

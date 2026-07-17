@@ -1,6 +1,7 @@
 export interface Certificate {
   id: string;
   organization_id: string;
+  event_id: string | null;
   template_id: string | null;
   recipient_name: string;
   recipient_email: string;

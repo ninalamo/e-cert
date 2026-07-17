@@ -27,6 +27,13 @@ export class CertificateRepository extends BaseRepository<Certificate> {
     return data as Certificate;
   }
 
+  async findByEventId(eventId: string): Promise<Certificate[]> {
+    return this.findMany(
+      { event_id: eventId },
+      { orderBy: "created_at", ascending: false }
+    );
+  }
+
   async countByOrganizationId(organizationId: string): Promise<number> {
     return this.count({ organization_id: organizationId });
   }

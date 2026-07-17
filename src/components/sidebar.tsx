@@ -8,6 +8,7 @@ import { getDashboardStatsAction } from "@/features/dashboard/server/dashboard.a
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard" },
+  { label: "Events", href: "/dashboard/events" },
   { label: "Templates", href: "/dashboard/templates" },
   { label: "Certificates", href: "/dashboard/certificates" },
   { label: "Members", href: "/dashboard/members" },

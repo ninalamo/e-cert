@@ -24,6 +24,7 @@ DROP POLICY IF EXISTS "Users can read own orgs" ON organizations;
 DROP TABLE IF EXISTS certificate_emails CASCADE;
 DROP TABLE IF EXISTS certificates CASCADE;
 DROP TABLE IF EXISTS certificate_templates CASCADE;
+DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS user_memberships CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
 
@@ -60,9 +61,26 @@ CREATE TABLE certificate_templates (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  template_id UUID REFERENCES certificate_templates(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  event_date DATE,
+  location TEXT,
+  organizer TEXT,
+  certificate_title TEXT DEFAULT 'Certificate of Participation',
+  valid_until DATE,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'completed')),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE certificates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  event_id UUID REFERENCES events(id),
   template_id UUID REFERENCES certificate_templates(id),
   recipient_name TEXT NOT NULL,
   recipient_email TEXT NOT NULL,
@@ -96,7 +114,10 @@ CREATE INDEX idx_organizations_slug ON organizations(slug);
 CREATE INDEX idx_user_memberships_user_id ON user_memberships(user_id);
 CREATE INDEX idx_user_memberships_org_id ON user_memberships(organization_id);
 CREATE INDEX idx_cert_templates_org ON certificate_templates(organization_id);
+CREATE INDEX idx_events_org ON events(organization_id);
+CREATE INDEX idx_events_status ON events(status);
 CREATE INDEX idx_certificates_org ON certificates(organization_id);
+CREATE INDEX idx_certificates_event ON certificates(event_id);
 CREATE INDEX idx_certificates_number ON certificates(certificate_number);
 CREATE INDEX idx_certificates_email ON certificates(recipient_email);
 CREATE INDEX idx_certificate_emails_cert ON certificate_emails(certificate_id);
@@ -166,6 +187,22 @@ CREATE POLICY "Users can read org templates" ON certificate_templates
   );
 
 CREATE POLICY "Org admins can manage templates" ON certificate_templates
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM user_memberships
+      WHERE user_id = auth.uid() AND role IN ('OWNER', 'ADMIN')
+    )
+  );
+
+-- Events
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read org events" ON events
+  FOR SELECT USING (
+    organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "Org admins can manage events" ON events
   FOR ALL USING (
     organization_id IN (
       SELECT organization_id FROM user_memberships
