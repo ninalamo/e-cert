@@ -5,7 +5,7 @@ export type { SupabaseClient } from "@supabase/supabase-js";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseInsert = Record<string, any>;
 
-export abstract class BaseRepository<T extends Record<string, unknown>> {
+export abstract class BaseRepository<T> {
   protected table: string;
   protected client = supabaseAdmin;
 
