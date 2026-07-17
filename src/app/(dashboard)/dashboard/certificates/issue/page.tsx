@@ -1,14 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import CertificatesList from "@/features/certificates/components/certificates-list";
+import IssueForm from "@/features/certificates/components/issue-form";
 
-export default function CertificatesPage() {
+export default function IssueCertificatePage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Certificates</CardTitle>
+        <CardTitle>Issue Certificate</CardTitle>
       </CardHeader>
       <CardContent>
-        <CertificatesList />
+        <IssueForm />
       </CardContent>
     </Card>
   );
