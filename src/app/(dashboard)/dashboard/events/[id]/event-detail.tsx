@@ -6,6 +6,7 @@ import {
   getEventWithStatsAction,
   updateEventAction,
 } from "@/features/events/server/event.actions";
+import { getTemplatesAction } from "@/features/templates/server/template.actions";
 import type { Event } from "@/types/event";
 import type { Certificate } from "@/types/certificate";
 import type { CertificateTemplate } from "@/types/template";
@@ -26,23 +27,61 @@ interface EventDetailData {
 export default function EventDetail({ eventId }: { eventId: string }) {
   const [data, setData] = useState<EventDetailData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateMsg, setTemplateMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     getEventWithStatsAction(eventId).then((result) => {
       if (active) {
         setData(result);
+        setSelectedTemplate(result?.event.template_id ?? "");
         setLoading(false);
       }
     });
     return () => { active = false; };
   }, [eventId]);
 
+  useEffect(() => {
+    let active = true;
+    getTemplatesAction(data?.event.organization_id ?? "").then((t) => {
+      if (active) setTemplates(t);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [data?.event.organization_id]);
+
   async function handleStatusChange(newStatus: "draft" | "published" | "completed") {
     const result = await updateEventAction(eventId, { status: newStatus });
     if (!result?.error && result?.event) {
       setData((prev) => prev ? { ...prev, event: result.event! } : prev);
     }
+  }
+
+  async function handleTemplateSave() {
+    setSavingTemplate(true);
+    setTemplateMsg(null);
+    const result = await updateEventAction(eventId, {
+      template_id: selectedTemplate || undefined,
+    });
+    if (result?.error) {
+      setTemplateMsg(result.error ?? "Failed to update template");
+    } else if (result?.event) {
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              event: result.event!,
+              template:
+                templates.find((t) => t.id === (selectedTemplate || undefined)) ??
+                null,
+            }
+          : prev
+      );
+      setTemplateMsg("Template updated.");
+    }
+    setSavingTemplate(false);
   }
 
   if (loading) {
@@ -132,6 +171,33 @@ export default function EventDetail({ eventId }: { eventId: string }) {
         <div className="rounded-md border p-4">
           <p className="font-medium text-muted-foreground">Template</p>
           <p className="mt-1">{template?.name ?? "No template"}</p>
+          <div className="mt-3 space-y-2">
+            <select
+              value={selectedTemplate}
+              onChange={(e) => setSelectedTemplate(e.target.value)}
+              className="block w-full rounded-md border px-3 py-2 text-sm"
+            >
+              <option value="">No template</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleTemplateSave}
+                disabled={savingTemplate || selectedTemplate === (event.template_id ?? "")}
+                className="rounded-md bg-black px-3 py-1.5 text-xs text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                {savingTemplate ? "Saving..." : "Assign Template"}
+              </button>
+              {templateMsg && (
+                <span className="text-xs text-muted-foreground">{templateMsg}</span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

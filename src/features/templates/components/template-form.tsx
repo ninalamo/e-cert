@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import TemplateCanvas from "./template-canvas";
 
 interface TemplateFormProps {
   initialData?: {
@@ -30,7 +31,7 @@ export default function TemplateForm({
   const [cssContent, setCssContent] = useState(initialData?.css_content ?? DEFAULT_CSS);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [mode, setMode] = useState<"design" | "html" | "css" | "preview">("design");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -102,23 +103,21 @@ export default function TemplateForm({
       </div>
 
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setShowPreview(false)}
-          className={`rounded-md px-3 py-1 text-sm ${!showPreview ? "bg-black text-white" : "bg-gray-100"}`}
-        >
-          Editor
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowPreview(true)}
-          className={`rounded-md px-3 py-1 text-sm ${showPreview ? "bg-black text-white" : "bg-gray-100"}`}
-        >
-          Preview
-        </button>
+        {(["design", "html", "css", "preview"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            className={`rounded-md px-3 py-1 capitalize text-sm ${
+              mode === m ? "bg-black text-white" : "bg-gray-100"
+            }`}
+          >
+            {m === "design" ? "Design" : m === "html" ? "HTML" : m === "css" ? "CSS" : "Preview"}
+          </button>
+        ))}
       </div>
 
-      {showPreview ? (
+      {mode === "preview" ? (
         <div className="border rounded-md overflow-hidden">
           <iframe
             srcDoc={previewHtml}
@@ -126,36 +125,47 @@ export default function TemplateForm({
             title="Template Preview"
           />
         </div>
+      ) : mode === "design" ? (
+        <div>
+          <p className="text-muted-foreground text-xs mb-2">
+            Design your certificate. Use the &quot;Insert field&quot; buttons to add
+            placeholders that are filled in when a certificate is issued.
+          </p>
+          <TemplateCanvas
+            value={htmlContent}
+            onChange={setHtmlContent}
+            css={cssContent}
+            onCssChange={setCssContent}
+          />
+        </div>
+      ) : mode === "html" ? (
+        <div>
+          <label htmlFor="html" className="block text-sm font-medium">
+            HTML Content
+          </label>
+          <p className="text-muted-foreground text-xs mb-1">
+            Use {"{{recipient_name}}"}, {"{{certificate_number}}"}, {"{{issued_date}}"}, {"{{organization_name}}"}, {"{{qr_code}}"} as placeholders
+          </p>
+          <textarea
+            id="html"
+            value={htmlContent}
+            onChange={(e) => setHtmlContent(e.target.value)}
+            rows={16}
+            className="mt-1 block w-full rounded-md border px-3 py-2 font-mono text-sm"
+          />
+        </div>
       ) : (
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="html" className="block text-sm font-medium">
-              HTML Content
-            </label>
-            <p className="text-muted-foreground text-xs mb-1">
-              Use {"{{recipient_name}}"}, {"{{certificate_number}}"}, {"{{issued_date}}"}, {"{{organization_name}}"} as placeholders
-            </p>
-            <textarea
-              id="html"
-              value={htmlContent}
-              onChange={(e) => setHtmlContent(e.target.value)}
-              rows={16}
-              className="mt-1 block w-full rounded-md border px-3 py-2 font-mono text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="css" className="block text-sm font-medium">
-              CSS Content
-            </label>
-            <textarea
-              id="css"
-              value={cssContent}
-              onChange={(e) => setCssContent(e.target.value)}
-              rows={8}
-              className="mt-1 block w-full rounded-md border px-3 py-2 font-mono text-sm"
-            />
-          </div>
+        <div>
+          <label htmlFor="css" className="block text-sm font-medium">
+            CSS Content
+          </label>
+          <textarea
+            id="css"
+            value={cssContent}
+            onChange={(e) => setCssContent(e.target.value)}
+            rows={8}
+            className="mt-1 block w-full rounded-md border px-3 py-2 font-mono text-sm"
+          />
         </div>
       )}
 
