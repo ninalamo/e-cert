@@ -5,6 +5,7 @@ import { use } from "react";
 import { useSearchParams } from "next/navigation";
 import { getCertificateAction } from "@/features/certificates/server/certificate.actions";
 import { getTemplateAction } from "@/features/templates/server/template.actions";
+import EmailHistory from "@/features/certificates/components/email-history";
 import type { Certificate } from "@/types/certificate";
 import type { CertificateTemplate } from "@/types/template";
 
@@ -108,6 +109,12 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ id
           {certificate.revoke_reason && (
             <p className="mt-1">Reason: {certificate.revoke_reason}</p>
           )}
+        </div>
+      )}
+
+      {!certificate.revoked_at && (
+        <div className="rounded-md border p-4">
+          <EmailHistory certificateId={certificate.id} />
         </div>
       )}
     </div>

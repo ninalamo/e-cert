@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import * as certService from "./certificate.service";
+import * as emailService from "./certificate-email.service";
 
 async function requireAuth() {
   const supabase = await createClient();
@@ -18,9 +19,14 @@ export async function issueCertificateAction(data: {
   recipient_email: string;
   expires_at?: string;
   metadata?: Record<string, unknown>;
+  send_email?: boolean;
 }) {
-  await requireAuth();
-  return certService.issueCertificate(data);
+  const user = await requireAuth();
+  return certService.issueCertificate({
+    ...data,
+    send_email: data.send_email ?? false,
+    user_id: user.id,
+  });
 }
 
 export async function getCertificatesAction(organizationId: string) {
@@ -36,4 +42,14 @@ export async function getCertificateAction(id: string) {
 export async function revokeCertificateAction(id: string, reason: string) {
   await requireAuth();
   return certService.revokeCertificate(id, reason);
+}
+
+export async function sendCertificateEmailAction(certificateId: string) {
+  const user = await requireAuth();
+  return emailService.sendCertificateEmail(certificateId, user.id);
+}
+
+export async function getEmailLogsAction(certificateId: string) {
+  await requireAuth();
+  return emailService.getEmailLogs(certificateId);
 }

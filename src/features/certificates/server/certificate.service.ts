@@ -30,7 +30,9 @@ export async function issueCertificate(data: {
   recipient_email: string;
   expires_at?: string;
   metadata?: Record<string, unknown>;
-}): Promise<{ certificate: Certificate | null; error?: string }> {
+  send_email?: boolean;
+  user_id?: string;
+}): Promise<{ certificate: Certificate | null; error?: string; emailSent?: boolean }> {
   const number = await generateCertificateNumber(data.organization_id);
 
   const certificate = await certRepo.create({
@@ -45,6 +47,12 @@ export async function issueCertificate(data: {
 
   if (!certificate) {
     return { certificate: null, error: "Failed to issue certificate" };
+  }
+
+  if (data.send_email && data.user_id) {
+    const { sendCertificateEmail } = await import("./certificate-email.service");
+    const emailResult = await sendCertificateEmail(certificate.id, data.user_id);
+    return { certificate, emailSent: emailResult.success, error: emailResult.error };
   }
 
   return { certificate };

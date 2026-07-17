@@ -45,12 +45,14 @@ function IssueFormInner() {
       recipient_name: formData.get("recipient_name") as string,
       recipient_email: formData.get("recipient_email") as string,
       expires_at: (formData.get("expires_at") as string) || undefined,
+      send_email: formData.get("send_email") === "on",
     });
 
     if (result?.error) {
       setError(result.error);
     } else if (result?.certificate) {
-      setSuccess(`Certificate ${result.certificate.certificate_number} issued!`);
+      const emailMsg = result.emailSent ? " Email sent." : "";
+      setSuccess(`Certificate ${result.certificate.certificate_number} issued!${emailMsg}`);
       (e.target as HTMLFormElement).reset();
     }
 
@@ -112,6 +114,18 @@ function IssueFormInner() {
           type="date"
           className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
         />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          id="send_email"
+          name="send_email"
+          type="checkbox"
+          className="h-4 w-4 rounded border-gray-300"
+        />
+        <label htmlFor="send_email" className="text-sm font-medium">
+          Send certificate email to recipient
+        </label>
       </div>
 
       <div className="flex justify-end gap-2">
