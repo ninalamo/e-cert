@@ -5,11 +5,15 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ORG_ID, ORG_NAME } from "@/lib/org";
 import { getDashboardStatsAction } from "@/features/dashboard/server/dashboard.actions";
+import type { UserRole } from "@/types/organization";
 
 type NavChild = { label: string; href: string };
-type NavItem =
-  | { label: string; href: string; children?: NavChild[] }
-  | { label: string; href: string };
+type NavItem = {
+  label: string;
+  href: string;
+  children?: NavChild[];
+  adminOnly?: boolean;
+};
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
@@ -22,7 +26,7 @@ const navItems: NavItem[] = [
       { label: "Editor", href: "/dashboard/templates" },
     ],
   },
-  { label: "Members", href: "/dashboard/members" },
+  { label: "Members", href: "/dashboard/members", adminOnly: true },
 ];
 
 function isActivePath(pathname: string, href: string, exact = false) {
@@ -30,7 +34,7 @@ function isActivePath(pathname: string, href: string, exact = false) {
   return pathname === href || pathname.startsWith(href);
 }
 
-export default function Sidebar() {
+export default function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
   const [certCount, setCertCount] = useState<number | null>(null);
   const [certOpen, setCertOpen] = useState(true);
@@ -47,6 +51,8 @@ export default function Sidebar() {
     };
   }, []);
 
+  const visibleNav = navItems.filter((item) => !item.adminOnly || role === "admin");
+
   return (
     <aside className="w-64 border-r border-default bg-surface-muted p-4">
       <div className="mb-6">
@@ -56,7 +62,7 @@ export default function Sidebar() {
         <p className="text-xs text-tertiary mt-1">{ORG_NAME}</p>
       </div>
       <nav className="space-y-1">
-        {navItems.map((item) => {
+        {visibleNav.map((item) => {
           if (!("children" in item)) {
             const active = isActivePath(pathname, item.href);
             return (

@@ -33,6 +33,7 @@ export async function GET(
     certificate_number: certificate.certificate_number,
     recipient_name: certificate.recipient_name,
     issued_date: certificate.issued_at,
+    valid_until: certificate.expires_at,
     status,
   });
 }

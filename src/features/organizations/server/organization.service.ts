@@ -1,71 +1,53 @@
 import { OrganizationRepository } from "./organization.repository";
 import { UserMembershipRepository } from "./membership.repository";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import type { Organization } from "@/types/organization";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { UserRole } from "@/types/organization";
 
-const orgRepo = new OrganizationRepository();
-const membershipRepo = new UserMembershipRepository();
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+function repos(client: SupabaseClient) {
+  return {
+    orgRepo: new OrganizationRepository(client),
+    membershipRepo: new UserMembershipRepository(client),
+  };
 }
 
+/**
+ * In the single-org model there is one fixed organization (ORG_ID).
+ * "Creating" an org is disabled; users are added as members of ORG_ID instead.
+ * Kept for compatibility but returns an error if called.
+ */
 export async function createOrganization(
-  name: string,
-  ownerId: string
+  _name: string,
+  _ownerId: string
 ): Promise<{ org: Organization | null; error?: string }> {
-  const slug = slugify(name);
-
-  const existing = await orgRepo.findBySlug(slug);
-  if (existing) {
-    return { org: null, error: "An organization with this name already exists" };
-  }
-
-  const org = await orgRepo.create({ name, slug } as Partial<Organization>);
-  if (!org) {
-    return { org: null, error: "Failed to create organization" };
-  }
-
-  const membership = await membershipRepo.create({
-    user_id: ownerId,
-    organization_id: org.id,
-    role: "OWNER",
-  } as Record<string, unknown>);
-
-  if (!membership) {
-    return { org: null, error: "Failed to add you as owner" };
-  }
-
-  return { org };
+  return { org: null, error: "Organization management is disabled in single-org mode" };
 }
 
-export async function getUserOrganizations(userId: string): Promise<Organization[]> {
-  return orgRepo.findByUserId(userId);
+export async function getUserOrganizations(
+  userId: string,
+  client?: SupabaseClient
+): Promise<Organization[]> {
+  return repos(client ?? (await createClient())).orgRepo.findByUserId(userId);
 }
 
-export async function getOrganizationMembers(organizationId: string) {
-  return membershipRepo.findByOrganizationId(organizationId);
+export async function getOrganizationMembers(
+  organizationId: string,
+  client?: SupabaseClient
+) {
+  return repos(client ?? (await createClient())).membershipRepo.findByOrganizationId(organizationId);
 }
 
-export async function inviteMember(
+export async function addMember(
   organizationId: string,
   email: string,
-  invitedBy: string
+  role: UserRole,
+  client?: SupabaseClient
 ): Promise<{ error?: string }> {
-  const inviterMembership = await membershipRepo.findMembership(invitedBy, organizationId);
-  if (!inviterMembership || inviterMembership.role === "MEMBER") {
-    return { error: "You don't have permission to invite members" };
-  }
+  const supabase = client ?? (await createClient());
+  const { membershipRepo } = repos(supabase);
 
-  const existing = await membershipRepo.findByUserEmail(organizationId, email);
-  if (existing) {
-    return { error: "User is already a member of this organization" };
-  }
-
-  const { data: targetUser, error: userError } = await supabaseAdmin
+  const { data: targetUser, error: userError } = await supabase
     .from("users")
     .select("id")
     .eq("email", email)
@@ -75,10 +57,15 @@ export async function inviteMember(
     return { error: "No user found with this email. They must register first." };
   }
 
+  const existing = await membershipRepo.findMembership(targetUser.id, organizationId);
+  if (existing) {
+    return { error: "User is already a member of this organization" };
+  }
+
   const membership = await membershipRepo.create({
     user_id: targetUser.id,
     organization_id: organizationId,
-    role: "MEMBER",
+    role,
   } as Record<string, unknown>);
 
   if (!membership) {
@@ -91,11 +78,15 @@ export async function inviteMember(
 export async function removeMember(
   organizationId: string,
   memberId: string,
-  removedBy: string
+  removedBy: string,
+  client?: SupabaseClient
 ): Promise<{ error?: string }> {
+  const supabase = client ?? (await createClient());
+  const { membershipRepo } = repos(supabase);
+
   const removerMembership = await membershipRepo.findMembership(removedBy, organizationId);
-  if (!removerMembership || removerMembership.role === "MEMBER") {
-    return { error: "You don't have permission to remove members" };
+  if (!removerMembership || removerMembership.role !== "admin") {
+    return { error: "Only admins can remove members" };
   }
 
   if (memberId === removedBy) {
@@ -107,8 +98,8 @@ export async function removeMember(
     return { error: "Member not found" };
   }
 
-  if (targetMembership.role === "OWNER") {
-    return { error: "Cannot remove the organization owner" };
+  if (targetMembership.role === "admin") {
+    return { error: "Cannot remove another admin" };
   }
 
   const deleted = await membershipRepo.delete(targetMembership.id);

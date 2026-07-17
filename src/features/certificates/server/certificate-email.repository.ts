@@ -1,9 +1,10 @@
 import { BaseRepository } from "@/lib/repository/base.repository";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 
 export class CertificateEmailRepository extends BaseRepository<CertificateEmailLog> {
-  constructor() {
-    super("certificate_emails");
+  constructor(client: SupabaseClient) {
+    super("certificate_emails", client);
   }
 
   async findByCertificateId(certificateId: string): Promise<CertificateEmailLog[]> {

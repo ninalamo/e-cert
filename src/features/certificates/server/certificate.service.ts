@@ -5,8 +5,12 @@ import type { CertificateTemplate } from "@/types/template";
 import { renderHtmlToPdf } from "@/lib/pdf";
 import { getStorageProvider } from "@/lib/storage";
 import { generateQrCode } from "@/lib/qr";
+import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-const certRepo = new CertificateRepository();
+function repo(client: SupabaseClient) {
+  return new CertificateRepository(client);
+}
 
 function renderTemplate(html: string, css: string, variables: Record<string, string>): string {
   let rendered = html;
@@ -37,6 +41,8 @@ export async function issueCertificate(data: {
   send_email?: boolean;
   user_id?: string;
 }): Promise<{ certificate: Certificate | null; error?: string; emailSent?: boolean }> {
+  const client = await createClient();
+  const certRepo = repo(client);
   const number = await generateCertificateNumber(data.organization_id);
 
   const certificate = await certRepo.create({
@@ -64,22 +70,36 @@ export async function issueCertificate(data: {
   return { certificate };
 }
 
-export async function getCertificates(organizationId: string): Promise<Certificate[]> {
+export async function getCertificates(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<Certificate[]> {
+  const certRepo = repo(client ?? (await createClient()));
   return certRepo.findByOrganizationId(organizationId);
 }
 
-export async function getCertificate(id: string): Promise<Certificate | null> {
+export async function getCertificate(
+  id: string,
+  client?: SupabaseClient
+): Promise<Certificate | null> {
+  const certRepo = repo(client ?? (await createClient()));
   return certRepo.findById(id);
 }
 
-export async function getCertificateByNumber(number: string): Promise<Certificate | null> {
+export async function getCertificateByNumber(
+  number: string,
+  client?: SupabaseClient
+): Promise<Certificate | null> {
+  const certRepo = repo(client ?? (await createClient()));
   return certRepo.findByCertificateNumber(number);
 }
 
 export async function revokeCertificate(
   id: string,
-  reason: string
+  reason: string,
+  client?: SupabaseClient
 ): Promise<{ certificate: Certificate | null; error?: string }> {
+  const certRepo = repo(client ?? (await createClient()));
   const existing = await certRepo.findById(id);
   if (!existing) {
     return { certificate: null, error: "Certificate not found" };
@@ -121,7 +141,7 @@ export async function generateCertificatePdf(
   template: CertificateTemplate
 ): Promise<Buffer> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
+  const verifyUrl = `${baseUrl}/login?number=${certificate.certificate_number}`;
 
   const qrBuffer = await generateQrCode(verifyUrl, { width: 128, margin: 1 });
   const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;

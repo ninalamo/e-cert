@@ -4,15 +4,18 @@ import { certificateEmailHtml } from "./email-template";
 import { CertificateRepository } from "./certificate.repository";
 import { getCertificatePdfBuffer } from "./certificate.service";
 import { generateQrCodeDataUrl } from "@/lib/qr";
+import { createClient } from "@/lib/supabase/server";
 import type { CertificateEmailLog } from "@/types/certificate-email";
-
-const emailRepo = new CertificateEmailRepository();
-const certRepo = new CertificateRepository();
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function sendCertificateEmail(
   certificateId: string,
-  userId: string
+  userId: string,
+  client?: SupabaseClient
 ): Promise<{ success: boolean; error?: string }> {
+  const supabase = client ?? (await createClient());
+  const certRepo = new CertificateRepository(supabase);
+  const emailRepo = new CertificateEmailRepository(supabase);
   const certificate = await certRepo.findById(certificateId);
   if (!certificate) {
     return { success: false, error: "Certificate not found" };
@@ -28,7 +31,7 @@ export async function sendCertificateEmail(
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const downloadUrl = `${baseUrl}/api/certificates/${certificate.id}/download`;
-  const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
+  const verifyUrl = `${baseUrl}/login?number=${certificate.certificate_number}`;
 
   let qrCodeDataUrl: string | undefined;
   try {
@@ -89,6 +92,10 @@ export async function sendCertificateEmail(
   }
 }
 
-export async function getEmailLogs(certificateId: string): Promise<CertificateEmailLog[]> {
+export async function getEmailLogs(
+  certificateId: string,
+  client?: SupabaseClient
+): Promise<CertificateEmailLog[]> {
+  const emailRepo = new CertificateEmailRepository(client ?? (await createClient()));
   return emailRepo.findByCertificateId(certificateId);
 }

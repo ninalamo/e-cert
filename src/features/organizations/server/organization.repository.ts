@@ -1,9 +1,10 @@
 import { BaseRepository } from "@/lib/repository/base.repository";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Organization } from "@/types/organization";
 
 export class OrganizationRepository extends BaseRepository<Organization> {
-  constructor() {
-    super("organizations");
+  constructor(client: SupabaseClient) {
+    super("organizations", client);
   }
 
   async findBySlug(slug: string): Promise<Organization | null> {

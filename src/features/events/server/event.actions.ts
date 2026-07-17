@@ -1,29 +1,21 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import * as eventService from "./event.service";
 import * as certService from "@/features/certificates/server/certificate.service";
-
-async function requireAuth() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  return user;
-}
+import { requireRole } from "@/lib/permissions";
 
 export async function getEventsAction(organizationId: string) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   return eventService.getEvents(organizationId);
 }
 
 export async function getEventAction(id: string) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   return eventService.getEvent(id);
 }
 
 export async function getEventWithStatsAction(id: string) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   return eventService.getEventWithStats(id);
 }
 
@@ -38,7 +30,7 @@ export async function createEventAction(data: {
   valid_until?: string;
   template_id?: string;
 }) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   return eventService.createEvent(data);
 }
 
@@ -56,12 +48,12 @@ export async function updateEventAction(
     template_id?: string;
   }
 ) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   return eventService.updateEvent(id, data);
 }
 
 export async function deleteEventAction(id: string) {
-  await requireAuth();
+  await requireRole(["admin"]);
   return eventService.deleteEvent(id);
 }
 
@@ -70,7 +62,7 @@ export async function cloneTemplateForEventAction(
   eventId: string,
   eventName: string
 ) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   return eventService.cloneTemplateForEvent(sourceTemplateId, eventId, eventName);
 }
 
@@ -81,7 +73,7 @@ export async function issueEventCertificateAction(data: {
   recipient_email: string;
   send_email?: boolean;
 }) {
-  const user = await requireAuth();
+  const session = await requireRole(["admin", "staff"]);
   const event = await eventService.getEvent(data.event_id);
   if (!event) {
     return { certificate: null, error: "Event not found" };
@@ -95,7 +87,7 @@ export async function issueEventCertificateAction(data: {
     recipient_email: data.recipient_email,
     expires_at: event.valid_until ?? undefined,
     send_email: data.send_email ?? false,
-    user_id: user.id,
+    user_id: session.id,
   });
 
   return certificate;
@@ -107,7 +99,7 @@ export async function bulkIssueEventCertificatesAction(data: {
   recipients: Array<{ name: string; email: string }>;
   send_email?: boolean;
 }) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   const event = await eventService.getEvent(data.event_id);
   if (!event) {
     return { results: [], error: "Event not found" };

@@ -28,61 +28,62 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-6 p-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">E-Cert</h1>
-          <p className="text-muted-foreground mt-2">Sign in to your account</p>
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="rounded-xl border bg-danger-bg p-3 text-sm text-danger-text">
+            {error}
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-secondary">
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            className="input mt-1"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-secondary">
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            className="input mt-1"
+          />
+        </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              className="mt-1 block w-full rounded-md border px-3 py-2"
-            />
-          </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="btn-brand w-full disabled:opacity-50"
+        >
+          {loading ? "Signing in..." : "Sign in"}
+        </button>
+      </form>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              className="mt-1 block w-full rounded-md border px-3 py-2"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-black px-4 py-2 text-white hover:bg-gray-800 disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-muted-foreground">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-tertiary">
           Don&apos;t have an account?{" "}
-          <a href="/register" className="text-black underline">
+          <a href="/register" className="font-medium text-brand-700 underline">
             Register
           </a>
         </p>
+        <a
+          href="/forgot-password"
+          className="text-sm font-medium text-brand-700 underline"
+        >
+          Forgot password?
+        </a>
       </div>
     </div>
   );

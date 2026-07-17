@@ -1,16 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import * as certService from "./certificate.service";
 import * as emailService from "./certificate-email.service";
-
-async function requireAuth() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  return user;
-}
+import { requireRole } from "@/lib/permissions";
 
 export async function issueCertificateAction(data: {
   organization_id: string;
@@ -22,11 +14,11 @@ export async function issueCertificateAction(data: {
   metadata?: Record<string, unknown>;
   send_email?: boolean;
 }) {
-  const user = await requireAuth();
+  const session = await requireRole(["admin", "staff"]);
   return certService.issueCertificate({
     ...data,
     send_email: data.send_email ?? false,
-    user_id: user.id,
+    user_id: session.id,
   });
 }
 
@@ -36,7 +28,7 @@ export async function uploadCertificateFileAction(
   fileBase64: string,
   fileName: string
 ) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   const storage = (await import("@/lib/storage")).getStorageProvider();
   const buffer = Buffer.from(fileBase64, "base64");
   const ext = fileName.split(".").pop() || "pdf";
@@ -46,26 +38,26 @@ export async function uploadCertificateFileAction(
 }
 
 export async function getCertificatesAction(organizationId: string) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   return certService.getCertificates(organizationId);
 }
 
 export async function getCertificateAction(id: string) {
-  await requireAuth();
+  await requireRole(["admin", "staff"]);
   return certService.getCertificate(id);
 }
 
 export async function revokeCertificateAction(id: string, reason: string) {
-  await requireAuth();
+  await requireRole(["admin"]);
   return certService.revokeCertificate(id, reason);
 }
 
 export async function sendCertificateEmailAction(certificateId: string) {
-  const user = await requireAuth();
-  return emailService.sendCertificateEmail(certificateId, user.id);
+  const session = await requireRole(["admin", "staff"]);
+  return emailService.sendCertificateEmail(certificateId, session.id);
 }
 
 export async function getEmailLogsAction(certificateId: string) {
-  await requireAuth();
+  await requireRole(["admin"]);
   return emailService.getEmailLogs(certificateId);
 }

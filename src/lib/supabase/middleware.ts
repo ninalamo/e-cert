@@ -42,11 +42,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isAuthPage && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
+  // Note: authenticated users are intentionally NOT redirected away from
+  // /login. The login page now embeds the public certificate verification
+  // search, and non-dashboard users (e.g. participants) should be able to
+  // reach it. Role-based access to /dashboard is enforced in its layout.
 
   return supabaseResponse;
 }

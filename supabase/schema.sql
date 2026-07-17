@@ -4,6 +4,9 @@
 -- Safe to re-run: drops everything before recreating.
 -- ============================================================
 
+-- Extensions required for password hashing in the seed section.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- ============================================================
 -- 1. DROP EXISTING (reverse dependency order)
 -- ============================================================
@@ -124,125 +127,156 @@ CREATE INDEX idx_certificate_emails_cert ON certificate_emails(certificate_id);
 
 -- ============================================================
 -- 4. ROW LEVEL SECURITY
+-- Roles: admin (full, incl. audit + delete), staff (all except audit + delete),
+--         participant (own profile + own certificates by email), guest (none).
 -- ============================================================
+
+-- Helper: role of the current user for the single org
+-- (inline in each policy to avoid needing a SECURITY DEFINER function)
 
 -- Organizations
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read own orgs" ON organizations
+CREATE POLICY "Members can read org" ON organizations
   FOR SELECT USING (
     id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
   );
 
-CREATE POLICY "Authenticated users can create orgs" ON organizations
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-
-CREATE POLICY "Owners can update orgs" ON organizations
-  FOR UPDATE USING (
-    id IN (
-      SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('OWNER', 'ADMIN')
-    )
-  );
-
-CREATE POLICY "Owners can delete orgs" ON organizations
-  FOR DELETE USING (
-    id IN (
-      SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role = 'OWNER'
-    )
-  );
+-- Org is single-tenant; no insert/update/delete by app users.
 
 -- User memberships
 ALTER TABLE user_memberships ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read own memberships" ON user_memberships
+CREATE POLICY "Users can read memberships" ON user_memberships
   FOR SELECT USING (
     user_id = auth.uid()
     OR organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
   );
 
-CREATE POLICY "Owners can add members" ON user_memberships
+CREATE POLICY "Admins can add members" ON user_memberships
   FOR INSERT WITH CHECK (
     organization_id IN (
       SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('OWNER', 'ADMIN')
+      WHERE user_id = auth.uid() AND role = 'admin'
     )
   );
 
-CREATE POLICY "Owners can remove members" ON user_memberships
+CREATE POLICY "Admins can remove members" ON user_memberships
   FOR DELETE USING (
     organization_id IN (
       SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('OWNER', 'ADMIN')
+      WHERE user_id = auth.uid() AND role = 'admin'
     )
+    AND user_id <> auth.uid()
   );
 
 -- Certificate templates
 ALTER TABLE certificate_templates ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read org templates" ON certificate_templates
+CREATE POLICY "Members can read templates" ON certificate_templates
   FOR SELECT USING (
     organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
   );
 
-CREATE POLICY "Org admins can manage templates" ON certificate_templates
+CREATE POLICY "Staff and admins manage templates" ON certificate_templates
   FOR ALL USING (
     organization_id IN (
       SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('OWNER', 'ADMIN')
+      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
     )
   );
 
 -- Events
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read org events" ON events
+CREATE POLICY "Members can read events" ON events
   FOR SELECT USING (
     organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
   );
 
-CREATE POLICY "Org admins can manage events" ON events
+CREATE POLICY "Staff and admins manage events" ON events
   FOR ALL USING (
     organization_id IN (
       SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('OWNER', 'ADMIN')
+      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
     )
   );
 
 -- Certificates
 ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read org certificates" ON certificates
+CREATE POLICY "Members can read org certificates" ON certificates
   FOR SELECT USING (
     organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+    OR recipient_email = (SELECT email FROM auth.users WHERE id = auth.uid())
   );
 
-CREATE POLICY "Org admins can manage certificates" ON certificates
+CREATE POLICY "Staff and admins manage certificates" ON certificates
   FOR ALL USING (
     organization_id IN (
       SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('OWNER', 'ADMIN')
+      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
     )
   );
 
--- Certificate emails
+-- Certificate emails (audit trail — admins only)
 ALTER TABLE certificate_emails ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Org admins can view email logs" ON certificate_emails
+CREATE POLICY "Admins can view email logs" ON certificate_emails
   FOR SELECT USING (
     certificate_id IN (
       SELECT id FROM certificates WHERE organization_id IN (
-        SELECT organization_id FROM user_memberships WHERE user_id = auth.uid()
+        SELECT organization_id FROM user_memberships
+        WHERE user_id = auth.uid() AND role = 'admin'
       )
     )
   );
 
+-- Email logs are written by the service role (bypasses RLS); no app-user writes.
+
 -- ============================================================
 -- 5. SEED DATA
---    App tables only. Users created via the Seed Test Data button.
 -- ============================================================
 
 -- 5a. Organization
 INSERT INTO organizations (id, name, slug, created_at, updated_at)
-VALUES ('d4444444-4444-4444-4444-444444444444', 'Lyceum Of Alabang', 'lyceum-of-alabang', now(), now());
+VALUES ('d4444444-4444-4444-4444-444444444444', 'Lyceum Of Alabang', 'lyceum-of-alabang', now(), now())
+ON CONFLICT (id) DO NOTHING;
+
+-- 5b. Default users for every role (admin / staff / participant).
+--     These are seeded via the Auth Admin API (not raw SQL) because
+--     direct INSERTs into auth.users produce a password hash that the
+--     current GoTrue rejects on login (500 on /auth/v1/token). The Admin
+--     API hashes correctly and fills all bookkeeping columns.
+--
+--     Run:  npx tsx scripts/seed-users.ts   (or PUT /api/health on localhost)
+--     Password for all seeded users: "password123"
+--     Emails: admin@lyceumalabang.edu.ph, staff@lyceumalabang.edu.ph,
+--             participant@lyceumalabang.edu.ph
+--
+--     The script also grants each user a role in the single organization
+--     (d4444444-4444-4444-4444-444444444444) via user_memberships.
+-- defined by DEFAULT_ROLE in src/lib/permissions.ts.
+
+-- 5c. Revert step (DELETE only — safe to re-run).
+--     Removes any previously seeded auth rows and their org memberships
+--     so the seed script starts from a clean slate. We intentionally do
+--     NOT INSERT into auth.users here (that corrupts GoTrue); user
+--     creation is done by the Admin API in scripts/seed-users.ts.
+DELETE FROM auth.identities
+WHERE user_id IN (
+  SELECT id FROM auth.users WHERE email LIKE '%@lyceum%'
+);
+
+DELETE FROM auth.users
+WHERE email LIKE '%@lyceum%';
+
+DELETE FROM user_memberships
+WHERE user_id IN (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1'::uuid,
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2'::uuid,
+  'cccccccc-cccc-cccc-cccc-ccccccccccc3'::uuid
+);
+-- Note: membership grants are created by scripts/seed-users.ts (Admin API),
+-- because user_memberships.user_id has a FK to auth.users which does not
+-- exist until the seed script creates the users.

@@ -1,4 +1,5 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface DashboardStats {
   totalCertificates: number;
@@ -7,24 +8,28 @@ export interface DashboardStats {
   totalEmails: number;
 }
 
-export async function getDashboardStats(organizationId: string): Promise<DashboardStats> {
+export async function getDashboardStats(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<DashboardStats> {
+  const supabase = client ?? (await createClient());
   const [total, revoked, emails] = await Promise.all([
-    supabaseAdmin
+    supabase
       .from("certificates")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", organizationId),
-    supabaseAdmin
+    supabase
       .from("certificates")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", organizationId)
       .not("revoked_at", "is", null),
-    supabaseAdmin
+    supabase
       .from("certificate_emails")
       .select("*", { count: "exact", head: true })
       .in(
         "certificate_id",
         (
-          await supabaseAdmin
+          await supabase
             .from("certificates")
             .select("id")
             .eq("organization_id", organizationId)
@@ -52,22 +57,24 @@ export interface RecentActivity {
 
 export async function getRecentActivity(
   organizationId: string,
-  limit = 5
+  limit = 5,
+  client?: SupabaseClient
 ): Promise<RecentActivity[]> {
-  const certs = await supabaseAdmin
+  const supabase = client ?? (await createClient());
+  const certs = await supabase
     .from("certificates")
     .select("certificate_number, recipient_name, created_at")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  const emails = await supabaseAdmin
+  const emails = await supabase
     .from("certificate_emails")
     .select("sent_to, subject, sent_at, certificate_id")
     .in(
       "certificate_id",
       (
-        await supabaseAdmin
+        await supabase
           .from("certificates")
           .select("id")
           .eq("organization_id", organizationId)

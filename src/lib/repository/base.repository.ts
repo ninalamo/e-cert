@@ -1,16 +1,15 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
-
-export type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseInsert = Record<string, any>;
 
 export abstract class BaseRepository<T> {
   protected table: string;
-  protected client = supabaseAdmin;
+  protected client: SupabaseClient;
 
-  constructor(table: string) {
+  constructor(table: string, client: SupabaseClient) {
     this.table = table;
+    this.client = client;
   }
 
   async findById(id: string): Promise<T | null> {

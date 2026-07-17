@@ -82,7 +82,7 @@ export default function MembersList() {
                     {new Date(member.created_at).toLocaleDateString()}
                   </td>
                   <td className="text-right">
-                    {member.user_id !== currentUserId && member.role !== "OWNER" && (
+                    {member.user_id !== currentUserId && member.role !== "admin" && (
                       <button
                         onClick={() => handleRemove(member.user_id)}
                         className="text-xs text-danger hover:underline"

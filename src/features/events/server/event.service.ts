@@ -1,21 +1,34 @@
 import { EventRepository } from "./event.repository";
 import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
 import { CertificateTemplateRepository } from "@/features/templates/server/template.repository";
+import { createClient } from "@/lib/supabase/server";
 import type { Event } from "@/types/event";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-const eventRepo = new EventRepository();
-const certRepo = new CertificateRepository();
-const templateRepo = new CertificateTemplateRepository();
-
-export async function getEvents(organizationId: string): Promise<Event[]> {
-  return eventRepo.findByOrganizationId(organizationId);
+function repos(client: SupabaseClient) {
+  return {
+    eventRepo: new EventRepository(client),
+    certRepo: new CertificateRepository(client),
+    templateRepo: new CertificateTemplateRepository(client),
+  };
 }
 
-export async function getEvent(id: string): Promise<Event | null> {
-  return eventRepo.findById(id);
+export async function getEvents(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<Event[]> {
+  return repos(client ?? (await createClient())).eventRepo.findByOrganizationId(organizationId);
 }
 
-export async function getEventWithStats(id: string) {
+export async function getEvent(
+  id: string,
+  client?: SupabaseClient
+): Promise<Event | null> {
+  return repos(client ?? (await createClient())).eventRepo.findById(id);
+}
+
+export async function getEventWithStats(id: string, client?: SupabaseClient) {
+  const { eventRepo, certRepo, templateRepo } = repos(client ?? (await createClient()));
   const event = await eventRepo.findById(id);
   if (!event) return null;
 
@@ -36,9 +49,10 @@ export async function getEventWithStats(id: string) {
 
 export async function createEvent(
   data: Pick<Event, "organization_id" | "name"> &
-    Partial<Pick<Event, "description" | "event_date" | "location" | "organizer" | "certificate_title" | "valid_until" | "template_id">>
+    Partial<Pick<Event, "description" | "event_date" | "location" | "organizer" | "certificate_title" | "valid_until" | "template_id">>,
+  client?: SupabaseClient
 ): Promise<{ event: Event | null; error?: string }> {
-  const event = await eventRepo.create({
+  const event = await repos(client ?? (await createClient())).eventRepo.create({
     ...data,
     description: data.description ?? null,
     event_date: data.event_date ?? null,
@@ -58,8 +72,10 @@ export async function createEvent(
 
 export async function updateEvent(
   id: string,
-  data: Partial<Pick<Event, "name" | "description" | "event_date" | "location" | "organizer" | "certificate_title" | "valid_until" | "status" | "template_id">>
+  data: Partial<Pick<Event, "name" | "description" | "event_date" | "location" | "organizer" | "certificate_title" | "valid_until" | "status" | "template_id">>,
+  client?: SupabaseClient
 ): Promise<{ event: Event | null; error?: string }> {
+  const { eventRepo } = repos(client ?? (await createClient()));
   const existing = await eventRepo.findById(id);
   if (!existing) {
     return { event: null, error: "Event not found" };
@@ -72,7 +88,11 @@ export async function updateEvent(
   return { event };
 }
 
-export async function deleteEvent(id: string): Promise<{ error?: string }> {
+export async function deleteEvent(
+  id: string,
+  client?: SupabaseClient
+): Promise<{ error?: string }> {
+  const { eventRepo } = repos(client ?? (await createClient()));
   const existing = await eventRepo.findById(id);
   if (!existing) {
     return { error: "Event not found" };
@@ -87,8 +107,10 @@ export async function deleteEvent(id: string): Promise<{ error?: string }> {
 export async function cloneTemplateForEvent(
   sourceTemplateId: string,
   eventId: string,
-  eventName: string
+  eventName: string,
+  client?: SupabaseClient
 ): Promise<{ templateId: string | null; error?: string }> {
+  const { eventRepo, templateRepo } = repos(client ?? (await createClient()));
   const source = await templateRepo.findById(sourceTemplateId);
   if (!source) {
     return { templateId: null, error: "Source template not found" };

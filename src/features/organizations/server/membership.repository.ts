@@ -1,9 +1,10 @@
 import { BaseRepository } from "@/lib/repository/base.repository";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UserMembership } from "@/types/organization";
 
 export class UserMembershipRepository extends BaseRepository<UserMembership> {
-  constructor() {
-    super("user_memberships");
+  constructor(client: SupabaseClient) {
+    super("user_memberships", client);
   }
 
   async findByOrganizationId(organizationId: string): Promise<UserMembership[]> {

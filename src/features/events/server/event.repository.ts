@@ -1,9 +1,10 @@
 import { BaseRepository } from "@/lib/repository/base.repository";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Event } from "@/types/event";
 
 export class EventRepository extends BaseRepository<Event> {
-  constructor() {
-    super("events");
+  constructor(client: SupabaseClient) {
+    super("events", client);
   }
 
   async findByOrganizationId(organizationId: string): Promise<Event[]> {
