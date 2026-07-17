@@ -29,8 +29,10 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ id
         return;
       }
       setCertificate(cert);
-      const tpl = await getTemplateAction(cert.template_id);
-      setTemplate(tpl);
+      if (cert.template_id) {
+        const tpl = await getTemplateAction(cert.template_id);
+        setTemplate(tpl);
+      }
       setLoading(false);
     }
     load();
@@ -90,8 +92,8 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ id
           <p>{new Date(certificate.issued_at).toLocaleString()}</p>
         </div>
         <div className="rounded-md border p-4">
-          <p className="font-medium text-muted-foreground">Template</p>
-          <p>{template?.name ?? "Unknown"}</p>
+          <p className="font-medium text-muted-foreground">Source</p>
+          <p>{template?.name ?? (certificate.file_path ? "Uploaded PDF" : "Unknown")}</p>
         </div>
         <div className="rounded-md border p-4">
           <p className="font-medium text-muted-foreground">Expires</p>

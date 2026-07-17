@@ -3,6 +3,8 @@ export function certificateEmailHtml(data: {
   certificateNumber: string;
   issuedDate: string;
   downloadUrl: string;
+  verifyUrl: string;
+  qrCodeDataUrl?: string;
 }): string {
   return `
 <!DOCTYPE html>
@@ -41,6 +43,12 @@ export function certificateEmailHtml(data: {
           Download Certificate (PDF)
         </a>
       </div>
+      ${data.qrCodeDataUrl ? `
+      <div style="text-align:center;margin:0 0 24px;">
+        <p style="color:#71717a;font-size:13px;margin:0 0 8px;">Scan to verify:</p>
+        <img src="${data.qrCodeDataUrl}" width="128" height="128" alt="QR Code" style="border:1px solid #e4e4e7;border-radius:4px;" />
+      </div>
+      ` : ""}
       <p style="color:#a1a1aa;font-size:13px;margin:0 0 8px;">
         If you have any questions, please contact your administrator.
       </p>

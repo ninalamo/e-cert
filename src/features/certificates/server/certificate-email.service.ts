@@ -2,8 +2,8 @@ import { CertificateEmailRepository } from "./certificate-email.repository";
 import { getEmailProvider } from "@/lib/email";
 import { certificateEmailHtml } from "./email-template";
 import { CertificateRepository } from "./certificate.repository";
-import { generateCertificatePdf } from "./certificate.service";
-import { getTemplate } from "@/features/templates/server/template.service";
+import { getCertificatePdfBuffer } from "./certificate.service";
+import { generateQrCodeDataUrl } from "@/lib/qr";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 
 const emailRepo = new CertificateEmailRepository();
@@ -18,20 +18,23 @@ export async function sendCertificateEmail(
     return { success: false, error: "Certificate not found" };
   }
 
-  const template = await getTemplate(certificate.template_id);
-  if (!template) {
-    return { success: false, error: "Template not found" };
-  }
-
   let pdfBuffer: Buffer;
   try {
-    pdfBuffer = await generateCertificatePdf(certificate, template);
+    pdfBuffer = await getCertificatePdfBuffer(certificate);
   } catch {
     return { success: false, error: "Failed to generate PDF" };
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const downloadUrl = `${baseUrl}/api/certificates/${certificate.id}/pdf`;
+  const downloadUrl = `${baseUrl}/api/certificates/${certificate.id}/download`;
+  const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
+
+  let qrCodeDataUrl: string | undefined;
+  try {
+    qrCodeDataUrl = await generateQrCodeDataUrl(verifyUrl, { width: 128, margin: 1 });
+  } catch {
+    // QR code is optional
+  }
 
   const subject = `Your Certificate ${certificate.certificate_number} is Ready`;
   const html = certificateEmailHtml({
@@ -39,6 +42,8 @@ export async function sendCertificateEmail(
     certificateNumber: certificate.certificate_number,
     issuedDate: new Date(certificate.issued_at).toLocaleDateString(),
     downloadUrl,
+    verifyUrl,
+    qrCodeDataUrl,
   });
 
   const emailProvider = getEmailProvider();

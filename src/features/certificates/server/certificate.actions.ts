@@ -14,10 +14,11 @@ async function requireAuth() {
 
 export async function issueCertificateAction(data: {
   organization_id: string;
-  template_id: string;
+  template_id?: string;
   recipient_name: string;
   recipient_email: string;
   expires_at?: string;
+  file_path?: string;
   metadata?: Record<string, unknown>;
   send_email?: boolean;
 }) {
@@ -27,6 +28,21 @@ export async function issueCertificateAction(data: {
     send_email: data.send_email ?? false,
     user_id: user.id,
   });
+}
+
+export async function uploadCertificateFileAction(
+  organizationId: string,
+  certificateNumber: string,
+  fileBase64: string,
+  fileName: string
+) {
+  await requireAuth();
+  const storage = (await import("@/lib/storage")).getStorageProvider();
+  const buffer = Buffer.from(fileBase64, "base64");
+  const ext = fileName.split(".").pop() || "pdf";
+  const filePath = `certificates/${organizationId}/${certificateNumber}.${ext}`;
+  await storage.writeFile(filePath, buffer);
+  return filePath;
 }
 
 export async function getCertificatesAction(organizationId: string) {

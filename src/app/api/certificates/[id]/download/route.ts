@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import * as certService from "@/features/certificates/server/certificate.service";
 
 export async function GET(
@@ -8,16 +7,13 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const certificate = await certService.getCertificate(id);
   if (!certificate) {
     return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
+  }
+
+  if (certificate.revoked_at) {
+    return NextResponse.json({ error: "Certificate has been revoked" }, { status: 410 });
   }
 
   try {
