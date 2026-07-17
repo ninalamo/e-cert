@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { ORG_ID } from "@/lib/org";
 import { getDashboardStatsAction } from "../server/dashboard.actions";
 
 interface Stats {
@@ -12,17 +11,14 @@ interface Stats {
   totalEmails: number;
 }
 
-function StatsCardsInner() {
-  const searchParams = useSearchParams();
-  const orgId = searchParams.get("org");
+export default function StatsCards() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!orgId) return;
     let cancelled = false;
     async function load() {
-      const data = await getDashboardStatsAction(orgId!);
+      const data = await getDashboardStatsAction(ORG_ID);
       if (!cancelled) {
         setStats(data);
         setLoading(false);
@@ -30,7 +26,7 @@ function StatsCardsInner() {
     }
     load();
     return () => { cancelled = true; };
-  }, [orgId]);
+  }, []);
 
   if (loading) {
     return (
@@ -45,13 +41,7 @@ function StatsCardsInner() {
     );
   }
 
-  if (!stats || !orgId) {
-    return (
-      <div className="rounded-md border p-4 text-center text-muted-foreground text-sm">
-        Select an organization to view stats.
-      </div>
-    );
-  }
+  if (!stats) return null;
 
   const cards = [
     { label: "Total Certificates", value: stats.totalCertificates, color: "text-gray-900" },
@@ -69,20 +59,5 @@ function StatsCardsInner() {
         </div>
       ))}
     </div>
-  );
-}
-
-export default function StatsCards() {
-  return (
-    <Suspense fallback={<div className="grid grid-cols-4 gap-4">
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="rounded-md border p-4 animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-20 mb-2" />
-          <div className="h-8 bg-gray-200 rounded w-12" />
-        </div>
-      ))}
-    </div>}>
-      <StatsCardsInner />
-    </Suspense>
   );
 }

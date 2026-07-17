@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { use } from "react";
-import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { getCertificateAction } from "@/features/certificates/server/certificate.actions";
 import { getTemplateAction } from "@/features/templates/server/template.actions";
 import EmailHistory from "@/features/certificates/components/email-history";
@@ -11,8 +11,6 @@ import type { CertificateTemplate } from "@/types/template";
 
 export default function CertificateDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const searchParams = useSearchParams();
-  const orgId = searchParams.get("org");
 
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
@@ -20,9 +18,10 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ id
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
-      setLoading(true);
       const cert = await getCertificateAction(id);
+      if (cancelled) return;
       if (!cert) {
         setError("Certificate not found");
         setLoading(false);
@@ -31,11 +30,12 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ id
       setCertificate(cert);
       if (cert.template_id) {
         const tpl = await getTemplateAction(cert.template_id);
-        setTemplate(tpl);
+        if (!cancelled) setTemplate(tpl);
       }
       setLoading(false);
     }
     load();
+    return () => { cancelled = true; };
   }, [id]);
 
   if (loading) {
@@ -59,18 +59,17 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ id
           <a
             href={`/api/certificates/${certificate.id}/pdf`}
             target="_blank"
+            rel="noopener noreferrer"
             className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
           >
             Download PDF
           </a>
-          {orgId && (
-            <a
-              href={`/dashboard/certificates?org=${orgId}`}
-              className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
-            >
-              Back to list
-            </a>
-          )}
+          <Link
+            href="/dashboard/certificates"
+            className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
+          >
+            Back to list
+          </Link>
         </div>
       </div>
 

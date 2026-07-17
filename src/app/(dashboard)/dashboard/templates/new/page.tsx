@@ -1,18 +1,10 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 import TemplateForm from "@/features/templates/components/template-form";
 import { createTemplateAction } from "@/features/templates/server/template.actions";
+import { ORG_ID } from "@/lib/org";
 
-function NewTemplateInner() {
-  const searchParams = useSearchParams();
-  const orgId = searchParams.get("org");
-
-  if (!orgId) {
-    return <p className="text-muted-foreground">Select an organization first.</p>;
-  }
-
+export default function NewTemplatePage() {
   return (
     <div className="space-y-6">
       <div>
@@ -25,23 +17,15 @@ function NewTemplateInner() {
         submitLabel="Create Template"
         onSubmit={async (data) => {
           const result = await createTemplateAction({
-            organization_id: orgId,
+            organization_id: ORG_ID,
             ...data,
           });
           if (!result?.error) {
-            window.location.href = `/dashboard/templates?org=${orgId}`;
+            window.location.href = "/dashboard/templates";
           }
           return result;
         }}
       />
     </div>
-  );
-}
-
-export default function NewTemplatePage() {
-  return (
-    <Suspense fallback={<p className="text-muted-foreground text-sm">Loading...</p>}>
-      <NewTemplateInner />
-    </Suspense>
   );
 }

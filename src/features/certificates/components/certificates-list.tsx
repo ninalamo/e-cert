@@ -1,31 +1,29 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { ORG_ID } from "@/lib/org";
 import {
   getCertificatesAction,
   revokeCertificateAction,
 } from "../server/certificate.actions";
 import type { Certificate } from "@/types/certificate";
 
-function CertificatesListInner() {
-  const searchParams = useSearchParams();
-  const orgId = searchParams.get("org");
-  const initialQuery = searchParams.get("q") || "";
+export default function CertificatesList({ initialQuery = "" }: { initialQuery?: string }) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const [search, setSearch] = useState(initialQuery);
 
-  const loadCertificates = useCallback(async () => {
-    if (!orgId) return;
-    setLoading(true);
-    const data = await getCertificatesAction(orgId);
-    setCertificates(data);
-    setLoaded(true);
-    setLoading(false);
-  }, [orgId]);
+  useEffect(() => {
+    let active = true;
+    getCertificatesAction(ORG_ID).then((data) => {
+      if (active) {
+        setCertificates(data);
+        setReady(true);
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   async function handleRevoke(id: string, number: string) {
     const reason = prompt(`Reason for revoking ${number}:`);
@@ -34,12 +32,9 @@ function CertificatesListInner() {
     if (result?.error) {
       alert(result.error);
     } else {
-      loadCertificates();
+      const data = await getCertificatesAction(ORG_ID);
+      setCertificates(data);
     }
-  }
-
-  if (!orgId) {
-    return <p className="text-muted-foreground">Select an organization first.</p>;
   }
 
   const filtered = certificates.filter(
@@ -59,30 +54,23 @@ function CertificatesListInner() {
           onChange={(e) => setSearch(e.target.value)}
           className="w-96 rounded-md border px-3 py-2 text-sm"
         />
-        <div className="flex gap-2">
-          {!loaded && (
-            <button onClick={loadCertificates} className="text-sm text-blue-600 hover:underline">
-              Load certificates
-            </button>
-          )}
-          <a
-            href={`/dashboard/certificates/issue?org=${orgId}`}
-            className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
-          >
-            Issue Certificate
-          </a>
-        </div>
+        <Link
+          href="/dashboard/certificates/issue"
+          className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+        >
+          Issue Certificate
+        </Link>
       </div>
 
-      {loading && <p className="text-muted-foreground text-sm">Loading certificates...</p>}
+      {!ready && <p className="text-muted-foreground text-sm">Loading certificates...</p>}
 
-      {!loading && loaded && filtered.length === 0 && (
+      {ready && filtered.length === 0 && (
         <div className="border rounded-md p-8 text-center">
           <p className="text-muted-foreground">No certificates found.</p>
         </div>
       )}
 
-      {!loading && loaded && filtered.length > 0 && (
+      {ready && filtered.length > 0 && (
         <div className="border rounded-md">
           <table className="w-full text-sm">
             <thead>
@@ -116,12 +104,12 @@ function CertificatesListInner() {
                     )}
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <a
-                      href={`/dashboard/certificates/${cert.id}?org=${orgId}`}
+                    <Link
+                      href={`/dashboard/certificates/${cert.id}`}
                       className="text-xs text-blue-600 hover:underline mr-3"
                     >
                       View
-                    </a>
+                    </Link>
                     {!cert.revoked_at && (
                       <button
                         onClick={() => handleRevoke(cert.id, cert.certificate_number)}
@@ -138,13 +126,5 @@ function CertificatesListInner() {
         </div>
       )}
     </div>
-  );
-}
-
-export default function CertificatesList() {
-  return (
-    <Suspense fallback={<p className="text-muted-foreground text-sm">Loading...</p>}>
-      <CertificatesListInner />
-    </Suspense>
   );
 }

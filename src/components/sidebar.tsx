@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { ORG_ID, ORG_NAME } from "@/lib/org";
 import { getDashboardStatsAction } from "@/features/dashboard/server/dashboard.actions";
 
 const navItems = [
@@ -14,22 +15,17 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const orgId = searchParams.get("org");
   const [certCount, setCertCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!orgId) return;
+    let cancelled = false;
     async function load() {
-      const stats = await getDashboardStatsAction(orgId!);
-      setCertCount(stats.totalCertificates);
+      const stats = await getDashboardStatsAction(ORG_ID);
+      if (!cancelled) setCertCount(stats.totalCertificates);
     }
     load();
-  }, [orgId]);
-
-  function buildHref(href: string) {
-    return orgId ? `${href}?org=${orgId}` : href;
-  }
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <aside className="w-64 border-r bg-gray-50 p-4">
@@ -37,6 +33,7 @@ export default function Sidebar() {
         <Link href="/dashboard" className="text-lg font-bold">
           E-Cert
         </Link>
+        <p className="text-xs text-muted-foreground mt-1">{ORG_NAME}</p>
       </div>
       <nav className="space-y-1">
         {navItems.map((item) => {
@@ -46,7 +43,7 @@ export default function Sidebar() {
           return (
             <Link
               key={item.href}
-              href={buildHref(item.href)}
+              href={item.href}
               className={`flex items-center justify-between rounded-md px-3 py-2 text-sm ${
                 isActive
                   ? "bg-black text-white"

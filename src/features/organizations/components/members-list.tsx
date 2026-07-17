@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
 import { getOrganizationMembersAction, removeMemberAction } from "../server/organization.actions";
 import { getCurrentUser } from "@/features/auth/server/auth.actions";
-import InviteMemberForm from "../components/invite-member-form";
-import { Suspense } from "react";
+import { ORG_ID } from "@/lib/org";
 
 interface Member {
   id: string;
@@ -15,31 +13,27 @@ interface Member {
   created_at: string;
 }
 
-function MembersListInner() {
-  const searchParams = useSearchParams();
-  const orgId = searchParams.get("org");
+export default function MembersList() {
   const [members, setMembers] = useState<Member[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const loadMembers = useCallback(async () => {
-    if (!orgId) return;
     setLoading(true);
     const [membersData, user] = await Promise.all([
-      getOrganizationMembersAction(orgId),
+      getOrganizationMembersAction(ORG_ID),
       getCurrentUser(),
     ]);
     setMembers(membersData as Member[]);
     setCurrentUserId(user?.id ?? null);
     setLoaded(true);
     setLoading(false);
-  }, [orgId]);
+  }, []);
 
   async function handleRemove(memberId: string) {
-    if (!orgId) return;
     if (!confirm("Remove this member?")) return;
-    const result = await removeMemberAction(orgId, memberId);
+    const result = await removeMemberAction(ORG_ID, memberId);
     if (result?.error) {
       alert(result.error);
     } else {
@@ -47,14 +41,8 @@ function MembersListInner() {
     }
   }
 
-  if (!orgId) {
-    return <p className="text-muted-foreground">Select an organization first.</p>;
-  }
-
   return (
     <div className="space-y-6">
-      <InviteMemberForm organizationId={orgId} onInvited={loadMembers} />
-
       {!loaded && !loading && (
         <button onClick={loadMembers} className="text-sm text-blue-600 hover:underline">
           Load members
@@ -111,13 +99,5 @@ function MembersListInner() {
         </div>
       )}
     </div>
-  );
-}
-
-export default function MembersList() {
-  return (
-    <Suspense fallback={<p className="text-muted-foreground text-sm">Loading...</p>}>
-      <MembersListInner />
-    </Suspense>
   );
 }

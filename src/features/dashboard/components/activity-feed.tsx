@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { ORG_ID } from "@/lib/org";
 import { getRecentActivityAction } from "../server/dashboard.actions";
 
 interface Activity {
@@ -12,17 +11,14 @@ interface Activity {
   timestamp: string;
 }
 
-function ActivityFeedInner() {
-  const searchParams = useSearchParams();
-  const orgId = searchParams.get("org");
+export default function ActivityFeed() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!orgId) return;
     let cancelled = false;
     async function load() {
-      const data = await getRecentActivityAction(orgId!);
+      const data = await getRecentActivityAction(ORG_ID);
       if (!cancelled) {
         setActivities(data);
         setLoading(false);
@@ -30,14 +26,10 @@ function ActivityFeedInner() {
     }
     load();
     return () => { cancelled = true; };
-  }, [orgId]);
+  }, []);
 
   if (loading) {
     return <p className="text-muted-foreground text-sm">Loading activity...</p>;
-  }
-
-  if (!orgId) {
-    return null;
   }
 
   if (activities.length === 0) {
@@ -79,13 +71,5 @@ function ActivityFeedInner() {
         </div>
       ))}
     </div>
-  );
-}
-
-export default function ActivityFeed() {
-  return (
-    <Suspense fallback={<p className="text-muted-foreground text-sm">Loading...</p>}>
-      <ActivityFeedInner />
-    </Suspense>
   );
 }

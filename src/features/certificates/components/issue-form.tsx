@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useState, useEffect } from "react";
+import { ORG_ID } from "@/lib/org";
 import { getTemplatesAction } from "@/features/templates/server/template.actions";
 import {
   issueCertificateAction,
@@ -12,31 +11,21 @@ import type { CertificateTemplate } from "@/types/template";
 
 type IssueMode = "template" | "file";
 
-function IssueFormInner() {
-  const searchParams = useSearchParams();
-  const orgId = searchParams.get("org");
+export default function IssueForm() {
   const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
-  const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [mode, setMode] = useState<IssueMode>("template");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const loadTemplates = useCallback(async () => {
-    if (!orgId || loaded) return;
-    const data = await getTemplatesAction(orgId);
-    setTemplates(data);
-    setLoaded(true);
-  }, [orgId, loaded]);
-
-  if (!loaded) {
-    loadTemplates();
-  }
-
-  if (!orgId) {
-    return <p className="text-muted-foreground">Select an organization first.</p>;
-  }
+  useEffect(() => {
+    let active = true;
+    getTemplatesAction(ORG_ID).then((data) => {
+      if (active) setTemplates(data);
+    });
+    return () => { active = false; };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -55,7 +44,7 @@ function IssueFormInner() {
     if (mode === "file" && selectedFile) {
       const base64 = await fileToBase64(selectedFile);
       const uploadResult = await uploadCertificateFileAction(
-        orgId!,
+        ORG_ID,
         "pending",
         base64,
         selectedFile.name
@@ -79,7 +68,7 @@ function IssueFormInner() {
     }
 
     const result = await issueCertificateAction({
-      organization_id: orgId!,
+      organization_id: ORG_ID,
       template_id: templateId,
       recipient_name: recipientName,
       recipient_email: recipientEmail,
@@ -249,12 +238,4 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-}
-
-export default function IssueForm() {
-  return (
-    <Suspense fallback={<p className="text-muted-foreground text-sm">Loading...</p>}>
-      <IssueFormInner />
-    </Suspense>
-  );
 }

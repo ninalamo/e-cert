@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
 import TemplateForm from "@/features/templates/components/template-form";
 import {
   getTemplateAction,
@@ -10,8 +9,6 @@ import {
 import type { CertificateTemplate } from "@/types/template";
 
 export default function EditTemplateForm({ id }: { id: string }) {
-  const searchParams = useSearchParams();
-  const orgId = searchParams.get("org");
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,7 +53,7 @@ export default function EditTemplateForm({ id }: { id: string }) {
         onSubmit={async (data) => {
           const result = await updateTemplateAction(id, data);
           if (!result?.error) {
-            window.location.href = `/dashboard/templates?org=${orgId ?? template.organization_id}`;
+            window.location.href = "/dashboard/templates";
           }
           return result;
         }}
