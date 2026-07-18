@@ -1,10 +1,10 @@
 import { ORG_NAME } from "@/lib/org";
-import Sidebar from "@/components/sidebar";
+import ParticipantSidebar from "@/components/participant-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import LogoutButton from "@/components/logout-button";
 import type { SessionUser } from "@/lib/permissions";
 
-export default function DashboardShell({
+export default function ParticipantShell({
   children,
   session,
 }: {
@@ -13,7 +13,7 @@ export default function DashboardShell({
 }) {
   return (
     <div className="flex min-h-screen bg-surface-muted">
-      <Sidebar role={session.role} />
+      <ParticipantSidebar />
       <div className="flex-1">
         <header className="flex items-center justify-between border-b border-default bg-surface px-6 py-3">
           <span className="text-sm font-medium text-secondary">{ORG_NAME}</span>

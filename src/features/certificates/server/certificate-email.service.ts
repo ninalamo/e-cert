@@ -31,7 +31,7 @@ export async function sendCertificateEmail(
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const downloadUrl = `${baseUrl}/api/certificates/${certificate.id}/download`;
-  const verifyUrl = `${baseUrl}/login?number=${certificate.certificate_number}`;
+  const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
 
   let qrCodeDataUrl: string | undefined;
   try {

@@ -35,6 +35,31 @@ export class CertificateRepository extends BaseRepository<Certificate> {
     );
   }
 
+  async findByRecipientEmail(
+    email: string,
+    organizationId: string
+  ): Promise<Certificate[]> {
+    return this.findMany(
+      { recipient_email: email, organization_id: organizationId },
+      { orderBy: "created_at", ascending: false }
+    );
+  }
+
+  async findByIdForRecipient(
+    id: string,
+    email: string
+  ): Promise<Certificate | null> {
+    const { data, error } = await this.client
+      .from(this.table)
+      .select("*")
+      .eq("id", id)
+      .eq("recipient_email", email)
+      .single();
+
+    if (error) return null;
+    return data as Certificate;
+  }
+
   async countByOrganizationId(organizationId: string): Promise<number> {
     return this.count({ organization_id: organizationId });
   }

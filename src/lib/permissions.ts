@@ -108,3 +108,12 @@ export async function requireRole(
   if (!roles.includes(session.role)) redirect(redirectTo);
   return session;
 }
+
+/**
+ * Returns the home path for the given role.
+ * - participant → /my
+ * - admin/staff → /dashboard
+ */
+export function getHomePathForRole(role: UserRole): string {
+  return role === "participant" ? "/my" : "/dashboard";
+}

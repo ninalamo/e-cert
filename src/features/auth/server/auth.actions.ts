@@ -4,22 +4,40 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ORG_ID } from "@/lib/org";
-import { DEFAULT_ROLE } from "@/lib/permissions";
-import type { LoginInput, RegisterInput } from "../schemas/auth.schema";
+import { DEFAULT_ROLE, getHomePathForRole, getCurrentSession } from "@/lib/permissions";
+import { loginSchema, type LoginInput, type RegisterInput } from "../schemas/auth.schema";
 
-export async function login(data: LoginInput) {
+export async function loginAction(
+  _prev: { error?: string; success?: boolean; redirectTo?: string } | undefined,
+  formData: FormData
+): Promise<{ error?: string; success?: boolean; redirectTo?: string }> {
+  const email = String(formData.get("email") ?? "");
+  const password = String(formData.get("password") ?? "");
+
+  const parsed = loginSchema.safeParse({ email, password });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email: data.email,
-    password: data.password,
+  const { data: result, error } = await supabase.auth.signInWithPassword({
+    email: parsed.data.email,
+    password: parsed.data.password,
   });
 
   if (error) {
     return { error: error.message };
   }
 
-  redirect("/dashboard");
+  if (!result.session) {
+    return { error: "Unable to establish session" };
+  }
+
+  const session = await getCurrentSession();
+  const redirectTo = session ? getHomePathForRole(session.role) : "/dashboard";
+
+  return { success: true, redirectTo };
 }
 
 export async function register(data: RegisterInput) {
@@ -47,7 +65,7 @@ export async function register(data: RegisterInput) {
     });
   }
 
-  redirect("/dashboard");
+  redirect(getHomePathForRole(DEFAULT_ROLE));
 }
 
 export async function logout() {
@@ -81,7 +99,10 @@ export async function updatePassword(data: { password: string }) {
     return { error: error.message };
   }
 
-  return { success: true };
+  const session = await getCurrentSession();
+  const redirectTo = session ? getHomePathForRole(session.role) : "/login";
+
+  return { success: true, redirectTo };
 }
 
 export async function getCurrentUser() {

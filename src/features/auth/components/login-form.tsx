@@ -1,38 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { login } from "../server/auth.actions";
-import type { LoginInput } from "../schemas/auth.schema";
+import { useEffect, useRef } from "react";
+import { useActionState } from "react";
+import { loginAction } from "../server/auth.actions";
 
 export default function LoginForm() {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [state, formAction, pending] = useActionState(loginAction, undefined);
+  const navigated = useRef(false);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const data: LoginInput = {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-    };
-
-    const result = await login(data);
-
-    if (result?.error) {
-      setError(result.error);
-      setLoading(false);
+  useEffect(() => {
+    if (state?.success && !navigated.current) {
+      navigated.current = true;
+      window.location.href = state.redirectTo ?? "/dashboard";
     }
-  }
+  }, [state?.success, state?.redirectTo]);
 
   return (
     <div className="space-y-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
+      <form action={formAction} className="space-y-4">
+        {state?.error && (
           <div className="rounded-xl border bg-danger-bg p-3 text-sm text-danger-text">
-            {error}
+            {state.error}
           </div>
         )}
 
@@ -64,10 +52,10 @@ export default function LoginForm() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={pending}
           className="btn-brand w-full disabled:opacity-50"
         >
-          {loading ? "Signing in..." : "Sign in"}
+          {pending ? "Signing in..." : "Sign in"}
         </button>
       </form>
 

@@ -94,6 +94,25 @@ export async function getCertificateByNumber(
   return certRepo.findByCertificateNumber(number);
 }
 
+export async function getMyCertificates(
+  email: string,
+  client?: SupabaseClient
+): Promise<Certificate[]> {
+  const c = client ?? (await createClient());
+  const certRepo = repo(c);
+  const { ORG_ID } = await import("@/lib/org");
+  return certRepo.findByRecipientEmail(email, ORG_ID);
+}
+
+export async function getMyCertificate(
+  id: string,
+  email: string,
+  client?: SupabaseClient
+): Promise<Certificate | null> {
+  const certRepo = repo(client ?? (await createClient()));
+  return certRepo.findByIdForRecipient(id, email);
+}
+
 export async function revokeCertificate(
   id: string,
   reason: string,
@@ -141,7 +160,7 @@ export async function generateCertificatePdf(
   template: CertificateTemplate
 ): Promise<Buffer> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const verifyUrl = `${baseUrl}/login?number=${certificate.certificate_number}`;
+  const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
 
   const qrBuffer = await generateQrCode(verifyUrl, { width: 128, margin: 1 });
   const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;

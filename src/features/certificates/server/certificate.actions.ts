@@ -2,7 +2,7 @@
 
 import * as certService from "./certificate.service";
 import * as emailService from "./certificate-email.service";
-import { requireRole } from "@/lib/permissions";
+import { requireRole, requireSession } from "@/lib/permissions";
 
 export async function issueCertificateAction(data: {
   organization_id: string;
@@ -60,4 +60,14 @@ export async function sendCertificateEmailAction(certificateId: string) {
 export async function getEmailLogsAction(certificateId: string) {
   await requireRole(["admin"]);
   return emailService.getEmailLogs(certificateId);
+}
+
+export async function getMyCertificatesAction() {
+  const session = await requireSession();
+  return certService.getMyCertificates(session.email!);
+}
+
+export async function getMyCertificateAction(id: string) {
+  const session = await requireSession();
+  return certService.getMyCertificate(id, session.email!);
 }

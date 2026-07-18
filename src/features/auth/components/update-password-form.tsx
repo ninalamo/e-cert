@@ -28,7 +28,8 @@ export default function UpdatePasswordForm() {
     }
 
     setDone(true);
-    setTimeout(() => router.push("/dashboard"), 1200);
+    const dest = result?.redirectTo ?? "/login";
+    setTimeout(() => router.push(dest), 1200);
   }
 
   if (done) {

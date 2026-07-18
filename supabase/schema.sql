@@ -4,29 +4,14 @@
 -- Safe to re-run: drops everything before recreating.
 -- ============================================================
 
--- Extensions required for password hashing in the seed section.
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 -- ============================================================
 -- 1. DROP EXISTING (reverse dependency order)
 -- ============================================================
 
-DROP POLICY IF EXISTS "Org admins can view email logs" ON certificate_emails;
-DROP POLICY IF EXISTS "Org admins can manage certificates" ON certificates;
-DROP POLICY IF EXISTS "Users can read org certificates" ON certificates;
-DROP POLICY IF EXISTS "Org admins can manage templates" ON certificate_templates;
-DROP POLICY IF EXISTS "Users can read org templates" ON certificate_templates;
-DROP POLICY IF EXISTS "Owners can remove members" ON user_memberships;
-DROP POLICY IF EXISTS "Owners can add members" ON user_memberships;
-DROP POLICY IF EXISTS "Users can read own memberships" ON user_memberships;
-DROP POLICY IF EXISTS "Owners can delete orgs" ON organizations;
-DROP POLICY IF EXISTS "Owners can update orgs" ON organizations;
-DROP POLICY IF EXISTS "Authenticated users can create orgs" ON organizations;
-DROP POLICY IF EXISTS "Users can read own orgs" ON organizations;
-
 DROP TABLE IF EXISTS certificate_emails CASCADE;
 DROP TABLE IF EXISTS certificates CASCADE;
 DROP TABLE IF EXISTS certificate_templates CASCADE;
+DROP TABLE IF EXISTS event_attendees CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS user_memberships CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
@@ -98,6 +83,23 @@ CREATE TABLE certificates (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE event_attendees (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  attended BOOLEAN NOT NULL DEFAULT FALSE,
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
+  attended_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  certificate_id UUID REFERENCES certificates(id),
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(event_id, email)
+);
+
 CREATE TABLE certificate_emails (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   certificate_id UUID NOT NULL REFERENCES certificates(id) ON DELETE CASCADE,
@@ -119,6 +121,9 @@ CREATE INDEX idx_user_memberships_org_id ON user_memberships(organization_id);
 CREATE INDEX idx_cert_templates_org ON certificate_templates(organization_id);
 CREATE INDEX idx_events_org ON events(organization_id);
 CREATE INDEX idx_events_status ON events(status);
+CREATE INDEX idx_attendees_event ON event_attendees(event_id);
+CREATE INDEX idx_attendees_org ON event_attendees(organization_id);
+CREATE INDEX idx_attendees_completed ON event_attendees(event_id, completed);
 CREATE INDEX idx_certificates_org ON certificates(organization_id);
 CREATE INDEX idx_certificates_event ON certificates(event_id);
 CREATE INDEX idx_certificates_number ON certificates(certificate_number);
@@ -202,6 +207,22 @@ CREATE POLICY "Staff and admins manage events" ON events
     )
   );
 
+-- Event attendees
+ALTER TABLE event_attendees ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Members can read attendees" ON event_attendees
+  FOR SELECT USING (
+    organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "Staff and admins manage attendees" ON event_attendees
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM user_memberships
+      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+    )
+  );
+
 -- Certificates
 ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
 
@@ -243,40 +264,22 @@ INSERT INTO organizations (id, name, slug, created_at, updated_at)
 VALUES ('d4444444-4444-4444-4444-444444444444', 'Lyceum Of Alabang', 'lyceum-of-alabang', now(), now())
 ON CONFLICT (id) DO NOTHING;
 
--- 5b. Default users for every role (admin / staff / participant).
---     These are seeded via the Auth Admin API (not raw SQL) because
---     direct INSERTs into auth.users produce a password hash that the
---     current GoTrue rejects on login (500 on /auth/v1/token). The Admin
---     API hashes correctly and fills all bookkeeping columns.
+-- 5b. Auth users + memberships are seeded via the Supabase Admin API,
+--     NOT raw SQL. GoTrue (Supabase Auth) rejects password hashes
+--     produced by pgcrypto — only the Admin API produces valid hashes.
 --
---     Run:  npx tsx scripts/seed-users.ts   (or PUT /api/health on localhost)
---     Password for all seeded users: "password123"
---     Emails: admin@lyceumalabang.edu.ph, staff@lyceumalabang.edu.ph,
---             participant@lyceumalabang.edu.ph
+--     Clean slate: remove all auth rows so GoTrue starts fresh.
+--     Safe to re-run.
+DELETE FROM auth.refresh_tokens;
+DELETE FROM auth.sessions;
+DELETE FROM auth.identities;
+DELETE FROM auth.users;
+
+--     After running this schema, seed users by running:
+--       npx tsx scripts/seed-users.ts
+--     Or by calling PUT http://localhost:3000/api/health
 --
---     The script also grants each user a role in the single organization
---     (d4444444-4444-4444-4444-444444444444) via user_memberships.
--- defined by DEFAULT_ROLE in src/lib/permissions.ts.
-
--- 5c. Revert step (DELETE only — safe to re-run).
---     Removes any previously seeded auth rows and their org memberships
---     so the seed script starts from a clean slate. We intentionally do
---     NOT INSERT into auth.users here (that corrupts GoTrue); user
---     creation is done by the Admin API in scripts/seed-users.ts.
-DELETE FROM auth.identities
-WHERE user_id IN (
-  SELECT id FROM auth.users WHERE email LIKE '%@lyceum%'
-);
-
-DELETE FROM auth.users
-WHERE email LIKE '%@lyceum%';
-
-DELETE FROM user_memberships
-WHERE user_id IN (
-  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1'::uuid,
-  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2'::uuid,
-  'cccccccc-cccc-cccc-cccc-ccccccccccc3'::uuid
-);
--- Note: membership grants are created by scripts/seed-users.ts (Admin API),
--- because user_memberships.user_id has a FK to auth.users which does not
--- exist until the seed script creates the users.
+--     Default credentials (all roles):
+--       admin@lyceumalabang.edu.ph      / password123
+--       staff@lyceumalabang.edu.ph      / password123
+--       participant@lyceumalabang.edu.ph / password123

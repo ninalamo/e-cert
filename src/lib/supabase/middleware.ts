@@ -8,6 +8,9 @@ export async function updateSession(request: NextRequest) {
     process.env.SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: {
+        name: "sb-odujtmhhguezexkpbhrw-auth-token",
+      },
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -36,7 +39,16 @@ export async function updateSession(request: NextRequest) {
   const isProtectedRoute =
     request.nextUrl.pathname.startsWith("/dashboard");
 
+  const isParticipantRoute =
+    request.nextUrl.pathname.startsWith("/my");
+
   if (isProtectedRoute && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  if (isParticipantRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

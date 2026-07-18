@@ -6,6 +6,7 @@ import {
   getEventWithStatsAction,
   updateEventAction,
 } from "@/features/events/server/event.actions";
+import AttendeesManager from "@/features/events/components/attendees-manager";
 import { getTemplatesAction } from "@/features/templates/server/template.actions";
 import type { Event } from "@/types/event";
 import type { Certificate } from "@/types/certificate";
@@ -263,6 +264,11 @@ export default function EventDetail({ eventId }: { eventId: string }) {
           </div>
         )}
       </div>
+
+      <AttendeesManager
+        eventId={eventId}
+        organizationId={event.organization_id}
+      />
     </div>
   );
 }
