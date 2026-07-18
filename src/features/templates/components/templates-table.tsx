@@ -11,6 +11,8 @@ import { ORG_ID } from "@/lib/org";
 import { usePagination, Paginator } from "@/components/ui/paginator";
 import { SkeletonTable } from "@/components/ui/skeleton";
 
+const CERT_WIDTH = 960;
+
 type FilterKey = "all" | "with-description" | "without-description";
 type SortKey = "name-asc" | "name-desc" | "created-desc" | "created-asc";
 
@@ -35,6 +37,18 @@ export default function TemplatesTable() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sort, setSort] = useState<SortKey>("created-desc");
+  const [previewTemplate, setPreviewTemplate] = useState<CertificateTemplate | null>(null);
+  const [certHeight, setCertHeight] = useState(680);
+
+  useEffect(() => {
+    function handleMessage(e: MessageEvent) {
+      if (typeof e.data === "number") {
+        setCertHeight(e.data);
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -201,6 +215,12 @@ export default function TemplatesTable() {
                     {new Date(t.created_at).toLocaleDateString()}
                   </td>
                   <td className="text-right whitespace-nowrap">
+                    <button
+                      onClick={() => setPreviewTemplate(t)}
+                      className="text-xs text-info hover:underline mr-3"
+                    >
+                      Preview
+                    </button>
                     <Link
                       href={`/templates/${t.id}`}
                       className="text-xs text-info hover:underline mr-3"
@@ -229,6 +249,38 @@ export default function TemplatesTable() {
             }}
           />
         </div>
+      )}
+
+      {previewTemplate && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/5 backdrop-blur-sm"
+            onClick={() => { setPreviewTemplate(null); setCertHeight(680); }}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+            <div className="relative pointer-events-auto" style={{ height: "85vh", aspectRatio: "297 / 210", maxWidth: "90vw" }}>
+              <iframe
+                srcDoc={`<!DOCTYPE html><html><head><meta name="viewport" content="width=${CERT_WIDTH}"><style>body{margin:0;overflow:hidden;}${previewTemplate.css_content ?? ""}</style></head><body>${previewTemplate.html_content.replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz").replace(/\{\{certificate_number\}\}/g, "CERT-000001").replace(/\{\{issued_date\}\}/g, new Date().toLocaleDateString()).replace(/\{\{organization_name\}\}/g, "Sample Organization")}<script>function send(){parent.postMessage(document.body.scrollHeight,"*")}send();new ResizeObserver(send).observe(document.body);</script></body></html>`}
+                className="w-full h-full bg-white block shadow-2xl"
+                title="Template Preview"
+              />
+              <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                <Link
+                  href={`/templates/${previewTemplate.id}`}
+                  className="bg-white/80 text-black text-xs font-medium px-4 py-2 rounded-full shadow-lg backdrop-blur-md border border-black/5 hover:bg-white/90 transition-colors"
+                >
+                  Edit in page
+                </Link>
+              </div>
+              <button
+                onClick={() => { setPreviewTemplate(null); setCertHeight(680); }}
+                className="absolute top-3 right-3 bg-white/80 text-black rounded-full w-8 h-8 flex items-center justify-center shadow-lg backdrop-blur-md border border-black/5 hover:bg-white/90 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
