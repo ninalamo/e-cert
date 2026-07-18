@@ -7,7 +7,6 @@ import {
   addAttendeeAction,
   updateAttendeeAction,
   removeAttendeeAction,
-  bulkAddAttendeesAction,
   issueCertificatesForCompletedAction,
 } from "@/features/events/server/attendee.actions";
 import type { EventAttendee } from "@/types/event-attendee";
@@ -23,8 +22,6 @@ export default function AttendeesManager({
   const [loaded, setLoaded] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [bulkText, setBulkText] = useState("");
-  const [showBulk, setShowBulk] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,33 +53,6 @@ export default function AttendeesManager({
       await load();
       setMessage("Attendee added.");
     }
-  }
-
-  async function handleBulk() {
-    setError(null);
-    setMessage(null);
-    setBusy(true);
-    const lines = bulkText
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    const parsed = lines.map((l) => {
-      const [namePart, emailPart] = l.split(/[,;]+/).map((s) => s.trim());
-      return { name: namePart ?? "", email: emailPart ?? "" };
-    });
-    const result = await bulkAddAttendeesAction({
-      event_id: eventId,
-      organization_id: organizationId,
-      attendees: parsed,
-    });
-    setBusy(false);
-    setBulkText("");
-    setShowBulk(false);
-    await load();
-    setMessage(
-      `${result.added} added, ${result.skipped} skipped` +
-        (result.errors.length ? `, ${result.errors.length} failed` : "")
-    );
   }
 
   async function toggle(id: string, field: "attended" | "completed", value: boolean) {
@@ -142,13 +112,6 @@ export default function AttendeesManager({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowBulk((v) => !v)}
-            className="text-xs text-info hover:underline"
-          >
-            {showBulk ? "Hide bulk add" : "Bulk add (CSV)"}
-          </button>
-          <button
-            type="button"
             onClick={handleBulkIssue}
             disabled={busy || completedCount === 0}
             className="btn-brand-soft disabled:opacity-50"
@@ -200,29 +163,6 @@ export default function AttendeesManager({
           {busy ? "Adding..." : "Add Attendee"}
         </button>
       </form>
-
-      {showBulk && (
-        <div className="rounded-md border p-3 space-y-2">
-          <p className="text-xs text-muted-foreground">
-            One per line: <code>Name, email@domain.com</code>
-          </p>
-          <textarea
-            value={bulkText}
-            onChange={(e) => setBulkText(e.target.value)}
-            rows={6}
-            className="block w-full rounded-md border px-3 py-2 text-sm font-mono"
-            placeholder={"Jane Doe, jane@lyceumalabang.edu.ph\nJohn Smith, john@lyceumalabang.edu.ph"}
-          />
-          <button
-            type="button"
-            onClick={handleBulk}
-            disabled={busy}
-            className="btn-brand disabled:opacity-50"
-          >
-            {busy ? "Adding..." : "Add List"}
-          </button>
-        </div>
-      )}
 
       {attendees.length === 0 ? (
         <div className="border rounded-md p-8 text-center">
