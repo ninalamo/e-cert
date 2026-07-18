@@ -21,7 +21,6 @@ const statusColors: Record<string, string> = {
 interface EventDetailData {
   event: Event;
   template: CertificateTemplate | null;
-  stats: { total: number; active: number; revoked: number };
 }
 
 export default function EventDetail({ eventId }: { eventId: string }) {
@@ -92,7 +91,7 @@ export default function EventDetail({ eventId }: { eventId: string }) {
     return <p className="text-red-600 text-sm">Event not found</p>;
   }
 
-  const { event, template, stats } = data;
+  const { event, template } = data;
 
   return (
     <div className="space-y-6">
@@ -114,35 +113,21 @@ export default function EventDetail({ eventId }: { eventId: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 text-sm">
-        <div className="rounded-md border p-4">
-          <p className="font-medium text-muted-foreground">Status</p>
-          <div className="mt-1 flex items-center gap-2">
-            <span className={statusColors[event.status] ?? "status-pill status-draft"}>
-              {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-            </span>
-            <select
-              value={event.status}
-              onChange={(e) => handleStatusChange(e.target.value as "draft" | "published" | "completed")}
-              className="rounded-md border px-2 py-1 text-xs"
-            >
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-        </div>
-        <div className="rounded-md border p-4">
-          <p className="font-medium text-muted-foreground">Total Issued</p>
-          <p className="text-2xl font-bold mt-1">{stats.total}</p>
-        </div>
-        <div className="rounded-md border p-4">
-          <p className="font-medium text-muted-foreground">Active</p>
-          <p className="text-2xl font-bold mt-1 text-green-600">{stats.active}</p>
-        </div>
-        <div className="rounded-md border p-4">
-          <p className="font-medium text-muted-foreground">Revoked</p>
-          <p className="text-2xl font-bold mt-1 text-red-600">{stats.revoked}</p>
+      <div className="rounded-md border p-4 text-sm">
+        <p className="font-medium text-muted-foreground">Status</p>
+        <div className="mt-1 flex items-center gap-2">
+          <span className={statusColors[event.status] ?? "status-pill status-draft"}>
+            {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+          </span>
+          <select
+            value={event.status}
+            onChange={(e) => handleStatusChange(e.target.value as "draft" | "published" | "completed")}
+            className="rounded-md border px-2 py-1 text-xs"
+          >
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+            <option value="completed">Completed</option>
+          </select>
         </div>
       </div>
 
