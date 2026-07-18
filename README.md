@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# E-Cert
+
+Digital certificate management system for organizations. Built with Next.js (App Router) and Supabase.
+
+## User Roles
+
+| Role | Description |
+|------|-------------|
+| **Admin** | Full access to all features |
+| **Staff** | (Reserved) |
+| **Participant** | View own profile and certificates |
+| **Guest** | Unauthenticated; certificate verification only |
+
+---
+
+## User Stories
+
+### Events
+
+| ID | As a... | I want to... | So that... |
+|----|---------|-------------|------------|
+| E-1 | Admin | Create an event with a name, date, and location | I can organize certificate issuances |
+| E-2 | Admin | Update an event's details | I can correct or modify event information |
+| E-3 | Admin | Delete an event | I can remove events that are no longer needed |
+
+### Certificates
+
+| ID | As a... | I want to... | So that... |
+|----|---------|-------------|------------|
+| C-1 | Admin | View all certificates across the organization | I can audit and manage issued certificates |
+| C-2 | Admin | Create a certificate by mapping it to an event template | I can issue certificates for an event |
+| C-3 | Admin | Update a certificate's details | I can correct errors on issued certificates |
+| C-4 | Admin | Delete a certificate | I can revoke access to invalid certificates |
+| C-5 | Admin | Issue certificates to participants in bulk via CSV upload (name, email) | I can onboard many participants at once without manual entry |
+| C-6 | Admin | Assign a certificate using a CSV (name, email, PDF path) | I can override auto-generated certificates with custom PDFs |
+| C-7 | Admin | Revoke a single certificate | I can invalidate a specific certificate |
+| C-8 | Admin | Revoke certificates in batch | I can revoke multiple certificates at once |
+| C-9 | Participant | View only my own certificates | I can access my issued certificates |
+| C-10 | Guest | Verify a certificate by its certificate number | I can confirm if a certificate is valid |
+
+### Participant Profile
+
+| ID | As a... | I want to... | So that... |
+|----|---------|-------------|------------|
+| P-1 | Participant | View my own profile (name, email, role) | I can confirm my account details |
+
+### Authentication
+
+| ID | As a... | I want to... | So that... |
+|----|---------|-------------|------------|
+| A-1 | Guest | Register a new account | I can create a participant account |
+| A-2 | Guest | Log in with my email and password | I can access my dashboard |
+| A-3 | Guest | Request a password reset | I can recover access if I forget my password |
+| A-4 | Authenticated user | Log out | I can end my session securely |
+
+---
+
+## Public Pages (No Authentication Required)
+
+| Route | Description |
+|-------|-------------|
+| `/login` | Sign in to an existing account |
+| `/register` | Create a new participant account |
+| `/forgot-password` | Request a password reset email |
+| `/verify` | Verify a certificate by number |
+
+---
+
+## Protected Pages (Authentication Required)
+
+All authenticated users (any role) can access:
+
+| Route | Description |
+|-------|-------------|
+| `/dashboard` | Overview / home |
+| `/dashboard/events` | List, create, edit, delete events |
+| `/dashboard/events/[id]` | Event detail (attendees, certificates) |
+| `/dashboard/events/[id]/upload` | Upload CSV of participants |
+| `/dashboard/events/[id]/issue` | Issue certificates for event |
+| `/dashboard/certificates` | List all certificates |
+| `/dashboard/templates` | Certificate template editor |
+| `/my` | Participant home |
+| `/my/profile` | View own profile |
+| `/my/certificates` | View own certificates |
+
+---
+
+## Seeded Users
+
+| Email | Password | Role |
+|-------|----------|------|
+| admin@lyceumalabang.edu.ph | password123 | admin |
+| staff@lyceumalabang.edu.ph | password123 | staff |
+| participant@lyceumalabang.edu.ph | password123 | participant |
+
+Reseed via `PUT http://localhost:3000/api/health` (localhost only).
+
+---
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000).
