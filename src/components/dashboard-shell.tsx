@@ -1,5 +1,6 @@
 import { ORG_NAME } from "@/lib/org";
 import Sidebar from "@/components/sidebar";
+import Breadcrumbs from "@/components/breadcrumbs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import LogoutButton from "@/components/logout-button";
 import type { SessionUser } from "@/lib/permissions";
@@ -23,7 +24,10 @@ export default function DashboardShell({
             <LogoutButton />
           </div>
         </header>
-        <main className="p-6">{children}</main>
+        <main className="p-6">
+          <Breadcrumbs />
+          {children}
+        </main>
       </div>
     </div>
   );

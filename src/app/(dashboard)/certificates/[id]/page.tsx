@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { use } from "react";
-import Link from "next/link";
 import { getCertificateAction } from "@/features/certificates/server/certificate.actions";
 import { getTemplateAction } from "@/features/templates/server/template.actions";
 import EmailHistory from "@/features/certificates/components/email-history";
@@ -56,22 +55,14 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ id
             {certificate.recipient_name} ({certificate.recipient_email})
           </p>
         </div>
-        <div className="flex gap-2">
-          <a
-            href={`/api/certificates/${certificate.id}/pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
-          >
-            Download PDF
-          </a>
-          <Link
-            href="/certificates"
-            className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
-          >
-            Back to list
-          </Link>
-        </div>
+        <a
+          href={`/api/certificates/${certificate.id}/pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+        >
+          Download PDF
+        </a>
       </div>
 
       <div className="grid grid-cols-2 gap-4 text-sm">

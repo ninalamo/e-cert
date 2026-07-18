@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMyCertificateAction } from "@/features/certificates/server/certificate.actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,13 +16,6 @@ export default async function MyCertificateDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/my/certificates"
-        className="text-sm font-medium text-brand-700 underline"
-      >
-        &larr; Back to certificates
-      </Link>
-
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
