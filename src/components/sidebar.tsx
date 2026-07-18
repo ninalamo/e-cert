@@ -12,12 +12,12 @@ type NavItem = {
   label: string;
   href: string;
   children?: NavChild[];
-  adminOnly?: boolean;
+  roles?: UserRole[];
 };
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
-  { label: "Events", href: "/events" },
+  { label: "Events", href: "/events", roles: ["admin", "staff"] },
   {
     label: "Certificates",
     href: "/certificates",
@@ -25,8 +25,9 @@ const navItems: NavItem[] = [
       { label: "Records", href: "/certificates" },
       { label: "Editor", href: "/templates" },
     ],
+    roles: ["admin", "staff"],
   },
-  { label: "Members", href: "/members", adminOnly: true },
+  { label: "Members", href: "/members", roles: ["admin"] },
 ];
 
 function isActivePath(pathname: string, href: string, exact = false) {
@@ -51,7 +52,12 @@ export default function Sidebar({ role }: { role: UserRole }) {
     };
   }, []);
 
-  const visibleNav = navItems.filter((item) => !item.adminOnly || role === "admin");
+  const homeHref = role === "participant" ? "/my" : "/dashboard";
+  const visibleNav = navItems
+    .map((item) =>
+      item.label === "Dashboard" ? { ...item, href: homeHref } : item
+    )
+    .filter((item) => !item.roles || item.roles.includes(role));
 
   return (
     <aside className="w-64 border-r border-default bg-surface-muted p-4">

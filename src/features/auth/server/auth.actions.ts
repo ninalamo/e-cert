@@ -105,6 +105,20 @@ export async function updatePassword(data: { password: string }) {
   return { success: true, redirectTo };
 }
 
+export async function updateEmail(data: { email: string }) {
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.updateUser({
+    email: data.email,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true };
+}
+
 export async function getCurrentUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -77,6 +77,10 @@ export function canManageMembers(role: UserRole): boolean {
   return role === "admin";
 }
 
+export function canManageUsers(role: UserRole): boolean {
+  return role === "admin";
+}
+
 /**
  * A participant may only see certificates issued to their own email.
  */

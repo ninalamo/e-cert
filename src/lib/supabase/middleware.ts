@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/dashboard") ||
     request.nextUrl.pathname.startsWith("/certificates") ||
     request.nextUrl.pathname.startsWith("/templates") ||
-    request.nextUrl.pathname.startsWith("/members");
+    request.nextUrl.pathname.startsWith("/users");
 
   const isParticipantRoute =
     request.nextUrl.pathname.startsWith("/my");

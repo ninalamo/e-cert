@@ -1,11 +1,11 @@
 "use server";
 
 import * as attendeeService from "./attendee.service";
-import { requireSession } from "@/lib/permissions";
+import { requireRole } from "@/lib/permissions";
 import type { AttendeeMetadata } from "@/types/event-attendee";
 
 export async function getAttendeesAction(eventId: string) {
-  await requireSession();
+  await requireRole(["admin", "staff"]);
   return attendeeService.getAttendees(eventId);
 }
 
@@ -17,7 +17,7 @@ export async function addAttendeeAction(data: {
   file_path?: string;
   mode?: "template" | "file";
 }) {
-  await requireSession();
+  await requireRole(["admin", "staff"]);
   const metadata: Record<string, unknown> = {};
   if (data.mode) metadata.generation_mode = data.mode;
   if (data.file_path) metadata.file_path = data.file_path;
@@ -39,12 +39,12 @@ export async function updateAttendeeAction(
     completed: boolean;
   }>
 ) {
-  await requireSession();
+  await requireRole(["admin", "staff"]);
   return attendeeService.updateAttendee(id, data);
 }
 
 export async function removeAttendeeAction(id: string) {
-  await requireSession();
+  await requireRole(["admin", "staff"]);
   return attendeeService.removeAttendee(id);
 }
 
@@ -53,7 +53,7 @@ export async function bulkAddAttendeesAction(data: {
   organization_id: string;
   attendees: Array<{ name: string; email: string; metadata?: AttendeeMetadata }>;
 }) {
-  await requireSession();
+  await requireRole(["admin", "staff"]);
   return attendeeService.bulkAddAttendees(
     data.event_id,
     data.organization_id,
@@ -65,6 +65,6 @@ export async function issueCertificatesForCompletedAction(
   eventId: string,
   options?: { send_email?: boolean }
 ) {
-  await requireSession();
+  await requireRole(["admin", "staff"]);
   return attendeeService.issueCertificatesForCompleted(eventId, options);
 }

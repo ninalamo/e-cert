@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import UpdateEmailForm from "./update-email-form";
 
 export default async function MyProfilePage() {
   const session = await requireSession();
@@ -34,6 +35,8 @@ export default async function MyProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      <UpdateEmailForm currentEmail={session.email ?? ""} />
     </div>
   );
 }
