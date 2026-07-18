@@ -44,7 +44,7 @@ export async function updateEventAction(
     organizer?: string;
     certificate_title?: string;
     valid_until?: string;
-    status?: "draft" | "published" | "completed";
+    status?: "draft" | "active" | "archive";
     template_id?: string;
   }
 ) {

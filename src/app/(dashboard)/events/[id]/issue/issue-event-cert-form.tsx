@@ -19,7 +19,16 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
   useEffect(() => {
     let active = true;
     getEventAction(eventId).then((e) => {
-      if (active) setEvent(e);
+      if (active) {
+        setEvent(e);
+        if (e && e.status !== "active") {
+          setError(
+            e.status === "draft"
+              ? "This event is still a draft. Activate it before issuing certificates."
+              : "This event is archived. Certificate issuance is no longer available."
+          );
+        }
+      }
     });
     return () => { active = false; };
   }, [eventId]);
@@ -70,6 +79,14 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
         {success && (
           <div className="rounded-md bg-green-50 p-3 text-sm text-green-600">{success}</div>
         )}
+        {event.status === "active" &&
+          event.valid_until &&
+          new Date(event.valid_until) <= new Date() && (
+            <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-600">
+              This event&apos;s validity period has ended. Certificates issued may not
+              be valid.
+            </div>
+          )}
 
         <div>
           <label htmlFor="name" className="block text-sm font-medium">
@@ -80,7 +97,8 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+            disabled={event.status !== "active"}
+            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm disabled:opacity-50"
           />
         </div>
 
@@ -94,19 +112,29 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+            disabled={event.status !== "active"}
+            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm disabled:opacity-50"
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            id="send_email"
-            type="checkbox"
-            checked={sendEmail}
-            onChange={(e) => setSendEmail(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300"
-          />
-          <label htmlFor="send_email" className="text-sm font-medium">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={sendEmail}
+            onClick={() => setSendEmail(!sendEmail)}
+            disabled={event.status !== "active"}
+            className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-50 ${
+              sendEmail ? "bg-[var(--color-success)]" : "bg-[var(--color-border-strong)]"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
+                sendEmail ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+          <label className="text-sm font-medium">
             Send certificate email to recipient
           </label>
         </div>
@@ -120,7 +148,7 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
           </Link>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || event.status !== "active"}
             className="btn-brand disabled:opacity-50"
           >
             {loading ? "Issuing..." : "Issue Certificate"}

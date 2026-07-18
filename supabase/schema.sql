@@ -60,7 +60,7 @@ CREATE TABLE events (
   organizer TEXT,
   certificate_title TEXT DEFAULT 'Certificate of Participation',
   valid_until DATE,
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'completed')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'archive')),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

@@ -89,6 +89,9 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
     getEventAction(eventId).then((e) => {
       if (!active || !e) return;
       setEvent(e);
+      if (e.status === "archive") {
+        setError("This event is archived. CSV uploads are no longer available.");
+      }
       if (e.template_id) {
         getTemplatesAction(e.organization_id).then((ts) => {
           if (!active) return;
@@ -344,7 +347,8 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
               type="file"
               accept=".csv,.txt"
               onChange={handleCsvChange}
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              disabled={event?.status === "archive"}
+              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm disabled:opacity-50"
             />
           </div>
 
@@ -358,7 +362,8 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
               accept=".pdf,.png,.jpg,.jpeg"
               multiple
               onChange={handleFilesChange}
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              disabled={event?.status === "archive"}
+              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm disabled:opacity-50"
             />
             {uploadedFiles.size > 0 && (
               <p className="mt-1 text-xs text-muted-foreground">

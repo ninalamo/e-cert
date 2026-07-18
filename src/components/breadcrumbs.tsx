@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getBreadcrumbs } from "@/lib/routes";
@@ -21,17 +22,19 @@ export default function Breadcrumbs() {
   return (
     <Breadcrumb className="mb-4">
       <BreadcrumbList>
-        {items.map((item) => (
-          <BreadcrumbItem key={item.href}>
-            {item.isCurrent ? (
-              <BreadcrumbPage>{item.label}</BreadcrumbPage>
-            ) : (
-              <BreadcrumbLink render={<Link href={item.href} />}>
-                {item.label}
-              </BreadcrumbLink>
-            )}
+        {items.map((item, i) => (
+          <React.Fragment key={item.href}>
+            <BreadcrumbItem>
+              {item.isCurrent ? (
+                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink render={<Link href={item.href} />}>
+                  {item.label}
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
             {!item.isCurrent && <BreadcrumbSeparator />}
-          </BreadcrumbItem>
+          </React.Fragment>
         ))}
       </BreadcrumbList>
     </Breadcrumb>

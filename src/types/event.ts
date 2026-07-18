@@ -9,7 +9,7 @@ export interface Event {
   organizer: string | null;
   certificate_title: string | null;
   valid_until: string | null;
-  status: "draft" | "published" | "completed";
+  status: "draft" | "active" | "archive";
   created_at: string;
   updated_at: string;
 }

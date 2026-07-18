@@ -9,8 +9,8 @@ import { SkeletonTable } from "@/components/ui/skeleton";
 
 const statusColors: Record<string, string> = {
   draft: "status-pill status-draft",
-  published: "status-pill status-active",
-  completed: "status-pill status-info",
+  active: "status-pill status-active",
+  archive: "status-pill status-info",
 };
 
 export default function EventsList() {
