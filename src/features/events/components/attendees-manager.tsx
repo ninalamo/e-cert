@@ -22,6 +22,8 @@ export default function AttendeesManager({
   const [loaded, setLoaded] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [filePath, setFilePath] = useState("");
+  const [mode, setMode] = useState<"template" | "file">("template");
   const [sendEmail, setSendEmail] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +45,8 @@ export default function AttendeesManager({
       organization_id: organizationId,
       name,
       email,
+      file_path: filePath || undefined,
+      mode,
     });
     setBusy(false);
     if (result.error) {
@@ -50,6 +54,8 @@ export default function AttendeesManager({
     } else {
       setName("");
       setEmail("");
+      setFilePath("");
+      setMode("template");
       await load();
       setMessage("Attendee added.");
     }
@@ -158,6 +164,29 @@ export default function AttendeesManager({
             required
             className="mt-1 block w-56 rounded-md border px-3 py-2 text-sm"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">File Path (optional)</label>
+          <input
+            value={filePath}
+            onChange={(e) => {
+              setFilePath(e.target.value);
+              if (e.target.value) setMode("file");
+            }}
+            placeholder="e.g. participant.pdf"
+            className="mt-1 block w-48 rounded-md border px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Mode</label>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value as "template" | "file")}
+            className="mt-1 block rounded-md border px-3 py-2 text-sm"
+          >
+            <option value="template">Template</option>
+            <option value="file">File</option>
+          </select>
         </div>
         <button type="submit" disabled={busy} className="btn-brand disabled:opacity-50">
           {busy ? "Adding..." : "Add Attendee"}

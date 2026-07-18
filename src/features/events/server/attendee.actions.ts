@@ -14,9 +14,20 @@ export async function addAttendeeAction(data: {
   organization_id: string;
   name: string;
   email: string;
+  file_path?: string;
+  mode?: "template" | "file";
 }) {
   await requireSession();
-  return attendeeService.addAttendee(data);
+  const metadata: Record<string, unknown> = {};
+  if (data.mode) metadata.generation_mode = data.mode;
+  if (data.file_path) metadata.file_path = data.file_path;
+  return attendeeService.addAttendee({
+    event_id: data.event_id,
+    organization_id: data.organization_id,
+    name: data.name,
+    email: data.email,
+    metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+  });
 }
 
 export async function updateAttendeeAction(
