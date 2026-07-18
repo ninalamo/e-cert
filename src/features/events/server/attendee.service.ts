@@ -2,7 +2,7 @@ import { EventAttendeeRepository } from "./attendee.repository";
 import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
 import { EventRepository } from "./event.repository";
 import { createClient } from "@/lib/supabase/server";
-import type { EventAttendee } from "@/types/event-attendee";
+import type { EventAttendee, AttendeeMetadata } from "@/types/event-attendee";
 import type { Event } from "@/types/event";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as certService from "@/features/certificates/server/certificate.service";
@@ -105,7 +105,7 @@ export async function removeAttendee(
 export async function bulkAddAttendees(
   eventId: string,
   organizationId: string,
-  attendees: Array<{ name: string; email: string }>,
+  attendees: Array<{ name: string; email: string; metadata?: AttendeeMetadata }>,
   client?: SupabaseClient
 ): Promise<{
   added: number;
@@ -136,7 +136,7 @@ export async function bulkAddAttendees(
       email: a.email,
       attended: false,
       completed: false,
-      metadata: null,
+      metadata: a.metadata ?? null,
     } as Partial<EventAttendee>);
     if (created) added++;
     else errors.push({ email: a.email, error: "Failed to add" });
@@ -209,7 +209,7 @@ export async function issueCertificatesForCompleted(
 
       await certRepo.update(result.certificate.id, {
         metadata: { ...(result.certificate.metadata ?? {}), attendee_id: attendee.id },
-      } as Partial<EventAttendee> & Record<string, unknown>);
+      } as Record<string, unknown>);
 
       await attendeeRepo.update(attendee.id, {
         certificate_id: result.certificate.id,

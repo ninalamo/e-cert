@@ -9,7 +9,6 @@ import {
 import AttendeesManager from "@/features/events/components/attendees-manager";
 import { getTemplatesAction } from "@/features/templates/server/template.actions";
 import type { Event } from "@/types/event";
-import type { Certificate } from "@/types/certificate";
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonDetail } from "@/components/ui/skeleton";
 
@@ -23,7 +22,6 @@ interface EventDetailData {
   event: Event;
   template: CertificateTemplate | null;
   stats: { total: number; active: number; revoked: number };
-  certificates: Certificate[];
 }
 
 export default function EventDetail({ eventId }: { eventId: string }) {
@@ -94,7 +92,7 @@ export default function EventDetail({ eventId }: { eventId: string }) {
     return <p className="text-red-600 text-sm">Event not found</p>;
   }
 
-  const { event, template, stats, certificates } = data;
+  const { event, template, stats } = data;
 
   return (
     <div className="space-y-6">
@@ -108,17 +106,11 @@ export default function EventDetail({ eventId }: { eventId: string }) {
         </div>
         <div className="flex gap-2">
           <Link
-            href={`/events/${eventId}/issue`}
+            href={`/events/${eventId}/upload`}
             className="btn-brand"
           >
-            Issue Certificate
+            Upload CSV
           </Link>
-            <Link
-              href={`/events/${eventId}/upload`}
-              className="btn-brand-soft"
-            >
-              Upload CSV
-            </Link>
         </div>
       </div>
 
@@ -209,61 +201,6 @@ export default function EventDetail({ eventId }: { eventId: string }) {
           <p className="mt-1">{new Date(event.valid_until).toLocaleDateString()}</p>
         </div>
       )}
-
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Certificates</h2>
-        {certificates.length === 0 ? (
-          <div className="border rounded-md p-8 text-center">
-            <p className="text-muted-foreground">No certificates issued yet for this event.</p>
-          </div>
-        ) : (
-          <div className="tbl-container">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th className="text-left">Number</th>
-                  <th className="text-left">Recipient</th>
-                  <th className="text-left">Email</th>
-                  <th className="text-left">Issued</th>
-                  <th className="text-left">Status</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {certificates.map((cert) => (
-                  <tr key={cert.id}>
-                    <td className="font-mono text-xs">{cert.certificate_number}</td>
-                    <td>{cert.recipient_name}</td>
-                    <td className="text-tertiary">{cert.recipient_email}</td>
-                    <td className="text-tertiary">
-                      {new Date(cert.issued_at).toLocaleDateString()}
-                    </td>
-                    <td>
-                      {cert.revoked_at ? (
-                        <span className="status-pill status-revoked">
-                          Revoked
-                        </span>
-                      ) : (
-                        <span className="status-pill status-active">
-                          Active
-                        </span>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      <Link
-                        href={`/certificates/${cert.id}`}
-                        className="text-xs text-info hover:underline"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       <AttendeesManager
         eventId={eventId}

@@ -2,6 +2,7 @@
 
 import * as attendeeService from "./attendee.service";
 import { requireSession } from "@/lib/permissions";
+import type { AttendeeMetadata } from "@/types/event-attendee";
 
 export async function getAttendeesAction(eventId: string) {
   await requireSession();
@@ -39,7 +40,7 @@ export async function removeAttendeeAction(id: string) {
 export async function bulkAddAttendeesAction(data: {
   event_id: string;
   organization_id: string;
-  attendees: Array<{ name: string; email: string }>;
+  attendees: Array<{ name: string; email: string; metadata?: AttendeeMetadata }>;
 }) {
   await requireSession();
   return attendeeService.bulkAddAttendees(
