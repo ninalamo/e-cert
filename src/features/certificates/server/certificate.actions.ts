@@ -2,7 +2,7 @@
 
 import * as certService from "./certificate.service";
 import * as emailService from "./certificate-email.service";
-import { requireRole, requireSession } from "@/lib/permissions";
+import { requireSession } from "@/lib/permissions";
 
 export async function issueCertificateAction(data: {
   organization_id: string;
@@ -14,7 +14,7 @@ export async function issueCertificateAction(data: {
   metadata?: Record<string, unknown>;
   send_email?: boolean;
 }) {
-  const session = await requireRole(["admin", "staff"]);
+  const session = await requireSession();
   return certService.issueCertificate({
     ...data,
     send_email: data.send_email ?? false,
@@ -28,7 +28,7 @@ export async function uploadCertificateFileAction(
   fileBase64: string,
   fileName: string
 ) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   const storage = (await import("@/lib/storage")).getStorageProvider();
   const buffer = Buffer.from(fileBase64, "base64");
   const ext = fileName.split(".").pop() || "pdf";
@@ -38,27 +38,27 @@ export async function uploadCertificateFileAction(
 }
 
 export async function getCertificatesAction(organizationId: string) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return certService.getCertificates(organizationId);
 }
 
 export async function getCertificateAction(id: string) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return certService.getCertificate(id);
 }
 
 export async function revokeCertificateAction(id: string, reason: string) {
-  await requireRole(["admin"]);
+  await requireSession();
   return certService.revokeCertificate(id, reason);
 }
 
 export async function sendCertificateEmailAction(certificateId: string) {
-  const session = await requireRole(["admin", "staff"]);
+  const session = await requireSession();
   return emailService.sendCertificateEmail(certificateId, session.id);
 }
 
 export async function getEmailLogsAction(certificateId: string) {
-  await requireRole(["admin"]);
+  await requireSession();
   return emailService.getEmailLogs(certificateId);
 }
 

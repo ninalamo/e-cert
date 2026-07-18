@@ -21,7 +21,7 @@ export default function NewTemplatePage() {
             ...data,
           });
           if (!result?.error) {
-            window.location.href = "/dashboard/templates";
+            window.location.href = "/templates";
           }
           return result;
         }}

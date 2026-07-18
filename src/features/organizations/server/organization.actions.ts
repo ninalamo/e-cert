@@ -1,7 +1,7 @@
 "use server";
 
 import * as orgService from "./organization.service";
-import { requireRole } from "@/lib/permissions";
+import { requireSession } from "@/lib/permissions";
 import type { UserRole } from "@/types/organization";
 
 export async function createOrganizationAction(_name: string) {
@@ -9,12 +9,12 @@ export async function createOrganizationAction(_name: string) {
 }
 
 export async function getMyOrganizationsAction() {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return orgService.getUserOrganizations("");
 }
 
 export async function getOrganizationMembersAction(organizationId: string) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return orgService.getOrganizationMembers(organizationId);
 }
 
@@ -23,11 +23,11 @@ export async function addMemberAction(
   email: string,
   role: UserRole
 ) {
-  const session = await requireRole(["admin"]);
+  const session = await requireSession();
   return orgService.addMember(organizationId, email, role, undefined);
 }
 
 export async function removeMemberAction(organizationId: string, memberId: string) {
-  const session = await requireRole(["admin"]);
+  const session = await requireSession();
   return orgService.removeMember(organizationId, memberId, session.id);
 }

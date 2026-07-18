@@ -156,7 +156,7 @@ export default function TemplatesTable() {
               </option>
             ))}
           </select>
-          <Link href="/dashboard/templates/new" className="btn-brand whitespace-nowrap">
+          <Link href="/templates/new" className="btn-brand whitespace-nowrap">
             New Template
           </Link>
         </div>
@@ -190,7 +190,7 @@ export default function TemplatesTable() {
                 <tr key={t.id}>
                   <td className="font-medium">
                     <Link
-                      href={`/dashboard/templates/${t.id}`}
+                      href={`/templates/${t.id}`}
                       className="hover:underline"
                     >
                       {t.name}
@@ -202,7 +202,7 @@ export default function TemplatesTable() {
                   </td>
                   <td className="text-right whitespace-nowrap">
                     <Link
-                      href={`/dashboard/templates/${t.id}`}
+                      href={`/templates/${t.id}`}
                       className="text-xs text-info hover:underline mr-3"
                     >
                       Edit

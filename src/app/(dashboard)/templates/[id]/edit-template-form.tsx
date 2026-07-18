@@ -54,7 +54,7 @@ export default function EditTemplateForm({ id }: { id: string }) {
         onSubmit={async (data) => {
           const result = await updateTemplateAction(id, data);
           if (!result?.error) {
-            window.location.href = "/dashboard/templates";
+            window.location.href = "/templates";
           }
           return result;
         }}

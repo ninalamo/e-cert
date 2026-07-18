@@ -108,13 +108,13 @@ export default function EventDetail({ eventId }: { eventId: string }) {
         </div>
         <div className="flex gap-2">
           <Link
-            href={`/dashboard/events/${eventId}/issue`}
+            href={`/events/${eventId}/issue`}
             className="btn-brand"
           >
             Issue Certificate
           </Link>
             <Link
-              href={`/dashboard/events/${eventId}/upload`}
+              href={`/events/${eventId}/upload`}
               className="btn-brand-soft"
             >
               Upload CSV
@@ -251,7 +251,7 @@ export default function EventDetail({ eventId }: { eventId: string }) {
                     </td>
                     <td className="text-right">
                       <Link
-                        href={`/dashboard/certificates/${cert.id}`}
+                        href={`/certificates/${cert.id}`}
                         className="text-xs text-info hover:underline"
                       >
                         View

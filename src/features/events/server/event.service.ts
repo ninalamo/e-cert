@@ -52,7 +52,7 @@ export async function createEvent(
     Partial<Pick<Event, "description" | "event_date" | "location" | "organizer" | "certificate_title" | "valid_until" | "template_id">>,
   client?: SupabaseClient
 ): Promise<{ event: Event | null; error?: string }> {
-  const event = await repos(client ?? (await createClient())).eventRepo.create({
+  const { data: event, error } = await repos(client ?? (await createClient())).eventRepo.create({
     ...data,
     description: data.description ?? null,
     event_date: data.event_date ?? null,
@@ -65,7 +65,7 @@ export async function createEvent(
   } as Partial<Event>);
 
   if (!event) {
-    return { event: null, error: "Failed to create event" };
+    return { event: null, error: error ?? "Failed to create event" };
   }
   return { event };
 }
@@ -116,7 +116,7 @@ export async function cloneTemplateForEvent(
     return { templateId: null, error: "Source template not found" };
   }
 
-  const template = await templateRepo.create({
+  const { data: template, error: cloneError } = await templateRepo.create({
     organization_id: source.organization_id,
     name: `${eventName} - ${source.name}`,
     description: source.description,
@@ -125,7 +125,7 @@ export async function cloneTemplateForEvent(
   });
 
   if (!template) {
-    return { templateId: null, error: "Failed to clone template" };
+    return { templateId: null, error: cloneError ?? "Failed to clone template" };
   }
 
   await eventRepo.update(eventId, { template_id: template.id });

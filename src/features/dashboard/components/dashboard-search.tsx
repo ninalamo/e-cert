@@ -12,7 +12,7 @@ export default function DashboardSearch() {
     if (!query.trim()) return;
     const params = new URLSearchParams();
     params.set("q", query.trim());
-    router.push(`/dashboard/certificates?${params.toString()}`);
+    router.push(`/certificates?${params.toString()}`);
   }
 
   return (

@@ -17,16 +17,16 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
-  { label: "Events", href: "/dashboard/events" },
+  { label: "Events", href: "/events" },
   {
     label: "Certificates",
-    href: "/dashboard/certificates",
+    href: "/certificates",
     children: [
-      { label: "Records", href: "/dashboard/certificates" },
-      { label: "Editor", href: "/dashboard/templates" },
+      { label: "Records", href: "/certificates" },
+      { label: "Editor", href: "/templates" },
     ],
   },
-  { label: "Members", href: "/dashboard/members", adminOnly: true },
+  { label: "Members", href: "/members", adminOnly: true },
 ];
 
 function isActivePath(pathname: string, href: string, exact = false) {

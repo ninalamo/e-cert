@@ -66,7 +66,7 @@ export default function CertificateDetailPage({ params }: { params: Promise<{ id
             Download PDF
           </a>
           <Link
-            href="/dashboard/certificates"
+            href="/certificates"
             className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
           >
             Back to list

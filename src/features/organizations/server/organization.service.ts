@@ -62,14 +62,14 @@ export async function addMember(
     return { error: "User is already a member of this organization" };
   }
 
-  const membership = await membershipRepo.create({
+  const { data: membership, error: createError } = await membershipRepo.create({
     user_id: targetUser.id,
     organization_id: organizationId,
     role,
   } as Record<string, unknown>);
 
   if (!membership) {
-    return { error: "Failed to add member" };
+    return { error: createError ?? "Failed to add member" };
   }
 
   return {};

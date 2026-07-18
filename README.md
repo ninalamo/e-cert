@@ -73,10 +73,10 @@ All authenticated users (any role) can access:
 | Route | Description |
 |-------|-------------|
 | `/dashboard` | Overview / home |
-| `/dashboard/events` | List, create, edit, delete events |
-| `/dashboard/events/[id]` | Event detail (attendees, certificates) |
-| `/dashboard/events/[id]/upload` | Upload CSV of participants |
-| `/dashboard/events/[id]/issue` | Issue certificates for event |
+| `/events` | List, create, edit, delete events |
+| `/events/[id]` | Event detail (attendees, certificates) |
+| `/events/[id]/upload` | Upload CSV of participants |
+| `/events/[id]/issue` | Issue certificates for event |
 | `/dashboard/certificates` | List all certificates |
 | `/dashboard/templates` | Certificate template editor |
 | `/my` | Participant home |

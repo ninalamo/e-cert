@@ -25,9 +25,9 @@ export async function createTemplate(
   data: Pick<CertificateTemplate, "organization_id" | "name" | "description" | "html_content" | "css_content">,
   client?: SupabaseClient
 ): Promise<{ template: CertificateTemplate | null; error?: string }> {
-  const template = await repo(client ?? (await createClient())).create(data as Partial<CertificateTemplate>);
+  const { data: template, error } = await repo(client ?? (await createClient())).create(data as Partial<CertificateTemplate>);
   if (!template) {
-    return { template: null, error: "Failed to create template" };
+    return { template: null, error: error ?? "Failed to create template" };
   }
   return { template };
 }

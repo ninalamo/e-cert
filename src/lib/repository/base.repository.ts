@@ -50,15 +50,18 @@ export abstract class BaseRepository<T> {
     return (data ?? []) as T[];
   }
 
-  async create(data: Partial<T>): Promise<T | null> {
+  async create(data: Partial<T>): Promise<{ data: T | null; error: string | null }> {
     const { data: created, error } = await this.client
       .from(this.table)
       .insert(data as SupabaseInsert)
       .select()
       .single();
 
-    if (error) return null;
-    return created as T;
+    if (error) {
+      console.error(`[${this.table}] create error:`, error.message, error.details, error.hint);
+      return { data: null, error: error.message };
+    }
+    return { data: created as T, error: null };
   }
 
   async update(id: string, data: Partial<T>): Promise<T | null> {

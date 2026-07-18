@@ -47,7 +47,7 @@ export async function addAttendee(
     return { attendee: existing, error: "Attendee with this email already exists" };
   }
 
-  const attendee = await attendeeRepo.create({
+  const { data: attendee } = await attendeeRepo.create({
     event_id: data.event_id,
     organization_id: data.organization_id,
     name: data.name,
@@ -129,7 +129,7 @@ export async function bulkAddAttendees(
       skipped++;
       continue;
     }
-    const result = await attendeeRepo.create({
+    const { data: created } = await attendeeRepo.create({
       event_id: eventId,
       organization_id: organizationId,
       name: a.name,
@@ -138,7 +138,7 @@ export async function bulkAddAttendees(
       completed: false,
       metadata: null,
     } as Partial<EventAttendee>);
-    if (result) added++;
+    if (created) added++;
     else errors.push({ email: a.email, error: "Failed to add" });
   }
 

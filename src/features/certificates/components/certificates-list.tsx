@@ -56,7 +56,7 @@ export default function CertificatesList({ initialQuery = "" }: { initialQuery?:
           className="w-96 rounded-md border px-3 py-2 text-sm"
         />
         <Link
-          href="/dashboard/certificates/issue"
+          href="/certificates/issue"
           className="btn-brand"
         >
           Issue Certificate
@@ -106,7 +106,7 @@ export default function CertificatesList({ initialQuery = "" }: { initialQuery?:
                   </td>
                   <td className="text-right">
                     <Link
-                      href={`/dashboard/certificates/${cert.id}`}
+                      href={`/certificates/${cert.id}`}
                       className="text-xs text-info hover:underline mr-3"
                     >
                       View

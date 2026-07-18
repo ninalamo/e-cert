@@ -2,20 +2,20 @@
 
 import * as eventService from "./event.service";
 import * as certService from "@/features/certificates/server/certificate.service";
-import { requireRole } from "@/lib/permissions";
+import { requireSession } from "@/lib/permissions";
 
 export async function getEventsAction(organizationId: string) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return eventService.getEvents(organizationId);
 }
 
 export async function getEventAction(id: string) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return eventService.getEvent(id);
 }
 
 export async function getEventWithStatsAction(id: string) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return eventService.getEventWithStats(id);
 }
 
@@ -30,7 +30,7 @@ export async function createEventAction(data: {
   valid_until?: string;
   template_id?: string;
 }) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return eventService.createEvent(data);
 }
 
@@ -48,12 +48,12 @@ export async function updateEventAction(
     template_id?: string;
   }
 ) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return eventService.updateEvent(id, data);
 }
 
 export async function deleteEventAction(id: string) {
-  await requireRole(["admin"]);
+  await requireSession();
   return eventService.deleteEvent(id);
 }
 
@@ -62,7 +62,7 @@ export async function cloneTemplateForEventAction(
   eventId: string,
   eventName: string
 ) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return eventService.cloneTemplateForEvent(sourceTemplateId, eventId, eventName);
 }
 
@@ -73,7 +73,7 @@ export async function issueEventCertificateAction(data: {
   recipient_email: string;
   send_email?: boolean;
 }) {
-  const session = await requireRole(["admin", "staff"]);
+  const session = await requireSession();
   const event = await eventService.getEvent(data.event_id);
   if (!event) {
     return { certificate: null, error: "Event not found" };
@@ -99,7 +99,7 @@ export async function bulkIssueEventCertificatesAction(data: {
   recipients: Array<{ name: string; email: string }>;
   send_email?: boolean;
 }) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   const event = await eventService.getEvent(data.event_id);
   if (!event) {
     return { results: [], error: "Event not found" };

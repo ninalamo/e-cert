@@ -42,7 +42,7 @@ export default function EventsList() {
     <div className="space-y-4">
       <div className="flex items-center justify-end">
         <Link
-          href="/dashboard/events/new"
+          href="/events/new"
           className="btn-brand"
         >
           New Event
@@ -74,7 +74,7 @@ export default function EventsList() {
                 <tr key={event.id}>
                   <td className="font-medium">
                     <Link
-                      href={`/dashboard/events/${event.id}`}
+                      href={`/events/${event.id}`}
                       className="hover:underline"
                     >
                       {event.name}
@@ -95,7 +95,7 @@ export default function EventsList() {
                   </td>
                   <td className="text-right">
                     <Link
-                      href={`/dashboard/events/${event.id}`}
+                      href={`/events/${event.id}`}
                       className="text-xs text-info hover:underline mr-3"
                     >
                       View

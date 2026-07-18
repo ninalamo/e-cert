@@ -113,7 +113,7 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
 
         <div className="flex justify-end gap-2">
           <Link
-            href={`/dashboard/events/${eventId}`}
+            href={`/events/${eventId}`}
             className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
           >
             Back to Event

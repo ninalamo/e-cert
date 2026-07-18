@@ -3,15 +3,15 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import * as templateService from "./template.service";
-import { requireRole } from "@/lib/permissions";
+import { requireSession } from "@/lib/permissions";
 
 export async function getTemplatesAction(organizationId: string) {
-  const session = await requireRole(["admin", "staff"]);
+  const session = await requireSession();
   return templateService.getTemplates(organizationId);
 }
 
 export async function getTemplateAction(id: string) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return templateService.getTemplate(id);
 }
 
@@ -22,7 +22,7 @@ export async function createTemplateAction(data: {
   html_content: string;
   css_content?: string;
 }) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return templateService.createTemplate({
     ...data,
     description: data.description ?? null,
@@ -39,7 +39,7 @@ export async function updateTemplateAction(
     css_content?: string;
   }
 ) {
-  await requireRole(["admin", "staff"]);
+  await requireSession();
   return templateService.updateTemplate(id, {
     ...data,
     description: data.description ?? null,
@@ -48,6 +48,6 @@ export async function updateTemplateAction(
 }
 
 export async function deleteTemplateAction(id: string) {
-  await requireRole(["admin"]);
+  await requireSession();
   return templateService.deleteTemplate(id);
 }

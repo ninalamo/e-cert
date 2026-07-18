@@ -265,7 +265,7 @@ export default function AttendeesManager({
                   <td>
                     {a.certificate_id ? (
                       <Link
-                        href={`/dashboard/certificates/${a.certificate_id}`}
+                        href={`/certificates/${a.certificate_id}`}
                         className="text-xs text-info hover:underline"
                       >
                         View

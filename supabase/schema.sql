@@ -155,7 +155,6 @@ ALTER TABLE user_memberships ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can read memberships" ON user_memberships
   FOR SELECT USING (
     user_id = auth.uid()
-    OR organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "Admins can add members" ON user_memberships

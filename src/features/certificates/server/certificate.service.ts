@@ -45,7 +45,7 @@ export async function issueCertificate(data: {
   const certRepo = repo(client);
   const number = await generateCertificateNumber(data.organization_id);
 
-  const certificate = await certRepo.create({
+  const { data: certificate, error } = await certRepo.create({
     organization_id: data.organization_id,
     event_id: data.event_id ?? null,
     template_id: data.template_id ?? null,
@@ -58,7 +58,7 @@ export async function issueCertificate(data: {
   } as Partial<Certificate>);
 
   if (!certificate) {
-    return { certificate: null, error: "Failed to issue certificate" };
+    return { certificate: null, error: error ?? "Failed to issue certificate" };
   }
 
   if (data.send_email && data.user_id) {

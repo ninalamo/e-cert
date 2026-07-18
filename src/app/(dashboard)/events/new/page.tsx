@@ -67,7 +67,7 @@ export default function NewEventPage() {
       await updateEventAction(result.event.id, { template_id: selectedTemplate });
     }
 
-    window.location.href = "/dashboard/events";
+    window.location.href = "/events";
   }
 
   return (
@@ -209,7 +209,7 @@ export default function NewEventPage() {
 
         <div className="flex justify-end gap-2">
           <Link
-            href="/dashboard/events"
+            href="/events"
             className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
           >
             Cancel
