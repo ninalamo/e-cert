@@ -38,6 +38,16 @@ export async function getCurrentSession(): Promise<SessionUser | null> {
 
   const role = (membership?.role as UserRole) ?? DEFAULT_ROLE;
 
+  if (!membership) {
+    console.warn("[permissions] no membership found for user", user.id, { ORG_ID });
+  } else if (!["admin", "staff", "participant"].includes(membership.role)) {
+    console.warn("[permissions] unexpected role value for user", user.id, {
+      rawRole: membership.role,
+      ORG_ID,
+      resolvedRole: role,
+    });
+  }
+
   return {
     id: user.id,
     email: user.email ?? null,

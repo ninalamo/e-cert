@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon } from "lucide-react";
 
 const PAGE_SIZE = 25;
+const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
 
 type FilterStatus = "all" | "not_issued" | "issued" | "revoked" | "expired";
 
@@ -531,6 +532,11 @@ export default function AttendeesManager({
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      if (file.size > MAX_FILE_SIZE) {
+                        setError("File exceeds 1 MB limit. Please choose a smaller file.");
+                        e.target.value = "";
+                        return;
+                      }
                       const reader = new FileReader();
                       reader.onload = (ev) => {
                         const base64 = (ev.target?.result as string).split(",")[1] ?? "";
@@ -657,6 +663,11 @@ export default function AttendeesManager({
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      if (file.size > MAX_FILE_SIZE) {
+                        setError("File exceeds 1 MB limit. Please choose a smaller file.");
+                        e.target.value = "";
+                        return;
+                      }
                       const reader = new FileReader();
                       reader.onload = (ev) => {
                         const base64 = (ev.target?.result as string).split(",")[1] ?? "";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { getEmailLogsAction, sendCertificateEmailAction } from "../server/certificate.actions";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 import { SkeletonList } from "@/components/ui/skeleton";
@@ -21,9 +21,11 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
     setLoading(false);
   }, [certificateId]);
 
-  if (!loaded && !loading) {
-    loadLogs();
-  }
+  useEffect(() => {
+    if (!loaded && !loading) {
+      loadLogs();
+    }
+  }, [loaded, loading, loadLogs]);
 
   async function handleSend() {
     setSending(true);

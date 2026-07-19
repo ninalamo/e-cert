@@ -58,7 +58,7 @@ export async function sendCertificateEmailAction(certificateId: string) {
 }
 
 export async function getEmailLogsAction(certificateId: string) {
-  await requireRole(["admin"]);
+  await requireRole(["admin", "staff"]);
   return emailService.getEmailLogs(certificateId);
 }
 
