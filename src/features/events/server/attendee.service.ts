@@ -146,9 +146,8 @@ export async function bulkAddAttendees(
 }
 
 /**
- * Issue certificates for every completed attendee of an event that does not
- * yet have one. Certificates are only issued to attendees that have both
- * attended and completed the event. Returns a per-attendee result summary.
+ * Issue certificates for every attendee of an event that does not yet have one.
+ * Returns a per-attendee result summary.
  */
 export async function issueCertificatesForCompleted(
   eventId: string,
@@ -173,7 +172,7 @@ export async function issueCertificatesForCompleted(
     return { issued: 0, skipped: 0, results: [] };
   }
 
-  const eligible = await attendeeRepo.findCompletedWithoutCertificate(eventId);
+  const eligible = await attendeeRepo.findWithoutCertificate(eventId);
 
   let issued = 0;
   const results: Array<{

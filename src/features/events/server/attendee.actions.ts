@@ -16,11 +16,16 @@ export async function addAttendeeAction(data: {
   email: string;
   file_path?: string;
   mode?: "template" | "file";
+  file_data?: string;
+  file_name?: string;
+  file_type?: string;
 }) {
   await requireRole(["admin", "staff"]);
   const metadata: Record<string, unknown> = {};
   if (data.mode) metadata.generation_mode = data.mode;
-  if (data.file_path) metadata.file_path = data.file_path;
+  if (data.file_data) metadata.file_data = data.file_data;
+  if (data.file_name) metadata.file_name = data.file_name;
+  if (data.file_type) metadata.file_type = data.file_type;
   return attendeeService.addAttendee({
     event_id: data.event_id,
     organization_id: data.organization_id,
@@ -37,6 +42,7 @@ export async function updateAttendeeAction(
     email: string;
     attended: boolean;
     completed: boolean;
+    metadata: Record<string, unknown>;
   }>
 ) {
   await requireRole(["admin", "staff"]);

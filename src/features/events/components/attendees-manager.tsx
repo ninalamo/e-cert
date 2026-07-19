@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   getAttendeesAction,
   addAttendeeAction,
+  updateAttendeeAction,
   removeAttendeeAction,
 } from "@/features/events/server/attendee.actions";
 import type { EventAttendee } from "@/types/event-attendee";
@@ -17,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2Icon, InfoIcon, SearchIcon } from "lucide-react";
+import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -58,7 +59,15 @@ export default function AttendeesManager({
   const [addOpen, setAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
   const [addEmail, setAddEmail] = useState("");
+  const [addMode, setAddMode] = useState<"template" | "file">("template");
   const [addFile, setAddFile] = useState<{ name: string; data: string; type: string } | null>(null);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<EventAttendee | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editMode, setEditMode] = useState<"template" | "file">("template");
+  const [editFile, setEditFile] = useState<{ name: string; data: string; type: string } | null>(null);
 
   const [removeTarget, setRemoveTarget] = useState<EventAttendee | null>(null);
 
@@ -148,7 +157,10 @@ export default function AttendeesManager({
       organization_id: organizationId,
       name: addName,
       email: addEmail,
-      file_path: addFile?.name || undefined,
+      mode: addMode,
+      file_data: addFile?.data,
+      file_name: addFile?.name,
+      file_type: addFile?.type,
     });
     setBusy(false);
     if (result.error) {
@@ -156,10 +168,58 @@ export default function AttendeesManager({
     } else {
       setAddName("");
       setAddEmail("");
+      setAddMode("template");
       setAddFile(null);
       setAddOpen(false);
       await load();
       setMessage("Attendee added.");
+    }
+  }
+
+  function openEdit(a: EventAttendee) {
+    setEditTarget(a);
+    setEditName(a.name);
+    setEditEmail(a.email);
+    setEditMode(a.metadata?.generation_mode === "file" ? "file" : "template");
+    setEditFile(null);
+    setEditOpen(true);
+  }
+
+  async function handleEdit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editTarget) return;
+    setError(null);
+    setMessage(null);
+    setBusy(true);
+
+    const metadata: Record<string, unknown> = { generation_mode: editMode };
+    if (editMode === "file" && editFile) {
+      metadata.file_data = editFile.data;
+      metadata.file_name = editFile.name;
+      metadata.file_type = editFile.type;
+    } else if (editMode === "template") {
+      metadata.file_data = null;
+      metadata.file_name = null;
+      metadata.file_type = null;
+    }
+
+    const result = await updateAttendeeAction(editTarget.id, {
+      name: editName,
+      email: editEmail,
+      metadata,
+    });
+    setBusy(false);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setEditName("");
+      setEditEmail("");
+      setEditMode("template");
+      setEditFile(null);
+      setEditTarget(null);
+      setEditOpen(false);
+      await load();
+      setMessage("Attendee updated.");
     }
   }
 
@@ -262,7 +322,8 @@ export default function AttendeesManager({
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden sm:table-cell">Email</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Issued</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden lg:table-cell">Source</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden lg:table-cell">Has Uploaded PDF</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden lg:table-cell">Cert Option</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden md:table-cell">Status</th>
                   {!readOnly && (
                     <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
@@ -298,8 +359,15 @@ export default function AttendeesManager({
                         <span className="text-xs text-[var(--color-text-muted)]">No</span>
                       )}
                     </td>
+                    <td className="py-3 px-2 text-xs hidden lg:table-cell">
+                      {a.metadata?.file_data ? (
+                        <span className="text-[var(--color-success-text)] font-medium">Yes</span>
+                      ) : (
+                        <span className="text-[var(--color-text-muted)]">No</span>
+                      )}
+                    </td>
                     <td className="py-3 px-2 text-xs text-[var(--color-text-muted)] hidden lg:table-cell">
-                      {a.metadata?.generation_mode === "file" ? "Uploaded PDF" : a.metadata?.generation_mode === "template" ? "System" : "—"}
+                      {a.metadata?.generation_mode === "file" ? "Uploaded" : "System Generated"}
                     </td>
                     <td className="py-3 px-2 hidden md:table-cell">
                       {(() => {
@@ -318,7 +386,14 @@ export default function AttendeesManager({
                     </td>
                     {!readOnly && (
                       <td className="py-3 pr-4">
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(a)}
+                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
+                          >
+                            <PencilIcon className="size-4" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => setRemoveTarget(a)}
@@ -403,47 +478,78 @@ export default function AttendeesManager({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Certificate File <span className="text-tertiary">(optional)</span>
+              <label className="block text-sm font-medium mb-2">
+                Cert Option
               </label>
-              <label
-                className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors cursor-pointer ${
-                  addFile
-                    ? "border-[var(--color-success-border)] bg-[var(--color-success-bg)]"
-                    : "border-border hover:border-border-strong hover:bg-surface-hover"
-                }`}
-              >
-                <input
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg"
-                  className="sr-only"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                      const base64 = (ev.target?.result as string).split(",")[1] ?? "";
-                      setAddFile({ name: file.name, data: base64, type: file.type });
-                    };
-                    reader.readAsDataURL(file);
-                  }}
-                />
-                {addFile ? (
-                  <>
-                    <span className="text-[var(--color-success-text)] font-medium">{addFile.name}</span>
-                    <button
-                      type="button"
-                      onClick={(ev) => { ev.preventDefault(); setAddFile(null); }}
-                      className="text-xs text-danger underline"
-                    >
-                      Remove
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-tertiary">Tap to upload PDF, PNG, or JPG</span>
-                )}
-              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="add-mode"
+                    value="template"
+                    checked={addMode === "template"}
+                    onChange={() => { setAddMode("template"); setAddFile(null); }}
+                    className="accent-[var(--color-brand-600)]"
+                  />
+                  System Generated
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="add-mode"
+                    value="file"
+                    checked={addMode === "file"}
+                    onChange={() => setAddMode("file")}
+                    className="accent-[var(--color-brand-600)]"
+                  />
+                  Use Uploaded
+                </label>
+              </div>
             </div>
+            {addMode === "file" && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Certificate File
+                </label>
+                <label
+                  className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors cursor-pointer ${
+                    addFile
+                      ? "border-[var(--color-success-border)] bg-[var(--color-success-bg)]"
+                      : "border-border hover:border-border-strong hover:bg-surface-hover"
+                  }`}
+                >
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        const base64 = (ev.target?.result as string).split(",")[1] ?? "";
+                        setAddFile({ name: file.name, data: base64, type: file.type });
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  {addFile ? (
+                    <>
+                      <span className="text-[var(--color-success-text)] font-medium">{addFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={(ev) => { ev.preventDefault(); setAddFile(null); }}
+                        className="text-xs text-danger underline"
+                      >
+                        Remove
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-tertiary">Tap to upload PDF, PNG, or JPG</span>
+                  )}
+                </label>
+              </div>
+            )}
 
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => setAddOpen(false)}>
@@ -451,6 +557,132 @@ export default function AttendeesManager({
               </Button>
               <Button type="submit" disabled={busy}>
                 {busy ? "Adding..." : "Add Attendee"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Attendee</DialogTitle>
+            <DialogDescription>
+              Update participant details.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div>
+              <label htmlFor="edit-name" className="block text-sm font-medium">
+                Name *
+              </label>
+              <input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+                className="input mt-1"
+              />
+            </div>
+            <div>
+              <label htmlFor="edit-email" className="block text-sm font-medium">
+                Email *
+              </label>
+              <input
+                id="edit-email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                required
+                className="input mt-1"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Cert Option
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="edit-mode"
+                    value="template"
+                    checked={editMode === "template"}
+                    onChange={() => { setEditMode("template"); setEditFile(null); }}
+                    className="accent-[var(--color-brand-600)]"
+                  />
+                  System Generated
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="edit-mode"
+                    value="file"
+                    checked={editMode === "file"}
+                    onChange={() => setEditMode("file")}
+                    className="accent-[var(--color-brand-600)]"
+                  />
+                  Use Uploaded
+                </label>
+              </div>
+            </div>
+            {editMode === "file" && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Certificate File
+                </label>
+                {editTarget?.metadata?.file_name && !editFile && (
+                  <p className="text-xs text-tertiary mb-2">
+                    Current: {editTarget.metadata.file_name}
+                  </p>
+                )}
+                <label
+                  className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors cursor-pointer ${
+                    editFile
+                      ? "border-[var(--color-success-border)] bg-[var(--color-success-bg)]"
+                      : "border-border hover:border-border-strong hover:bg-surface-hover"
+                  }`}
+                >
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    className="sr-only"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        const base64 = (ev.target?.result as string).split(",")[1] ?? "";
+                        setEditFile({ name: file.name, data: base64, type: file.type });
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  {editFile ? (
+                    <>
+                      <span className="text-[var(--color-success-text)] font-medium">{editFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={(ev) => { ev.preventDefault(); setEditFile(null); }}
+                        className="text-xs text-danger underline"
+                      >
+                        Remove
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-tertiary">Tap to upload PDF, PNG, or JPG</span>
+                  )}
+                </label>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={busy}>
+                {busy ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>

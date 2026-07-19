@@ -33,11 +33,16 @@ export class EventAttendeeRepository extends BaseRepository<EventAttendee> {
     return data as EventAttendee;
   }
 
-  async findCompletedWithoutCertificate(eventId: string): Promise<EventAttendee[]> {
-    return this.findMany(
-      { event_id: eventId, completed: true },
-      { orderBy: "created_at", ascending: true }
-    ).then((rows) => rows.filter((r) => !r.certificate_id));
+  async findWithoutCertificate(eventId: string): Promise<EventAttendee[]> {
+    const { data, error } = await this.client
+      .from(this.table)
+      .select("*, certificates!certificate_id(revoked_at, expires_at)")
+      .eq("event_id", eventId)
+      .is("certificate_id", null)
+      .order("created_at", { ascending: true });
+
+    if (error) return [];
+    return (data ?? []) as EventAttendee[];
   }
 
   async countByEventId(eventId: string): Promise<number> {
