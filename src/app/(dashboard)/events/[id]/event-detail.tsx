@@ -81,9 +81,11 @@ function isExpired(dateStr: string | null): boolean {
 export default function EventDetail({
   eventId,
   canDelete = false,
+  initialTab = "details",
 }: {
   eventId: string;
   canDelete?: boolean;
+  initialTab?: "details" | "attendees";
 }) {
   const router = useRouter();
   const [data, setData] = useState<EventDetailData | null>(null);
@@ -93,7 +95,7 @@ export default function EventDetail({
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateMsg, setTemplateMsg] = useState<string | null>(null);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "attendees">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "attendees">(initialTab);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [editName, setEditName] = useState(false);
   const [nameValue, setNameValue] = useState("");

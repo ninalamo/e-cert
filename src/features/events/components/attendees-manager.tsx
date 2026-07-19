@@ -359,7 +359,7 @@ export default function AttendeesManager({
                     <td className="py-3 px-2 text-[var(--color-text-muted)] hidden sm:table-cell">{a.email}</td>
                     <td className="py-3 px-2">
                       {a.certificate_id ? (
-                        <Link href={`/certificates/${a.certificate_id}`} className="badge-blue">
+                        <Link href={`/certificates/${a.certificate_id}?eventId=${eventId}`} className="badge-blue">
                           Yes
                         </Link>
                       ) : (
@@ -380,7 +380,7 @@ export default function AttendeesManager({
                       {(() => {
                         const status = getAttendeeStatus(a);
                         if (status === "issued") {
-                          return <Link href={`/certificates/${a.certificate_id}`} className="badge-blue">Issued</Link>;
+                          return <Link href={`/certificates/${a.certificate_id}?eventId=${eventId}`} className="badge-blue">Issued</Link>;
                         }
                         if (status === "revoked") {
                           return <span className="badge-amber">Revoked</span>;

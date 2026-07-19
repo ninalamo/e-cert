@@ -11,7 +11,7 @@ export async function getTemplatesAction(organizationId: string) {
 }
 
 export async function getTemplateAction(id: string) {
-  await requireRole(["admin", "staff"]);
+  await requireRole(["admin", "staff", "participant"]);
   return templateService.getTemplate(id);
 }
 

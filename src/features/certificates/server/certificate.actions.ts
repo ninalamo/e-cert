@@ -43,7 +43,10 @@ export async function getCertificatesAction(organizationId: string) {
 }
 
 export async function getCertificateAction(id: string) {
-  await requireRole(["admin", "staff"]);
+  const session = await requireRole(["admin", "staff", "participant"]);
+  if (session.role === "participant") {
+    return certService.getMyCertificate(id, session.email!);
+  }
   return certService.getCertificate(id);
 }
 
@@ -70,4 +73,17 @@ export async function getMyCertificatesAction() {
 export async function getMyCertificateAction(id: string) {
   const session = await requireSession();
   return certService.getMyCertificate(id, session.email!);
+}
+
+export async function getCertificateQrCodeAction(certificateNumber: string) {
+  await requireRole(["admin", "staff", "participant"]);
+  const { generateQrCodeDataUrl } = await import("@/lib/qr");
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const verifyUrl = `${baseUrl}/verify?number=${encodeURIComponent(certificateNumber)}`;
+  return generateQrCodeDataUrl(verifyUrl, { width: 200, margin: 2 });
+}
+
+export async function getSessionRoleAction() {
+  const session = await requireSession();
+  return session.role;
 }

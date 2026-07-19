@@ -9,8 +9,6 @@ const serverSchema = z.object({
   SMTP_USER: z.string().email(),
   SMTP_PASS: z.string().min(1),
   SMTP_FROM: z.string().email(),
-  SSO_FEATURE_FLAG: z.string().optional().default("false"),
-  EMAIL_FEATURE_FLAG: z.string().optional().default("true"),
 });
 
 const clientSchema = z.object({
@@ -28,8 +26,6 @@ function buildEnv() {
     SMTP_USER: process.env.SMTP_USER,
     SMTP_PASS: process.env.SMTP_PASS,
     SMTP_FROM: process.env.SMTP_FROM,
-    SSO_FEATURE_FLAG: process.env.SSO_FEATURE_FLAG,
-    EMAIL_FEATURE_FLAG: process.env.EMAIL_FEATURE_FLAG,
   };
 
   const clientEnv = {

@@ -9,7 +9,25 @@ export async function GET(
 
   const { data: certificate, error } = await supabaseAdmin
     .from("certificates")
-    .select("certificate_number, recipient_name, issued_at, expires_at, revoked_at")
+    .select(`
+      certificate_number,
+      recipient_name,
+      issued_at,
+      expires_at,
+      revoked_at,
+      events (
+        name,
+        description,
+        event_date,
+        location,
+        organizer,
+        certificate_title
+      ),
+      organizations (
+        name,
+        slug
+      )
+    `)
     .eq("certificate_number", number)
     .single();
 
@@ -28,6 +46,11 @@ export async function GET(
     status = "expired";
   }
 
+  const eventArr = certificate.events as unknown as { name: string; description: string | null; event_date: string | null; location: string | null; organizer: string | null; certificate_title: string | null }[] | null;
+  const event = eventArr?.[0] ?? null;
+  const orgArr = certificate.organizations as unknown as { name: string; slug: string }[] | null;
+  const org = orgArr?.[0] ?? null;
+
   return NextResponse.json({
     valid: true,
     certificate_number: certificate.certificate_number,
@@ -35,5 +58,16 @@ export async function GET(
     issued_date: certificate.issued_at,
     valid_until: certificate.expires_at,
     status,
+    organization: org ? { name: org.name } : null,
+    event: event
+      ? {
+          name: event.name,
+          description: event.description,
+          event_date: event.event_date,
+          location: event.location,
+          organizer: event.organizer,
+          certificate_title: event.certificate_title,
+        }
+      : null,
   });
 }

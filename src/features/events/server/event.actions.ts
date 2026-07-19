@@ -11,7 +11,7 @@ export async function getEventsAction(organizationId: string) {
 }
 
 export async function getEventAction(id: string) {
-  await requireRole(["admin", "staff"]);
+  await requireRole(["admin", "staff", "participant"]);
   return eventService.getEvent(id);
 }
 

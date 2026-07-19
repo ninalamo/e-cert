@@ -12,6 +12,17 @@ export interface VerificationResult {
   valid_until?: string;
   status?: string;
   error?: string;
+  organization?: {
+    name: string;
+  } | null;
+  event?: {
+    name: string;
+    description: string | null;
+    event_date: string | null;
+    location: string | null;
+    organizer: string | null;
+    certificate_title: string | null;
+  } | null;
 }
 
 function VerifySearchInner() {
@@ -92,6 +103,40 @@ function VerifySearchInner() {
               <span className="text-tertiary">Recipient</span>
               <span className="font-medium text-primary">{result.recipient_name}</span>
             </div>
+            {result.event && (
+              <>
+                <div className="flex justify-between gap-3">
+                  <span className="text-tertiary">Event</span>
+                  <span className="font-medium text-primary">{result.event.name}</span>
+                </div>
+                {result.event.event_date && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-tertiary">Event date</span>
+                    <span className="text-primary">
+                      {new Date(result.event.event_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                {result.event.location && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-tertiary">Location</span>
+                    <span className="text-primary">{result.event.location}</span>
+                  </div>
+                )}
+                {result.event.organizer && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-tertiary">Organizer</span>
+                    <span className="text-primary">{result.event.organizer}</span>
+                  </div>
+                )}
+              </>
+            )}
+            {result.organization && (
+              <div className="flex justify-between gap-3">
+                <span className="text-tertiary">Issued by</span>
+                <span className="text-primary">{result.organization.name}</span>
+              </div>
+            )}
             <div className="flex justify-between gap-3">
               <span className="text-tertiary">Issued</span>
               <span className="text-primary">
