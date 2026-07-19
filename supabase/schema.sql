@@ -68,7 +68,7 @@ CREATE TABLE events (
 CREATE TABLE certificates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  event_id UUID REFERENCES events(id),
+  event_id UUID REFERENCES events(id) ON DELETE CASCADE,
   template_id UUID REFERENCES certificate_templates(id),
   recipient_name TEXT NOT NULL,
   recipient_email TEXT NOT NULL,

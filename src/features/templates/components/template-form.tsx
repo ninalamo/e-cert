@@ -18,12 +18,14 @@ interface TemplateFormProps {
     css_content: string;
   }) => Promise<{ error?: string }>;
   submitLabel: string;
+  disabled?: boolean;
 }
 
 export default function TemplateForm({
   initialData,
   onSubmit,
   submitLabel,
+  disabled = false,
 }: TemplateFormProps) {
   const [name, setName] = useState(initialData?.name ?? "");
   const [description, setDescription] = useState(initialData?.description ?? "");
@@ -74,6 +76,7 @@ export default function TemplateForm({
         </div>
       )}
 
+      <fieldset disabled={disabled} className="space-y-6 disabled:opacity-60">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="name" className="block text-sm font-medium">
@@ -168,6 +171,7 @@ export default function TemplateForm({
           />
         </div>
       )}
+      </fieldset>
 
       <div className="flex justify-end gap-2">
         <Link
@@ -178,7 +182,7 @@ export default function TemplateForm({
         </Link>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || disabled}
             className="btn-brand disabled:opacity-50"
           >
             {loading ? "Saving..." : submitLabel}

@@ -10,6 +10,7 @@ import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import type { AttendeeMetadata } from "@/types/event-attendee";
 import { SkeletonDetail } from "@/components/ui/skeleton";
+import { InfoIcon, DownloadIcon } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -326,34 +327,86 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Upload CSV</h1>
-        <p className="text-muted-foreground text-sm">
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--color-text)]">
+          Upload CSV
+        </h1>
+        <p className="mt-1 text-sm text-tertiary">
           Bulk add participants for: {event.name}
         </p>
       </div>
 
+      <div className="flex items-start gap-3 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-4 text-sm">
+        <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-info-text)]" />
+        <div className="space-y-1.5 text-[var(--color-info-text)]">
+          <p className="font-medium">How it works</p>
+          <ol className="list-decimal space-y-1 pl-4">
+            <li>
+              Upload a <strong>CSV</strong> with columns{" "}
+              <code className="rounded bg-black/5 px-1 py-0.5 text-xs">name, email</code>{" "}
+              (and optional <code className="rounded bg-black/5 px-1 py-0.5 text-xs">file_path</code>).
+            </li>
+            <li>
+              Optionally upload <strong>participant files</strong> (PDF/PNG/JPG).
+              Rows whose <code className="rounded bg-black/5 px-1 py-0.5 text-xs">file_path</code>{" "}
+              matches an uploaded file use that file; otherwise a certificate is
+              generated from the event template.
+            </li>
+            <li>
+              Preview the rows, then <strong>Add Participants</strong> to import them
+              into this event.
+            </li>
+          </ol>
+        </div>
+      </div>
+
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+          <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
+          <p className="text-[var(--color-danger-text)]">{error}</p>
+        </div>
       )}
 
       {step === "upload" && (
-        <div className="space-y-4 max-w-lg">
+        <div className="app-card space-y-4 p-4">
           <div>
-            <label className="block text-sm font-medium">
-              CSV File (columns: name, email, file_path optional)
-            </label>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label className="block text-sm font-semibold text-[var(--color-text)]">
+                CSV File
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  downloadCsv(
+                    "sample-attendees.csv",
+                    ["name", "email", "file_path"],
+                    [
+                      ["Juan Dela Cruz", "juan@example.com", ""],
+                      ["Maria Santos", "maria@example.com", "maria-cert.pdf"],
+                    ]
+                  )
+                }
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] transition-colors hover:bg-[var(--color-brand-100)] active:scale-[0.97] cursor-pointer"
+              >
+                <DownloadIcon className="size-3.5" />
+                Download sample
+              </button>
+            </div>
+            <p className="mb-2 text-xs text-tertiary">
+              Columns: <code className="rounded bg-black/5 px-1 py-0.5">name, email</code>{" "}
+              (with optional <code className="rounded bg-black/5 px-1 py-0.5">file_path</code>)
+            </p>
             <input
               ref={csvRef}
               type="file"
               accept=".csv,.txt"
               onChange={handleCsvChange}
               disabled={event?.status === "archive"}
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm disabled:opacity-50"
+              className="input disabled:opacity-50"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium">
+            <label className="block text-xs font-semibold text-tertiary mb-1">
               Participant Files (PDF, PNG, JPG) — optional
             </label>
             <input
@@ -363,10 +416,10 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
               multiple
               onChange={handleFilesChange}
               disabled={event?.status === "archive"}
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm disabled:opacity-50"
+              className="input disabled:opacity-50"
             />
             {uploadedFiles.size > 0 && (
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-tertiary">
                 {uploadedFiles.size} file(s) uploaded
               </p>
             )}
@@ -375,7 +428,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
           <div className="flex justify-end gap-2">
             <Link
               href={`/events/${eventId}`}
-              className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
+              className="btn-cancel"
             >
               Back to Event
             </Link>
@@ -400,26 +453,26 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
 
       {step === "preview" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-tertiary">
               {rows.length} participant(s) — Page {page + 1} of {totalPages || 1}
             </p>
-            <div className="flex gap-2">
-              <button onClick={() => setAllMode("template")} className="text-xs border rounded px-2 py-1 hover:bg-gray-50">
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setAllMode("template")} className="btn">
                 All → Template
               </button>
-              <button onClick={() => setAllMode("file")} className="text-xs border rounded px-2 py-1 hover:bg-gray-50">
+              <button onClick={() => setAllMode("file")} className="btn">
                 All → File
               </button>
               {selected.size > 0 && (
                 <>
-                  <button onClick={() => setSelectedMode("template")} className="text-xs border rounded px-2 py-1 hover:bg-gray-50">
+                  <button onClick={() => setSelectedMode("template")} className="btn">
                     Selected → Template
                   </button>
-                  <button onClick={() => setSelectedMode("file")} className="text-xs border rounded px-2 py-1 hover:bg-gray-50">
+                  <button onClick={() => setSelectedMode("file")} className="btn">
                     Selected → File
                   </button>
-                  <button onClick={removeSelected} className="text-xs border rounded px-2 py-1 text-red-600 hover:bg-red-50">
+                  <button onClick={removeSelected} className="btn btn-danger">
                     Remove Selected ({selected.size})
                   </button>
                 </>
@@ -427,23 +480,24 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
             </div>
           </div>
 
-          <div className="tbl-container">
-            <table className="tbl">
+          <div className="app-card divide-y divide-border overflow-hidden">
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th className="w-8">
+                <tr className="border-b border-[var(--color-border)]">
+                  <th className="w-12 py-3 pl-4 text-left">
                     <input
                       type="checkbox"
                       checked={pageRows.length > 0 && pageRows.every((_, i) => selected.has(page * PAGE_SIZE + i))}
                       onChange={toggleSelectAll}
+                      className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
                     />
                   </th>
-                  <th className="text-left w-8">#</th>
-                  <th className="text-left">Name</th>
-                  <th className="text-left">Email</th>
-                  <th className="text-left">File Path</th>
-                  <th className="text-left">Mode</th>
-                  <th className="text-right">Actions</th>
+                  <th className="w-8 py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Email</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">File Path</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Mode</th>
+                  <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -451,8 +505,8 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                   const globalIdx = page * PAGE_SIZE + i;
                   const hasFile = canFileMode(row);
                   return (
-                    <tr key={globalIdx}>
-                      <td>
+                    <tr key={globalIdx} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
+                      <td className="py-3 pl-4">
                         <input
                           type="checkbox"
                           checked={selected.has(globalIdx)}
@@ -464,20 +518,21 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                               return next;
                             });
                           }}
+                          className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
                         />
                       </td>
                       <td className="text-tertiary text-xs">{globalIdx + 1}</td>
-                      <td className="font-medium">{row.name}</td>
+                      <td className="font-medium text-[var(--color-text)]">{row.name}</td>
                       <td className="text-tertiary">{row.email}</td>
                       <td className="text-xs">
                         {row.file_path ? (
                           hasFile ? (
-                            <span className="text-green-600">{row.file_path}</span>
+                            <span className="text-[var(--color-success-text)]">{row.file_path}</span>
                           ) : (
-                            <span className="text-amber-600" title="File not uploaded">{row.file_path} ⚠</span>
+                            <span className="text-[var(--color-warning-text)]" title="File not uploaded">{row.file_path} ⚠</span>
                           )
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-tertiary">—</span>
                         )}
                       </td>
                       <td>
@@ -485,7 +540,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                           value={row.mode}
                           onChange={() => toggleRowMode(globalIdx)}
                           disabled={!hasFile && row.mode === "template"}
-                          className="rounded border px-2 py-1 text-xs"
+                          className="input px-2 py-1 text-xs disabled:opacity-50"
                         >
                           <option value="template">Template</option>
                           <option value="file" disabled={!hasFile}>File</option>
@@ -494,7 +549,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                       <td className="text-right">
                         <button
                           onClick={() => removeRow(globalIdx)}
-                          className="text-xs text-danger hover:underline"
+                          className="btn btn-danger"
                         >
                           Remove
                         </button>
@@ -511,7 +566,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-50"
+                className="btn disabled:opacity-50"
               >
                 Previous
               </button>
@@ -519,7 +574,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                 <button
                   key={i}
                   onClick={() => setPage(i)}
-                  className={`rounded border px-3 py-1 text-sm ${i === page ? "bg-brand-600 text-white" : "hover:bg-gray-50"}`}
+                  className={`btn ${i === page ? "bg-[var(--color-brand-600)] text-white border-[var(--color-brand-700)]" : ""}`}
                 >
                   {i + 1}
                 </button>
@@ -527,7 +582,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-50"
+                className="btn disabled:opacity-50"
               >
                 Next
               </button>
@@ -537,7 +592,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setStep("upload")}
-              className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
+              className="btn-cancel"
             >
               Back
             </button>
@@ -555,37 +610,40 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
       {step === "results" && results && (
         <div className="space-y-4 max-w-2xl">
           <div className="flex gap-4 text-sm">
-            <span className="text-green-600 font-medium">{successCount} added</span>
+            <span className="font-medium text-[var(--color-success-text)]">{successCount} added</span>
             {failCount > 0 && (
-              <span className="text-red-600 font-medium">{failCount} failed</span>
+              <span className="font-medium text-[var(--color-danger-text)]">{failCount} failed</span>
             )}
           </div>
 
           {removedRows.length > 0 && (
-            <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-600">
-              {removedRows.length} removed row(s) have been downloaded as CSV.
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-3 text-sm">
+              <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-info-text)]" />
+              <p className="text-[var(--color-info-text)]">
+                {removedRows.length} removed row(s) have been downloaded as CSV.
+              </p>
             </div>
           )}
 
-          <div className="tbl-container">
-            <table className="tbl">
+          <div className="app-card divide-y divide-border overflow-hidden">
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th className="text-left">Name</th>
-                  <th className="text-left">Email</th>
-                  <th className="text-left">Status</th>
+                <tr className="border-b border-[var(--color-border)]">
+                  <th className="py-3 pl-4 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Email</th>
+                  <th className="py-3 pr-4 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {results.map((r, i) => (
-                  <tr key={i}>
-                    <td>{r.name}</td>
-                    <td className="text-tertiary">{r.email}</td>
-                    <td>
+                  <tr key={i} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
+                    <td className="py-3 pl-4 font-medium text-[var(--color-text)]">{r.name}</td>
+                    <td className="py-3 text-tertiary">{r.email}</td>
+                    <td className="py-3 pr-4">
                       {r.success ? (
-                        <span className="status-pill status-active">Added</span>
+                        <span className="status-badge status-badge--active">Added</span>
                       ) : (
-                        <span className="status-pill status-revoked">{r.error ?? "Failed"}</span>
+                        <span className="status-badge status-badge--danger">{r.error ?? "Failed"}</span>
                       )}
                     </td>
                   </tr>
@@ -597,7 +655,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
           <div className="flex justify-end gap-2">
             <Link
               href={`/events/${eventId}`}
-              className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
+              className="btn-cancel"
             >
               Back to Event
             </Link>

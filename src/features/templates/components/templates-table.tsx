@@ -7,6 +7,8 @@ import {
   deleteTemplateAction,
 } from "@/features/templates/server/template.actions";
 import type { CertificateTemplate } from "@/types/template";
+
+type TemplateRow = CertificateTemplate & { locked: boolean };
 import { ORG_ID } from "@/lib/org";
 import { usePagination, Paginator } from "@/components/ui/paginator";
 import { SkeletonTable } from "@/components/ui/skeleton";
@@ -30,7 +32,7 @@ const SORTS: { key: SortKey; label: string }[] = [
 ];
 
 export default function TemplatesTable() {
-  const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
+  const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -196,6 +198,7 @@ export default function TemplatesTable() {
                 <th className="text-left">Name</th>
                 <th className="text-left">Description</th>
                 <th className="text-left">Created</th>
+                <th className="text-left">Status</th>
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
@@ -214,6 +217,18 @@ export default function TemplatesTable() {
                   <td className="text-tertiary">
                     {new Date(t.created_at).toLocaleDateString()}
                   </td>
+                  <td>
+                    {t.locked ? (
+                      <span
+                        title="Locked: used by a draft or active event. Archive the linked event(s) to edit."
+                        className="status-badge status-badge--archive"
+                      >
+                        Locked
+                      </span>
+                    ) : (
+                      <span className="text-xs text-tertiary">Editable</span>
+                    )}
+                  </td>
                   <td className="text-right whitespace-nowrap">
                     <button
                       onClick={() => setPreviewTemplate(t)}
@@ -221,15 +236,26 @@ export default function TemplatesTable() {
                     >
                       Preview
                     </button>
-                    <Link
-                      href={`/templates/${t.id}`}
-                      className="text-xs text-info hover:underline mr-3"
-                    >
-                      Edit
-                    </Link>
+                    {t.locked ? (
+                      <span
+                        title="Locked: used by a draft or active event"
+                        className="text-xs text-tertiary opacity-50 mr-3 cursor-not-allowed"
+                      >
+                        Edit
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/templates/${t.id}`}
+                        className="text-xs text-info hover:underline mr-3"
+                      >
+                        Edit
+                      </Link>
+                    )}
                     <button
                       onClick={() => handleDelete(t.id, t.name)}
-                      className="text-xs text-danger hover:underline"
+                      disabled={t.locked}
+                      title={t.locked ? "Locked: used by a draft or active event" : undefined}
+                      className="text-xs text-danger hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Delete
                     </button>

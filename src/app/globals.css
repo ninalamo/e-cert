@@ -341,6 +341,16 @@
     outline-offset: 2px;
   }
 
+  /* Interactive controls show a pointer cursor */
+  a, button, .btn, [role="button"], [role="tab"],
+  input[type="button"], input[type="submit"], input[type="reset"],
+  .tab, .nav-link, .btn-link, .cursor-pointer {
+    cursor: pointer;
+  }
+  button:disabled, .btn:disabled, [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
   ::selection {
     background-color: rgba(0, 122, 255, 0.2);
   }
@@ -435,6 +445,117 @@
   .btn-brand-soft:not(:disabled):hover { background-color: var(--color-brand-200); }
   .btn-brand-soft:not(:disabled):active { transform: scale(0.97); }
 
+  /* Generic iOS buttons — apply to <button>/<a>/[role=button] */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 0.5rem; padding: 0.5rem 1rem;
+    font-size: 0.875rem; font-weight: 600; line-height: 1;
+    border-radius: 0.75rem; cursor: pointer;
+    background-color: var(--color-surface-secondary);
+    color: var(--color-text);
+    border: 1px solid var(--color-border-strong);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    text-decoration: none; white-space: nowrap;
+  }
+  .btn:not(:disabled):hover { background-color: var(--color-surface-hover); }
+  .btn:not(:disabled):active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* "View" — neutral pill */
+  .btn-view {
+    padding: 0.375rem 0.875rem; font-size: 0.8125rem;
+    border-radius: 9999px;
+    background-color: var(--color-surface-secondary);
+    color: var(--color-text-secondary); border: 1px solid var(--color-border);
+  }
+  .btn-view:not(:disabled):hover { background-color: var(--color-surface-hover); }
+
+  /* iOS disclosure-style text link with trailing chevron */
+  .btn-disclosure {
+    display: inline-flex; align-items: center; gap: 0.125rem;
+    font-size: 0.8125rem; font-weight: 600; line-height: 1;
+    color: var(--color-brand-700); text-decoration: none;
+    background: transparent; border: none; padding: 0; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    transition: opacity 0.15s ease;
+  }
+  .btn-disclosure:hover { opacity: 0.7; }
+  .btn-disclosure:active { opacity: 0.5; }
+  .btn-disclosure svg { width: 0.875rem; height: 0.875rem; }
+
+  /* "Edit" — brand-tinted */
+  .btn-edit {
+    padding: 0.375rem 0.75rem; font-size: 0.8125rem;
+    background-color: var(--color-brand-100);
+    color: var(--color-brand-700); border: 1px solid transparent;
+  }
+  .btn-edit:not(:disabled):hover { background-color: var(--color-brand-200); }
+
+  /* "Delete" / destructive — red */
+  .btn-danger {
+    padding: 0.375rem 0.75rem; font-size: 0.8125rem;
+    background-color: var(--color-danger-bg);
+    color: var(--color-danger-text); border: 1px solid transparent;
+  }
+  .btn-danger:not(:disabled):hover { filter: brightness(0.96); }
+  .btn-danger:not(:disabled):active { transform: scale(0.97); }
+
+  /* Icon-only ghost button (e.g. row action icons) */
+  .btn-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0.375rem; border-radius: 0.625rem; cursor: pointer;
+    background-color: transparent; color: var(--color-text-muted);
+    border: 1px solid transparent; line-height: 0;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  .btn-icon:not(:disabled):hover {
+    background-color: var(--color-surface-hover);
+    color: var(--color-text);
+  }
+  .btn-icon-danger:not(:disabled):hover {
+    background-color: var(--color-danger-bg);
+    color: var(--color-danger-text);
+  }
+  .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Prominent form actions — higher contrast so they aren't missed */
+  .btn-save {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 0.5rem; padding: 0.625rem 1.5rem;
+    font-size: 0.9375rem; font-weight: 700; line-height: 1;
+    border-radius: 0.75rem; cursor: pointer;
+    background-color: var(--color-brand-600); color: #ffffff;
+    border: 1px solid var(--color-brand-700);
+    box-shadow: var(--shadow-ios-sm);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    text-decoration: none; white-space: nowrap;
+  }
+  .btn-save:not(:disabled):hover { background-color: var(--color-brand-700); }
+  .btn-save:not(:disabled):active { transform: scale(0.97); }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-cancel {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 0.5rem; padding: 0.625rem 1.5rem;
+    font-size: 0.9375rem; font-weight: 600; line-height: 1;
+    border-radius: 0.75rem; cursor: pointer;
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-strong);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    text-decoration: none; white-space: nowrap;
+  }
+  .btn-cancel:not(:disabled):hover {
+    background-color: var(--color-surface-hover);
+    color: var(--color-text);
+  }
+  .btn-cancel:not(:disabled):active { transform: scale(0.97); }
+  .btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
   .input {
     width: 100%; padding: 0.625rem 0.875rem;
     border: 1.5px solid var(--color-border);
@@ -465,39 +586,67 @@
     transform: translateY(-1px);
   }
 
+  /* Global status badges — readable but not overpowering */
+  .status-badge {
+    display: inline-flex; align-items: center;
+    padding: 0.3125rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.8125rem; font-weight: 600; line-height: 1;
+    letter-spacing: 0.01em; white-space: nowrap;
+  }
+  .status-badge--draft {
+    background-color: var(--color-surface-tertiary); color: var(--color-text-secondary);
+  }
+  .status-badge--active {
+    background-color: var(--color-success-bg); color: var(--color-success-text);
+  }
+  .status-badge--archive {
+    background-color: var(--color-warning-bg); color: var(--color-warning-text);
+  }
+  .status-badge--info {
+    background-color: var(--color-info-bg); color: var(--color-info-text);
+  }
+  .status-badge--danger {
+    background-color: var(--color-danger-bg); color: var(--color-danger-text);
+  }
+  .status-badge--brand {
+    background-color: var(--color-brand-100); color: var(--color-brand-700);
+  }
+
+  /* Legacy aliases kept for backwards compatibility (regular CSS, no composes) */
   .badge-brand {
     display: inline-flex; align-items: center;
-    padding: 0.1875rem 0.5625rem;
-    border-radius: 9999px;
-    font-size: 0.6875rem; font-weight: 600;
+    padding: 0.3125rem 0.75rem; border-radius: 9999px;
+    font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
+    white-space: nowrap;
     background-color: var(--color-brand-100); color: var(--color-brand-700);
   }
   .badge-emerald {
     display: inline-flex; align-items: center;
-    padding: 0.1875rem 0.5625rem;
-    border-radius: 9999px;
-    font-size: 0.6875rem; font-weight: 600;
+    padding: 0.3125rem 0.75rem; border-radius: 9999px;
+    font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
+    white-space: nowrap;
     background-color: var(--color-success-bg); color: var(--color-success-text);
   }
   .badge-amber {
     display: inline-flex; align-items: center;
-    padding: 0.1875rem 0.5625rem;
-    border-radius: 9999px;
-    font-size: 0.6875rem; font-weight: 600;
+    padding: 0.3125rem 0.75rem; border-radius: 9999px;
+    font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
+    white-space: nowrap;
     background-color: var(--color-warning-bg); color: var(--color-warning-text);
   }
   .badge-red {
     display: inline-flex; align-items: center;
-    padding: 0.1875rem 0.5625rem;
-    border-radius: 9999px;
-    font-size: 0.6875rem; font-weight: 600;
+    padding: 0.3125rem 0.75rem; border-radius: 9999px;
+    font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
+    white-space: nowrap;
     background-color: var(--color-danger-bg); color: var(--color-danger-text);
   }
   .badge-blue {
     display: inline-flex; align-items: center;
-    padding: 0.1875rem 0.5625rem;
-    border-radius: 9999px;
-    font-size: 0.6875rem; font-weight: 600;
+    padding: 0.3125rem 0.75rem; border-radius: 9999px;
+    font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
+    white-space: nowrap;
     background-color: var(--color-info-bg); color: var(--color-info-text);
   }
 
@@ -577,6 +726,9 @@
   }
   .status-info {
     background-color: var(--color-info-bg); color: var(--color-info-text);
+  }
+  .status-archive {
+    background-color: var(--color-warning-bg); color: var(--color-warning-text);
   }
   .status-warning {
     background-color: var(--color-warning-bg); color: var(--color-warning-text);

@@ -74,24 +74,35 @@ export function SkeletonList({ rows = 4 }: { rows?: number }) {
 
 export function SkeletonDetail() {
   return (
-    <div className="space-y-4" aria-hidden="true">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6" aria-hidden="true">
+      <div className="flex items-center justify-between gap-3">
         <div className="space-y-2">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-8 w-48" />
         </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-28 rounded-lg" />
-          <Skeleton className="h-9 w-24 rounded-lg" />
+        <Skeleton className="h-7 w-20 rounded-full" />
+      </div>
+      <div className="flex gap-1 p-1 bg-surface-tertiary rounded-xl">
+        <Skeleton className="h-9 flex-1 rounded-lg" />
+        <Skeleton className="h-9 flex-1 rounded-lg" />
+      </div>
+      <div className="app-card p-4 space-y-3">
+        <Skeleton className="h-4 w-28" />
+        <div className="divide-y divide-[var(--color-border)]">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between px-1 py-2.5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="app-card p-4">
-            <Skeleton className="h-4 w-20 mb-3" />
-            <Skeleton className="h-5 w-32" />
-          </div>
-        ))}
+      <div className="app-card p-4 space-y-3">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+      </div>
+      <div className="app-card p-4 space-y-3">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-10 w-full rounded-lg" />
       </div>
     </div>
   );

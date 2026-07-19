@@ -63,7 +63,13 @@ export async function cloneTemplateForEventAction(
   eventName: string
 ) {
   await requireRole(["admin", "staff"]);
-  return eventService.cloneTemplateForEvent(sourceTemplateId, eventId, eventName);
+  const source = await eventService.getTemplateForClone(sourceTemplateId);
+  if (!source) {
+    return { templateId: null, error: "Source template not found" };
+  }
+  const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const cloneName = `${source.name} Copy (${eventName}) ${timestamp}`;
+  return eventService.cloneTemplateForEvent(sourceTemplateId, eventId, cloneName);
 }
 
 export async function issueEventCertificateAction(data: {

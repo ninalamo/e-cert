@@ -27,7 +27,7 @@ const navItems: NavItem[] = [
     ],
     roles: ["admin", "staff"],
   },
-  { label: "Members", href: "/members", roles: ["admin"] },
+  { label: "Users", href: "/users", roles: ["admin"] },
 ];
 
 function isActivePath(pathname: string, href: string, exact = false) {

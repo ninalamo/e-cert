@@ -63,4 +63,12 @@ export class CertificateRepository extends BaseRepository<Certificate> {
   async countByOrganizationId(organizationId: string): Promise<number> {
     return this.count({ organization_id: organizationId });
   }
+
+  async deleteByEventId(eventId: string): Promise<boolean> {
+    const { error } = await this.client
+      .from(this.table)
+      .delete()
+      .eq("event_id", eventId);
+    return !error;
+  }
 }

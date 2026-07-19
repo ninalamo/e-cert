@@ -1,4 +1,5 @@
 import EventDetail from "./event-detail";
+import { getCurrentSession, canDelete } from "@/lib/permissions";
 
 export default async function EventDetailPage({
   params,
@@ -6,5 +7,7 @@ export default async function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <EventDetail eventId={id} />;
+  const session = await getCurrentSession();
+  const canUserDelete = canDelete(session?.role ?? "participant");
+  return <EventDetail eventId={id} canDelete={canUserDelete} />;
 }

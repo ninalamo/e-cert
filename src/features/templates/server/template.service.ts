@@ -2,9 +2,40 @@ import { CertificateTemplateRepository } from "./template.repository";
 import type { CertificateTemplate } from "@/types/template";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import * as eventRepo from "@/features/events/server/event.repository";
+import type { Event } from "@/types/event";
+
+const LIVE_STATUSES: Event["status"][] = ["draft", "active", "archive"];
 
 function repo(client: SupabaseClient) {
   return new CertificateTemplateRepository(client);
+}
+
+export async function isTemplateLocked(
+  templateId: string,
+  client?: SupabaseClient
+): Promise<boolean> {
+  const c = client ?? (await createClient());
+  const events = await new eventRepo.EventRepository(c).findByTemplateId(templateId);
+  return events.some(
+    (e) => e.status !== "draft" && LIVE_STATUSES.includes(e.status)
+  );
+}
+
+export async function getTemplatesWithLockState(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<(CertificateTemplate & { locked: boolean })[]> {
+  const c = client ?? (await createClient());
+  const templates = await repo(c).findByOrganizationId(organizationId);
+  const eventR = new eventRepo.EventRepository(c);
+  const linkedEvents = (await eventR.findByOrganizationId(organizationId)).filter(
+    (e) => e.status !== "draft"
+  );
+  const lockedIds = new Set(
+    linkedEvents.map((e) => e.template_id).filter((id): id is string => !!id)
+  );
+  return templates.map((t) => ({ ...t, locked: lockedIds.has(t.id) }));
 }
 
 export async function getTemplates(

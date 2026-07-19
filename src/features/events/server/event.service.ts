@@ -3,6 +3,7 @@ import { CertificateRepository } from "@/features/certificates/server/certificat
 import { CertificateTemplateRepository } from "@/features/templates/server/template.repository";
 import { createClient } from "@/lib/supabase/server";
 import type { Event } from "@/types/event";
+import type { CertificateTemplate } from "@/types/template";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function repos(client: SupabaseClient) {
@@ -92,11 +93,12 @@ export async function deleteEvent(
   id: string,
   client?: SupabaseClient
 ): Promise<{ error?: string }> {
-  const { eventRepo } = repos(client ?? (await createClient()));
+  const { eventRepo, certRepo } = repos(client ?? (await createClient()));
   const existing = await eventRepo.findById(id);
   if (!existing) {
     return { error: "Event not found" };
   }
+  await certRepo.deleteByEventId(id);
   const deleted = await eventRepo.delete(id);
   if (!deleted) {
     return { error: "Failed to delete event" };
@@ -130,4 +132,12 @@ export async function cloneTemplateForEvent(
 
   await eventRepo.update(eventId, { template_id: template.id });
   return { templateId: template.id };
+}
+
+export async function getTemplateForClone(
+  templateId: string,
+  client?: SupabaseClient
+): Promise<CertificateTemplate | null> {
+  const { templateRepo } = repos(client ?? (await createClient()));
+  return templateRepo.findById(templateId);
 }

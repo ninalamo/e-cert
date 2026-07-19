@@ -28,6 +28,7 @@ export default function AttendeesManager({
   eventId,
   organizationId,
   readOnly = false,
+  toggleDisabled = false,
   onSelectionChange,
   showAddDialog = false,
   onAddDialogHandled,
@@ -35,6 +36,7 @@ export default function AttendeesManager({
   eventId: string;
   organizationId: string;
   readOnly?: boolean;
+  toggleDisabled?: boolean;
   onSelectionChange?: (ids: string[]) => void;
   showAddDialog?: boolean;
   onAddDialogHandled?: () => void;
@@ -89,8 +91,7 @@ export default function AttendeesManager({
     }
     if (filter !== "all") {
       list = list.filter((a) => {
-        if (filter === "pending") return !a.attended && !a.completed && !a.certificate_id;
-        if (filter === "attended") return a.attended && !a.certificate_id;
+        if (filter === "pending") return !a.completed && !a.certificate_id;
         if (filter === "completed") return a.completed && !a.certificate_id;
         if (filter === "issued") return !!a.certificate_id;
         return true;
@@ -163,7 +164,7 @@ export default function AttendeesManager({
     }
   }
 
-  async function toggleField(id: string, field: "attended" | "completed", value: boolean) {
+  async function toggleField(id: string, field: "completed", value: boolean) {
     setError(null);
     const result = await updateAttendeeAction(id, { [field]: value });
     if (result.error) {
@@ -188,7 +189,7 @@ export default function AttendeesManager({
     }
   }
 
-  async function bulkToggle(field: "attended" | "completed", value: boolean) {
+  async function bulkToggle(field: "completed", value: boolean) {
     setError(null);
     const ids = Array.from(selected);
     for (const id of ids) {
@@ -255,43 +256,28 @@ export default function AttendeesManager({
           >
             <option value="all">All</option>
             <option value="pending">Pending</option>
-            <option value="attended">Attended</option>
             <option value="completed">Completed</option>
             <option value="issued">Issued</option>
           </select>
         </div>
       </div>
 
-      {selected.size > 0 && (
+      {selected.size > 0 && !toggleDisabled && (
         <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
           <span className="text-xs text-[var(--color-text-muted)] mr-1">{selected.size} selected</span>
-          <button
-            type="button"
-            onClick={() => bulkToggle("attended", true)}
-            className="btn-brand-soft text-xs"
-          >
-            Mark Attended
-          </button>
-          <button
-            type="button"
-            onClick={() => bulkToggle("attended", false)}
-            className="btn-brand-soft text-xs"
-          >
-            Unmark Attended
-          </button>
           <button
             type="button"
             onClick={() => bulkToggle("completed", true)}
             className="btn-brand-soft text-xs"
           >
-            Mark Done
+            Mark Completed
           </button>
           <button
             type="button"
             onClick={() => bulkToggle("completed", false)}
             className="btn-brand-soft text-xs"
           >
-            Unmark Done
+            Unmark Completed
           </button>
           <button
             type="button"
@@ -367,8 +353,6 @@ export default function AttendeesManager({
                         </Link>
                       ) : a.completed ? (
                         <span className="badge-amber">Pending</span>
-                      ) : a.attended ? (
-                        <span className="badge-emerald">Attended</span>
                       ) : (
                         <span className="text-xs text-[var(--color-text-muted)]">—</span>
                       )}
@@ -380,31 +364,14 @@ export default function AttendeesManager({
                             <button
                               type="button"
                               role="switch"
-                              aria-checked={a.attended}
-                              onClick={() => toggleField(a.id, "attended", !a.attended)}
-                              title="Attended"
-                              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-                                a.attended ? "bg-[var(--color-success)]" : "bg-[var(--color-border-strong)]"
-                              }`}
-                            >
-                              <span
-                                className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
-                                  a.attended ? "translate-x-5" : "translate-x-0.5"
-                                }`}
-                              />
-                            </button>
-                            <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">Attended</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              role="switch"
                               aria-checked={a.completed}
-                              onClick={() => toggleField(a.id, "completed", !a.completed)}
-                              title="Completed"
+                              aria-disabled={toggleDisabled}
+                              disabled={toggleDisabled}
+                              onClick={() => !toggleDisabled && toggleField(a.id, "completed", !a.completed)}
+                              title={toggleDisabled ? "Completed can only be toggled while the event is Active" : "Completed"}
                               className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
                                 a.completed ? "bg-[var(--color-success)]" : "bg-[var(--color-border-strong)]"
-                              }`}
+                              } ${toggleDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                             >
                               <span
                                 className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
@@ -412,7 +379,7 @@ export default function AttendeesManager({
                                 }`}
                               />
                             </button>
-                            <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">Done</span>
+                            <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">Completed</span>
                           </div>
                           <button
                             type="button"

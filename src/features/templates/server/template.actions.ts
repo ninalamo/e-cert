@@ -7,12 +7,17 @@ import { requireRole } from "@/lib/permissions";
 
 export async function getTemplatesAction(organizationId: string) {
   const session = await requireRole(["admin", "staff"]);
-  return templateService.getTemplates(organizationId);
+  return templateService.getTemplatesWithLockState(organizationId);
 }
 
 export async function getTemplateAction(id: string) {
   await requireRole(["admin", "staff"]);
   return templateService.getTemplate(id);
+}
+
+export async function isTemplateLockedAction(id: string) {
+  await requireRole(["admin", "staff"]);
+  return templateService.isTemplateLocked(id);
 }
 
 export async function createTemplateAction(data: {
@@ -40,6 +45,9 @@ export async function updateTemplateAction(
   }
 ) {
   await requireRole(["admin", "staff"]);
+  if (await templateService.isTemplateLocked(id)) {
+    return { template: null, error: "This template is locked because it is used by a draft or active event. Archive the linked event(s) to edit it." };
+  }
   return templateService.updateTemplate(id, {
     ...data,
     description: data.description ?? null,
@@ -49,5 +57,8 @@ export async function updateTemplateAction(
 
 export async function deleteTemplateAction(id: string) {
   await requireRole(["admin"]);
+  if (await templateService.isTemplateLocked(id)) {
+    return { error: "This template is locked because it is used by a draft or active event. Archive the linked event(s) to delete it." };
+  }
   return templateService.deleteTemplate(id);
 }

@@ -45,6 +45,51 @@ export async function issueCertificate(data: {
   const certRepo = repo(client);
   const number = await generateCertificateNumber(data.organization_id);
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const verifyUrl = `${baseUrl}/verify?number=${number}`;
+  const { qrBuffer } = await (async () => {
+    const { generateQrCode } = await import("@/lib/qr");
+    const buf = await generateQrCode(verifyUrl, { width: 128, margin: 1 });
+    return { qrBuffer: buf };
+  })();
+  const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;
+
+  let renderedHtml: string | null = null;
+  let filePath: string | null = data.file_path ?? null;
+
+  if (data.template_id) {
+    const { getTemplate } = await import("@/features/templates/server/template.service");
+    const template = await getTemplate(data.template_id);
+    if (template) {
+      renderedHtml = renderTemplate(
+        template.html_content,
+        template.css_content ?? "",
+        {
+          recipient_name: data.recipient_name,
+          certificate_number: number,
+          issued_date: new Date().toLocaleDateString(),
+          organization_name: "Organization",
+          qr_code: `<img src="${qrDataUrl}" width="128" height="128" />`,
+        }
+      );
+
+      if (!filePath) {
+        const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
+          format: "A4",
+          landscape: true,
+          margin: { top: "0", right: "0", bottom: "0", left: "0" },
+        });
+        const storage = getStorageProvider();
+        filePath = await storage.writeFile(`certificates/${number}.pdf`, pdfBuffer);
+      }
+    }
+  }
+
+  const metadata: Record<string, unknown> = {
+    ...(data.metadata ?? {}),
+    ...(renderedHtml ? { rendered_html: renderedHtml } : {}),
+  };
+
   const { data: certificate, error } = await certRepo.create({
     organization_id: data.organization_id,
     event_id: data.event_id ?? null,
@@ -53,8 +98,8 @@ export async function issueCertificate(data: {
     recipient_email: data.recipient_email,
     certificate_number: number,
     expires_at: data.expires_at ?? null,
-    file_path: data.file_path ?? null,
-    metadata: data.metadata ?? null,
+    file_path: filePath,
+    metadata,
   } as Partial<Certificate>);
 
   if (!certificate) {

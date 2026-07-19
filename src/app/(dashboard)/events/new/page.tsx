@@ -73,18 +73,22 @@ export default function NewEventPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-brand-700">New Event</h1>
-        <p className="text-muted-foreground text-sm">Create a new event</p>
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--color-text)]">
+          New Event
+        </h1>
+        <p className="mt-1 text-sm text-tertiary">Create a new event</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>
+          <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+            <p className="text-[var(--color-danger-text)]">{error}</p>
+          </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium">
+            <label htmlFor="name" className="block text-xs font-semibold text-tertiary mb-1">
               Event Name *
             </label>
             <input
@@ -93,11 +97,11 @@ export default function NewEventPage() {
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="e.g. Graduation Ceremony 2026"
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              className="input text-sm"
             />
           </div>
           <div>
-            <label htmlFor="event_date" className="block text-sm font-medium">
+            <label htmlFor="event_date" className="block text-xs font-semibold text-tertiary mb-1">
               Event Date
             </label>
             <input
@@ -105,13 +109,13 @@ export default function NewEventPage() {
               type="date"
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              className="input text-sm"
             />
           </div>
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium">
+          <label htmlFor="description" className="block text-xs font-semibold text-tertiary mb-1">
             Description
           </label>
           <textarea
@@ -120,13 +124,13 @@ export default function NewEventPage() {
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             placeholder="Optional description of the event"
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+            className="input text-sm"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="location" className="block text-sm font-medium">
+            <label htmlFor="location" className="block text-xs font-semibold text-tertiary mb-1">
               Location
             </label>
             <input
@@ -134,11 +138,11 @@ export default function NewEventPage() {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. School Auditorium"
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              className="input text-sm"
             />
           </div>
           <div>
-            <label htmlFor="organizer" className="block text-sm font-medium">
+            <label htmlFor="organizer" className="block text-xs font-semibold text-tertiary mb-1">
               Organizer
             </label>
             <input
@@ -146,14 +150,14 @@ export default function NewEventPage() {
               value={organizer}
               onChange={(e) => setOrganizer(e.target.value)}
               placeholder="e.g. Office of the Registrar"
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              className="input text-sm"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="cert_title" className="block text-sm font-medium">
+            <label htmlFor="cert_title" className="block text-xs font-semibold text-tertiary mb-1">
               Certificate Title
             </label>
             <input
@@ -161,11 +165,11 @@ export default function NewEventPage() {
               value={certTitle}
               onChange={(e) => setCertTitle(e.target.value)}
               placeholder="e.g. Certificate of Participation"
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              className="input text-sm"
             />
           </div>
           <div>
-            <label htmlFor="valid_until" className="block text-sm font-medium">
+            <label htmlFor="valid_until" className="block text-xs font-semibold text-tertiary mb-1">
               Valid Until (optional)
             </label>
             <input
@@ -173,18 +177,18 @@ export default function NewEventPage() {
               type="date"
               value={validUntil}
               onChange={(e) => setValidUntil(e.target.value)}
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+              className="input text-sm"
             />
           </div>
         </div>
 
         {templates.length > 0 && (
-          <div className="border rounded-md p-4 space-y-3">
-            <p className="text-sm font-medium">Certificate Template (optional)</p>
+          <div className="app-card space-y-3 p-4">
+            <p className="section-title">Certificate Template (optional)</p>
             <select
               value={selectedTemplate}
               onChange={(e) => setSelectedTemplate(e.target.value)}
-              className="block w-full rounded-md border px-3 py-2 text-sm"
+              className="input text-sm"
             >
               <option value="">No template</option>
               {templates.map((t) => (
@@ -194,12 +198,12 @@ export default function NewEventPage() {
               ))}
             </select>
             {selectedTemplate && (
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm text-secondary cursor-pointer">
                 <input
                   type="checkbox"
                   checked={cloneTemplate}
                   onChange={(e) => setCloneTemplate(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
                 />
                 Clone template for this event (independent copy you can customize)
               </label>
@@ -210,7 +214,7 @@ export default function NewEventPage() {
         <div className="flex justify-end gap-2">
           <Link
             href="/events"
-            className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
+            className="inline-flex items-center rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 py-2 text-sm font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97] cursor-pointer"
           >
             Cancel
           </Link>
