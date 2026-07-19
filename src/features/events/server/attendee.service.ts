@@ -146,15 +146,16 @@ export async function bulkAddAttendees(
 }
 
 /**
- * Issue certificates for every attendee of an event that does not yet have one.
+ * Issue certificates for attendees that don't have one, and resend emails to all.
  * Returns a per-attendee result summary.
  */
 export async function issueCertificatesForCompleted(
   eventId: string,
-  options?: { send_email?: boolean },
+  options?: { send_email?: boolean; user_id?: string },
   client?: SupabaseClient
 ): Promise<{
   issued: number;
+  emailed: number;
   skipped: number;
   results: Array<{
     name: string;
@@ -169,12 +170,13 @@ export async function issueCertificatesForCompleted(
 
   const event = (await eventRepo.findById(eventId)) as Event | null;
   if (!event) {
-    return { issued: 0, skipped: 0, results: [] };
+    return { issued: 0, emailed: 0, skipped: 0, results: [] };
   }
 
-  const eligible = await attendeeRepo.findWithoutCertificate(eventId);
+  const all = await attendeeRepo.findByEventId(eventId);
 
   let issued = 0;
+  let emailed = 0;
   const results: Array<{
     name: string;
     email: string;
@@ -183,39 +185,60 @@ export async function issueCertificatesForCompleted(
     error?: string;
   }> = [];
 
-  for (const attendee of eligible) {
+  for (const attendee of all) {
     try {
-      const result = await certService.issueCertificate({
-        organization_id: attendee.organization_id,
-        event_id: eventId,
-        template_id: event.template_id ?? undefined,
-        recipient_name: attendee.name,
-        recipient_email: attendee.email,
-        expires_at: event.valid_until ?? undefined,
-        send_email: options?.send_email ?? false,
-        metadata: { attendee_id: attendee.id },
-      });
+      let certId = attendee.certificate_id;
 
-      if (result.error || !result.certificate) {
-        results.push({
-          name: attendee.name,
-          email: attendee.email,
-          success: false,
-          error: result.error ?? "Failed to issue",
+      if (!certId) {
+        const result = await certService.issueCertificate({
+          organization_id: attendee.organization_id,
+          event_id: eventId,
+          template_id: event.template_id ?? undefined,
+          recipient_name: attendee.name,
+          recipient_email: attendee.email,
+          expires_at: event.valid_until ?? undefined,
+          metadata: { attendee_id: attendee.id },
         });
-        continue;
+
+        if (result.error || !result.certificate) {
+          results.push({
+            name: attendee.name,
+            email: attendee.email,
+            success: false,
+            error: result.error ?? "Failed to issue",
+          });
+          continue;
+        }
+
+        certId = result.certificate.id;
+        await attendeeRepo.update(attendee.id, {
+          certificate_id: certId,
+        } as Partial<EventAttendee>);
+        issued++;
       }
 
-      await attendeeRepo.update(attendee.id, {
-        certificate_id: result.certificate.id,
-      } as Partial<EventAttendee>);
+      if (options?.send_email && certId && options?.user_id) {
+        const { sendCertificateEmail } = await import(
+          "@/features/certificates/server/certificate-email.service"
+        );
+        const emailResult = await sendCertificateEmail(certId, options.user_id, c);
+        if (emailResult.success) emailed++;
+        else {
+          results.push({
+            name: attendee.name,
+            email: attendee.email,
+            success: false,
+            error: emailResult.error ?? "Email failed",
+          });
+          continue;
+        }
+      }
 
-      issued++;
       results.push({
         name: attendee.name,
         email: attendee.email,
         success: true,
-        certNumber: result.certificate.certificate_number,
+        certNumber: certId ? undefined : undefined,
       });
     } catch (err) {
       results.push({
@@ -227,5 +250,5 @@ export async function issueCertificatesForCompleted(
     }
   }
 
-  return { issued, skipped: 0, results };
+  return { issued, emailed, skipped: 0, results };
 }

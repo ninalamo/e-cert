@@ -38,6 +38,7 @@ export default function AttendeesManager({
   onSelectionChange,
   showAddDialog = false,
   onAddDialogHandled,
+  refreshTrigger = 0,
 }: {
   eventId: string;
   organizationId: string;
@@ -45,6 +46,7 @@ export default function AttendeesManager({
   onSelectionChange?: (ids: string[]) => void;
   showAddDialog?: boolean;
   onAddDialogHandled?: () => void;
+  refreshTrigger?: number;
 }) {
   const [attendees, setAttendees] = useState<EventAttendee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,6 +87,10 @@ export default function AttendeesManager({
   useEffect(() => {
     onSelectionChange?.(Array.from(selected));
   }, [selected, onSelectionChange]);
+
+  useEffect(() => {
+    if (refreshTrigger > 0) load();
+  }, [refreshTrigger, load]);
 
   useEffect(() => {
     if (showAddDialog) {

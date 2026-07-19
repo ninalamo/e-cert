@@ -117,6 +117,7 @@ export default function EventDetail({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [issueBusy, setIssueBusy] = useState(false);
   const [issueMessage, setIssueMessage] = useState<string | null>(null);
+  const [attendeeRefresh, setAttendeeRefresh] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -240,15 +241,16 @@ export default function EventDetail({
     setIssueBusy(true);
     setIssueMessage(null);
     const result = await issueCertificatesForCompletedAction(eventId, {
-      send_email: false,
+      send_email: true,
     });
     setIssueBusy(false);
     const failed = result.results.filter((r) => !r.success).length;
     setIssueMessage(
-      `${result.issued} certificate(s) issued` +
+      `${result.issued} issued, ${result.emailed} emailed` +
         (failed ? `, ${failed} failed` : "")
     );
     setSelectedAttendeeIds([]);
+    setAttendeeRefresh((n) => n + 1);
   }
 
   async function handleDeleteEvent() {
@@ -702,6 +704,7 @@ export default function EventDetail({
             onSelectionChange={setSelectedAttendeeIds}
             showAddDialog={showAddDialog}
             onAddDialogHandled={() => setShowAddDialog(false)}
+            refreshTrigger={attendeeRefresh}
           />
         </div>
       )}
