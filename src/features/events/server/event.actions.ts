@@ -97,6 +97,13 @@ export async function issueEventCertificateAction(data: {
     expires_at: event.valid_until ?? undefined,
     send_email: data.send_email ?? false,
     user_id: session.id,
+    event: {
+      name: event.name,
+      event_date: event.event_date,
+      location: event.location,
+      organizer: event.organizer,
+      certificate_title: event.certificate_title,
+    },
   });
 
   return certificate;

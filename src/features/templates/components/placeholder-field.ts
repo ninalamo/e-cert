@@ -9,6 +9,12 @@ export const PLACEHOLDER_FIELDS = [
   { key: "certificate_number", label: "Certificate Number" },
   { key: "issued_date", label: "Issued Date" },
   { key: "organization_name", label: "Organization Name" },
+  { key: "event_name", label: "Event Name" },
+  { key: "event_date", label: "Event Date" },
+  { key: "event_location", label: "Event Location" },
+  { key: "event_organizer", label: "Event Organizer" },
+  { key: "certificate_title", label: "Certificate Title" },
+  { key: "expiry_date", label: "Expiry Date" },
   { key: "qr_code", label: "QR Code" },
 ] as const;
 

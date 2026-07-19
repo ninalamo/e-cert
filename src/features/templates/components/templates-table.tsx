@@ -12,6 +12,16 @@ type TemplateRow = CertificateTemplate & { locked: boolean };
 import { ORG_ID } from "@/lib/org";
 import { usePagination, Paginator } from "@/components/ui/paginator";
 import { SkeletonTable } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { InfoIcon } from "lucide-react";
 
 const CERT_WIDTH = 960;
 
@@ -41,6 +51,8 @@ export default function TemplatesTable() {
   const [sort, setSort] = useState<SortKey>("created-desc");
   const [previewTemplate, setPreviewTemplate] = useState<CertificateTemplate | null>(null);
   const [certHeight, setCertHeight] = useState(680);
+  const [deleteTarget, setDeleteTarget] = useState<TemplateRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     function handleMessage(e: MessageEvent) {
@@ -103,14 +115,17 @@ export default function TemplatesTable() {
   const { page, totalPages, pageSize, paginatedItems, setPage, setPageSize } =
     usePagination(filtered, 10);
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete template "${name}"?`)) return;
-    const result = await deleteTemplateAction(id);
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteTemplateAction(deleteTarget.id);
+    setDeleting(false);
     if (result?.error) {
       alert(result.error);
     } else {
       loadTemplates();
       setPage(0);
+      setDeleteTarget(null);
     }
   }
 
@@ -252,7 +267,7 @@ export default function TemplatesTable() {
                       </Link>
                     )}
                     <button
-                      onClick={() => handleDelete(t.id, t.name)}
+                      onClick={() => setDeleteTarget(t)}
                       disabled={t.locked}
                       title={t.locked ? "Locked: used by a draft or active event" : undefined}
                       className="text-xs text-danger hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
@@ -308,6 +323,31 @@ export default function TemplatesTable() {
           </div>
         </>
       )}
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Template</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deleteTarget?.name}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+            <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
+            <p className="text-[var(--color-danger-text)]">
+              This will permanently delete the template. This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete Template"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

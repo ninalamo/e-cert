@@ -4,6 +4,7 @@ import type { Certificate } from "@/types/certificate";
 import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { createClient } from "@/lib/supabase/server";
+import { ORG_NAME } from "@/lib/org";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function repo(client: SupabaseClient) {
@@ -37,6 +38,13 @@ export async function issueCertificate(data: {
   metadata?: Record<string, unknown>;
   send_email?: boolean;
   user_id?: string;
+  event?: {
+    name?: string | null;
+    event_date?: string | null;
+    location?: string | null;
+    organizer?: string | null;
+    certificate_title?: string | null;
+  };
 }): Promise<{ certificate: Certificate | null; error?: string; emailSent?: boolean }> {
   const client = await createClient();
   const certRepo = repo(client);
@@ -61,7 +69,17 @@ export async function issueCertificate(data: {
           recipient_name: data.recipient_name,
           certificate_number: number,
           issued_date: new Date().toLocaleDateString(),
-          organization_name: "Organization",
+          organization_name: ORG_NAME,
+          event_name: data.event?.name ?? "",
+          event_date: data.event?.event_date
+            ? new Date(data.event.event_date).toLocaleDateString()
+            : "",
+          event_location: data.event?.location ?? "",
+          event_organizer: data.event?.organizer ?? "",
+          certificate_title: data.event?.certificate_title ?? "",
+          expiry_date: data.expires_at
+            ? new Date(data.expires_at).toLocaleDateString()
+            : "",
           qr_code: `<img src="${qrDataUrl}" width="128" height="128" />`,
         }
       );

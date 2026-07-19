@@ -3,7 +3,7 @@ import { getEmailProvider } from "@/lib/email";
 import { certificateEmailHtml } from "./email-template";
 import { CertificateRepository } from "./certificate.repository";
 import { getCertificatePdfBuffer } from "./certificate.service";
-import { generateQrCodeDataUrl } from "@/lib/qr";
+import { ORG_NAME } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -33,13 +33,6 @@ export async function sendCertificateEmail(
   const downloadUrl = `${baseUrl}/api/certificates/${certificate.id}/download`;
   const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
 
-  let qrCodeDataUrl: string | undefined;
-  try {
-    qrCodeDataUrl = await generateQrCodeDataUrl(verifyUrl, { width: 128, margin: 1 });
-  } catch {
-    // QR code is optional
-  }
-
   const subject = `Your Certificate ${certificate.certificate_number} is Ready`;
   const html = certificateEmailHtml({
     recipientName: certificate.recipient_name,
@@ -47,7 +40,7 @@ export async function sendCertificateEmail(
     issuedDate: new Date(certificate.issued_at).toLocaleDateString(),
     downloadUrl,
     verifyUrl,
-    qrCodeDataUrl,
+    orgName: ORG_NAME,
   });
 
   const emailProvider = getEmailProvider();

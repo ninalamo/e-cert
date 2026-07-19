@@ -198,6 +198,13 @@ export async function issueCertificatesForCompleted(
           recipient_email: attendee.email,
           expires_at: event.valid_until ?? undefined,
           metadata: { attendee_id: attendee.id },
+          event: {
+            name: event.name,
+            event_date: event.event_date,
+            location: event.location,
+            organizer: event.organizer,
+            certificate_title: event.certificate_title,
+          },
         });
 
         if (result.error || !result.certificate) {
