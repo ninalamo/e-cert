@@ -166,7 +166,7 @@ export async function issueCertificatesForCompleted(
   }>;
 }> {
   const c = client ?? (await createClient());
-  const { attendeeRepo, eventRepo, certRepo } = repos(c);
+  const { attendeeRepo, eventRepo } = repos(c);
 
   const event = (await eventRepo.findById(eventId)) as Event | null;
   if (!event) {
@@ -206,10 +206,6 @@ export async function issueCertificatesForCompleted(
         });
         continue;
       }
-
-      await certRepo.update(result.certificate.id, {
-        metadata: { ...(result.certificate.metadata ?? {}), attendee_id: attendee.id },
-      } as Record<string, unknown>);
 
       await attendeeRepo.update(attendee.id, {
         certificate_id: result.certificate.id,

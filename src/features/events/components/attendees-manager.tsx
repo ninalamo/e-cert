@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   getAttendeesAction,
   addAttendeeAction,
-  updateAttendeeAction,
   removeAttendeeAction,
 } from "@/features/events/server/attendee.actions";
 import type { EventAttendee } from "@/types/event-attendee";
@@ -22,13 +21,19 @@ import { Trash2Icon, InfoIcon, SearchIcon } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
-type FilterStatus = "all" | "pending" | "attended" | "completed" | "issued";
+type FilterStatus = "all" | "not_issued" | "issued" | "revoked" | "expired";
+
+function getAttendeeStatus(a: EventAttendee): "issued" | "revoked" | "expired" | "not_issued" {
+  if (!a.certificate_id) return "not_issued";
+  if (a.certificates?.revoked_at) return "revoked";
+  if (a.certificates?.expires_at && new Date(a.certificates.expires_at) < new Date()) return "expired";
+  return "issued";
+}
 
 export default function AttendeesManager({
   eventId,
   organizationId,
   readOnly = false,
-  toggleDisabled = false,
   onSelectionChange,
   showAddDialog = false,
   onAddDialogHandled,
@@ -36,7 +41,6 @@ export default function AttendeesManager({
   eventId: string;
   organizationId: string;
   readOnly?: boolean;
-  toggleDisabled?: boolean;
   onSelectionChange?: (ids: string[]) => void;
   showAddDialog?: boolean;
   onAddDialogHandled?: () => void;
@@ -90,12 +94,7 @@ export default function AttendeesManager({
       );
     }
     if (filter !== "all") {
-      list = list.filter((a) => {
-        if (filter === "pending") return !a.completed && !a.certificate_id;
-        if (filter === "completed") return a.completed && !a.certificate_id;
-        if (filter === "issued") return !!a.certificate_id;
-        return true;
-      });
+      list = list.filter((a) => getAttendeeStatus(a) === filter);
     }
     return list;
   }, [attendees, search, filter]);
@@ -164,16 +163,6 @@ export default function AttendeesManager({
     }
   }
 
-  async function toggleField(id: string, field: "completed", value: boolean) {
-    setError(null);
-    const result = await updateAttendeeAction(id, { [field]: value });
-    if (result.error) {
-      setError(result.error);
-    } else if (result.attendee) {
-      setAttendees((prev) => prev.map((a) => (a.id === id ? result.attendee! : a)));
-    }
-  }
-
   async function handleRemove(id: string) {
     setRemoveTarget(null);
     const result = await removeAttendeeAction(id);
@@ -188,20 +177,6 @@ export default function AttendeesManager({
       await load();
     }
   }
-
-  async function bulkToggle(field: "completed", value: boolean) {
-    setError(null);
-    const ids = Array.from(selected);
-    for (const id of ids) {
-      const result = await updateAttendeeAction(id, { [field]: value });
-      if (result.attendee) {
-        setAttendees((prev) => prev.map((a) => (a.id === id ? result.attendee! : a)));
-      }
-    }
-    setSelected(new Set());
-  }
-
-  const completedCount = attendees.filter((a) => a.completed && !a.certificate_id).length;
 
   if (loading) {
     return (
@@ -231,9 +206,6 @@ export default function AttendeesManager({
           <span className="text-sm text-tertiary">
             {filtered.length} attendee{filtered.length !== 1 ? "s" : ""}
           </span>
-          {completedCount > 0 && (
-            <span className="badge-amber">{completedCount} pending issue</span>
-          )}
           {selected.size > 0 && (
             <span className="badge-brand">{selected.size} selected</span>
           )}
@@ -255,39 +227,13 @@ export default function AttendeesManager({
             className="input py-1.5 text-xs w-auto"
           >
             <option value="all">All</option>
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
+            <option value="not_issued">Not Issued</option>
             <option value="issued">Issued</option>
+            <option value="revoked">Revoked</option>
+            <option value="expired">Expired</option>
           </select>
         </div>
       </div>
-
-      {selected.size > 0 && !toggleDisabled && (
-        <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-          <span className="text-xs text-[var(--color-text-muted)] mr-1">{selected.size} selected</span>
-          <button
-            type="button"
-            onClick={() => bulkToggle("completed", true)}
-            className="btn-brand-soft text-xs"
-          >
-            Mark Completed
-          </button>
-          <button
-            type="button"
-            onClick={() => bulkToggle("completed", false)}
-            className="btn-brand-soft text-xs"
-          >
-            Unmark Completed
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelected(new Set())}
-            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] ml-auto cursor-pointer"
-          >
-            Clear selection
-          </button>
-        </div>
-      )}
 
       {filtered.length === 0 ? (
         <div className="app-card p-12 text-center">
@@ -301,21 +247,22 @@ export default function AttendeesManager({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)]">
-                  {!readOnly && (
-                    <th className="w-12 py-3 pl-4 text-left">
-                      <input
-                        type="checkbox"
-                        checked={allPageSelected}
-                        ref={(el) => {
-                          if (el) el.indeterminate = somePageSelected && !allPageSelected;
-                        }}
-                        onChange={toggleSelectAll}
-                        className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
-                      />
-                    </th>
-                  )}
+                  <th className="w-12 py-3 pl-4 text-left">
+                    <input
+                      type="checkbox"
+                      checked={allPageSelected}
+                      disabled={readOnly}
+                      ref={(el) => {
+                        if (el) el.indeterminate = somePageSelected && !allPageSelected;
+                      }}
+                      onChange={toggleSelectAll}
+                      className="size-4 rounded border-border-strong accent-[var(--color-brand-600)] disabled:opacity-50"
+                    />
+                  </th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden sm:table-cell">Email</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Issued</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden lg:table-cell">Source</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden md:table-cell">Status</th>
                   {!readOnly && (
                     <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
@@ -328,59 +275,50 @@ export default function AttendeesManager({
                     key={a.id}
                     className={`border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)] ${idx === 0 ? "" : ""}`}
                   >
-                    {!readOnly && (
-                      <td className="w-12 py-3 pl-4">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(a.id)}
-                          onChange={() => toggleSelect(a.id)}
-                          className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
-                        />
-                      </td>
-                    )}
+                    <td className="w-12 py-3 pl-4">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(a.id)}
+                        disabled={readOnly}
+                        onChange={() => toggleSelect(a.id)}
+                        className="size-4 rounded border-border-strong accent-[var(--color-brand-600)] disabled:opacity-50"
+                      />
+                    </td>
                     <td className="py-3 px-2">
                       <p className="font-medium text-[var(--color-text)]">{a.name}</p>
                       <p className="text-xs text-[var(--color-text-muted)] sm:hidden">{a.email}</p>
                     </td>
                     <td className="py-3 px-2 text-[var(--color-text-muted)] hidden sm:table-cell">{a.email}</td>
-                    <td className="py-3 px-2 hidden md:table-cell">
+                    <td className="py-3 px-2">
                       {a.certificate_id ? (
-                        <Link
-                          href={`/certificates/${a.certificate_id}`}
-                          className="badge-blue"
-                        >
-                          Issued
+                        <Link href={`/certificates/${a.certificate_id}`} className="badge-blue">
+                          Yes
                         </Link>
-                      ) : a.completed ? (
-                        <span className="badge-amber">Pending</span>
                       ) : (
-                        <span className="text-xs text-[var(--color-text-muted)]">—</span>
+                        <span className="text-xs text-[var(--color-text-muted)]">No</span>
                       )}
+                    </td>
+                    <td className="py-3 px-2 text-xs text-[var(--color-text-muted)] hidden lg:table-cell">
+                      {a.metadata?.generation_mode === "file" ? "Uploaded PDF" : a.metadata?.generation_mode === "template" ? "System" : "—"}
+                    </td>
+                    <td className="py-3 px-2 hidden md:table-cell">
+                      {(() => {
+                        const status = getAttendeeStatus(a);
+                        if (status === "issued") {
+                          return <Link href={`/certificates/${a.certificate_id}`} className="badge-blue">Issued</Link>;
+                        }
+                        if (status === "revoked") {
+                          return <span className="badge-amber">Revoked</span>;
+                        }
+                        if (status === "expired") {
+                          return <span className="badge-amber">Expired</span>;
+                        }
+                        return <span className="text-xs text-[var(--color-text-muted)]">Not issued</span>;
+                      })()}
                     </td>
                     {!readOnly && (
                       <td className="py-3 pr-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={a.completed}
-                              aria-disabled={toggleDisabled}
-                              disabled={toggleDisabled}
-                              onClick={() => !toggleDisabled && toggleField(a.id, "completed", !a.completed)}
-                              title={toggleDisabled ? "Completed can only be toggled while the event is Active" : "Completed"}
-                              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-                                a.completed ? "bg-[var(--color-success)]" : "bg-[var(--color-border-strong)]"
-                              } ${toggleDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                            >
-                              <span
-                                className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
-                                  a.completed ? "translate-x-5" : "translate-x-0.5"
-                                }`}
-                              />
-                            </button>
-                            <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">Completed</span>
-                          </div>
+                        <div className="flex items-center justify-end">
                           <button
                             type="button"
                             onClick={() => setRemoveTarget(a)}

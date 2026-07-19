@@ -282,3 +282,14 @@ DELETE FROM auth.users;
 --       admin@lyceumalabang.edu.ph      / password123
 --       staff@lyceumalabang.edu.ph      / password123
 --       participant@lyceumalabang.edu.ph / password123
+
+-- ============================================================
+-- 6. MIGRATION: Event status rename (published→active, completed→archive)
+-- ============================================================
+-- Run this section against an EXISTING database that was created with
+-- the old status values ('published', 'completed'). Safe to re-run.
+
+UPDATE events SET status = 'active' WHERE status = 'published';
+UPDATE events SET status = 'archive' WHERE status = 'completed';
+ALTER TABLE events DROP CONSTRAINT IF EXISTS events_status_check;
+ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status IN ('draft', 'active', 'archive'));

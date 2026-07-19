@@ -3,6 +3,7 @@
 import * as eventService from "./event.service";
 import * as certService from "@/features/certificates/server/certificate.service";
 import { requireRole } from "@/lib/permissions";
+import { createClient } from "@/lib/supabase/server";
 
 export async function getEventsAction(organizationId: string) {
   await requireRole(["admin", "staff"]);
@@ -31,7 +32,8 @@ export async function createEventAction(data: {
   template_id?: string;
 }) {
   await requireRole(["admin", "staff"]);
-  return eventService.createEvent(data);
+  const client = await createClient();
+  return eventService.createEvent(data, client);
 }
 
 export async function updateEventAction(
@@ -49,7 +51,8 @@ export async function updateEventAction(
   }
 ) {
   await requireRole(["admin", "staff"]);
-  return eventService.updateEvent(id, data);
+  const client = await createClient();
+  return eventService.updateEvent(id, data, client);
 }
 
 export async function deleteEventAction(id: string) {

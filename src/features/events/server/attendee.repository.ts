@@ -8,10 +8,14 @@ export class EventAttendeeRepository extends BaseRepository<EventAttendee> {
   }
 
   async findByEventId(eventId: string): Promise<EventAttendee[]> {
-    return this.findMany(
-      { event_id: eventId },
-      { orderBy: "created_at", ascending: true }
-    );
+    const { data, error } = await this.client
+      .from(this.table)
+      .select("*, certificates!certificate_id(revoked_at, expires_at)")
+      .eq("event_id", eventId)
+      .order("created_at", { ascending: true });
+
+    if (error) return [];
+    return (data ?? []) as EventAttendee[];
   }
 
   async findByEventAndEmail(

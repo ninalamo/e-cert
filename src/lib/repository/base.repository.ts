@@ -72,7 +72,10 @@ export abstract class BaseRepository<T> {
       .select()
       .single();
 
-    if (error) return null;
+    if (error) {
+      console.error(`[${this.table}] update error:`, error.message, error.details, error.hint, error.code);
+      return null;
+    }
     return updated as T;
   }
 
@@ -82,6 +85,9 @@ export abstract class BaseRepository<T> {
       .delete()
       .eq("id", id);
 
+    if (error) {
+      console.error(`[${this.table}] delete error:`, error.message, error.details, error.hint, error.code);
+    }
     return !error;
   }
 

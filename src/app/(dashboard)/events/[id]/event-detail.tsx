@@ -287,7 +287,7 @@ export default function EventDetail({
   const transitions = statusTransitions[event.status] ?? [];
   const canChangeStatus = transitions.length > 0;
   const showArchiveTip = event.status === "active" && isExpired(event.valid_until);
-  const canManageAttendees = event.status === "draft";
+  const canManageAttendees = event.status === "draft" || event.status === "active";
   const canIssue = event.status === "active";
 
   return (
@@ -665,7 +665,7 @@ export default function EventDetail({
               type="button"
               onClick={() => canManageAttendees && setShowAddDialog(true)}
               disabled={!canManageAttendees}
-              title={canManageAttendees ? undefined : "Attendees can only be added while the event is in Draft"}
+              title={canManageAttendees ? undefined : "Attendees can only be added while the event is in Draft or Active"}
               className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-brand-600)] px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow-ios-sm)] transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--color-brand-600)]"
             >
               <PlusIcon className="size-4" />
@@ -675,7 +675,7 @@ export default function EventDetail({
               href={`/events/${eventId}/upload`}
               aria-disabled={!canManageAttendees}
               onClick={(e) => { if (!canManageAttendees) e.preventDefault(); }}
-              title={canManageAttendees ? undefined : "Attendees can only be imported while the event is in Draft"}
+              title={canManageAttendees ? undefined : "Attendees can only be imported while the event is in Draft or Active"}
               className={`inline-flex items-center gap-1.5 rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 py-2 text-sm font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97] cursor-pointer ${!canManageAttendees ? "opacity-50 pointer-events-none cursor-not-allowed" : ""}`}
             >
               <UploadIcon className="size-4" />
@@ -699,7 +699,6 @@ export default function EventDetail({
             eventId={eventId}
             organizationId={event.organization_id}
             readOnly={!canManageAttendees}
-            toggleDisabled={!canIssue}
             onSelectionChange={setSelectedAttendeeIds}
             showAddDialog={showAddDialog}
             onAddDialogHandled={() => setShowAddDialog(false)}

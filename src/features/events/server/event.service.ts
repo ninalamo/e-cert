@@ -109,7 +109,7 @@ export async function deleteEvent(
 export async function cloneTemplateForEvent(
   sourceTemplateId: string,
   eventId: string,
-  eventName: string,
+  cloneName: string,
   client?: SupabaseClient
 ): Promise<{ templateId: string | null; error?: string }> {
   const { eventRepo, templateRepo } = repos(client ?? (await createClient()));
@@ -120,7 +120,7 @@ export async function cloneTemplateForEvent(
 
   const { data: template, error: cloneError } = await templateRepo.create({
     organization_id: source.organization_id,
-    name: `${eventName} - ${source.name}`,
+    name: cloneName,
     description: source.description,
     html_content: source.html_content,
     css_content: source.css_content,

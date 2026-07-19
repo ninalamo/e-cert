@@ -20,4 +20,5 @@ export interface EventAttendee {
   metadata: AttendeeMetadata | null;
   created_at: string;
   updated_at: string;
+  certificates?: { revoked_at: string | null; expires_at: string | null } | null;
 }

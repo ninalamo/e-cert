@@ -1,9 +1,7 @@
 import { CertificateRepository } from "./certificate.repository";
 import { generateCertificateNumber } from "./certificate-number";
 import type { Certificate } from "@/types/certificate";
-import type { CertificateTemplate } from "@/types/template";
 import { renderHtmlToPdf } from "@/lib/pdf";
-import { getStorageProvider } from "@/lib/storage";
 import { generateQrCode } from "@/lib/qr";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -36,7 +34,6 @@ export async function issueCertificate(data: {
   recipient_name: string;
   recipient_email: string;
   expires_at?: string;
-  file_path?: string;
   metadata?: Record<string, unknown>;
   send_email?: boolean;
   user_id?: string;
@@ -47,15 +44,11 @@ export async function issueCertificate(data: {
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const verifyUrl = `${baseUrl}/verify?number=${number}`;
-  const { qrBuffer } = await (async () => {
-    const { generateQrCode } = await import("@/lib/qr");
-    const buf = await generateQrCode(verifyUrl, { width: 128, margin: 1 });
-    return { qrBuffer: buf };
-  })();
+  const qrBuffer = await generateQrCode(verifyUrl, { width: 128, margin: 1 });
   const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;
 
   let renderedHtml: string | null = null;
-  let filePath: string | null = data.file_path ?? null;
+  let renderedPdfBase64: string | null = null;
 
   if (data.template_id) {
     const { getTemplate } = await import("@/features/templates/server/template.service");
@@ -73,21 +66,19 @@ export async function issueCertificate(data: {
         }
       );
 
-      if (!filePath) {
-        const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
-          format: "A4",
-          landscape: true,
-          margin: { top: "0", right: "0", bottom: "0", left: "0" },
-        });
-        const storage = getStorageProvider();
-        filePath = await storage.writeFile(`certificates/${number}.pdf`, pdfBuffer);
-      }
+      const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
+        format: "A4",
+        landscape: true,
+        margin: { top: "0", right: "0", bottom: "0", left: "0" },
+      });
+      renderedPdfBase64 = pdfBuffer.toString("base64");
     }
   }
 
   const metadata: Record<string, unknown> = {
     ...(data.metadata ?? {}),
     ...(renderedHtml ? { rendered_html: renderedHtml } : {}),
+    ...(renderedPdfBase64 ? { rendered_pdf: renderedPdfBase64 } : {}),
   };
 
   const { data: certificate, error } = await certRepo.create({
@@ -98,7 +89,7 @@ export async function issueCertificate(data: {
     recipient_email: data.recipient_email,
     certificate_number: number,
     expires_at: data.expires_at ?? null,
-    file_path: filePath,
+    file_path: null,
     metadata,
   } as Partial<Certificate>);
 
@@ -187,40 +178,16 @@ export async function revokeCertificate(
 
 export async function getCertificatePdfBuffer(certificate: Certificate): Promise<Buffer> {
   if (certificate.file_path) {
+    const { getStorageProvider } = await import("@/lib/storage");
     const storage = getStorageProvider();
     return storage.readFile(certificate.file_path);
   }
 
-  const { getTemplate } = await import("@/features/templates/server/template.service");
-  const template = await getTemplate(certificate.template_id!);
-  if (!template) {
-    throw new Error("Template not found");
+  const renderedPdf = (certificate.metadata as Record<string, unknown> | null)
+    ?.rendered_pdf;
+  if (typeof renderedPdf === "string") {
+    return Buffer.from(renderedPdf, "base64");
   }
 
-  return generateCertificatePdf(certificate, template);
-}
-
-export async function generateCertificatePdf(
-  certificate: Certificate,
-  template: CertificateTemplate
-): Promise<Buffer> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
-
-  const qrBuffer = await generateQrCode(verifyUrl, { width: 128, margin: 1 });
-  const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;
-
-  const html = renderTemplate(template.html_content, template.css_content ?? "", {
-    recipient_name: certificate.recipient_name,
-    certificate_number: certificate.certificate_number,
-    issued_date: new Date(certificate.issued_at).toLocaleDateString(),
-    organization_name: "Organization",
-    qr_code: `<img src="${qrDataUrl}" width="128" height="128" />`,
-  });
-
-  return renderHtmlToPdf(html, {
-    format: "A4",
-    landscape: true,
-    margin: { top: "0", right: "0", bottom: "0", left: "0" },
-  });
+  throw new Error("Certificate PDF not found");
 }
