@@ -10,7 +10,7 @@ import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import type { AttendeeMetadata } from "@/types/event-attendee";
 import { SkeletonDetail } from "@/components/ui/skeleton";
-import { InfoIcon, DownloadIcon } from "lucide-react";
+import { InfoIcon, DownloadIcon, UploadIcon, XIcon, AlertTriangleIcon, FileIcon } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -79,7 +79,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const csvRef = useRef<HTMLInputElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const totalPages = Math.ceil(rows.length / PAGE_SIZE);
 
@@ -153,36 +152,37 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
     reader.readAsText(file);
   }, []);
 
-  const handleFilesChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const map = new Map(uploadedFiles);
-    const processFiles = async () => {
-      for (const file of Array.from(files)) {
-        const data = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const base64 = (ev.target?.result as string).split(",")[1] ?? "";
-            resolve(base64);
-          };
-          reader.readAsDataURL(file);
-        });
-        map.set(file.name, { name: file.name, data, type: file.type });
-      }
-      setUploadedFiles(new Map(map));
-
+  const handleRowFileUpload = useCallback((rowIndex: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = (ev.target?.result as string).split(",")[1] ?? "";
+      const uploaded: UploadedFile = { name: file.name, data: base64, type: file.type };
+      setUploadedFiles((prev) => new Map(prev).set(file.name, uploaded));
       setRows((prev) =>
-        prev.map((r) => {
-          if (r.file_path && map.has(r.file_path)) {
-            return { ...r, mode: "file" as const };
-          }
-          return r;
-        })
+        prev.map((r, i) =>
+          i !== rowIndex
+            ? r
+            : { ...r, file_path: file.name, mode: "file" as const }
+        )
       );
     };
-    processFiles();
-  }, [uploadedFiles]);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const removeRowFile = useCallback((rowIndex: number) => {
+    setRows((prev) => {
+      const row = prev[rowIndex];
+      if (!row) return prev;
+      setUploadedFiles((m) => {
+        const next = new Map(m);
+        next.delete(row.file_path);
+        return next;
+      });
+      return prev.map((r, i) =>
+        i === rowIndex ? { ...r, mode: "template" as const } : r
+      );
+    });
+  }, []);
 
   function toggleRowMode(index: number) {
     setRows((prev) => {
@@ -214,6 +214,10 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
 
   async function handleSubmit() {
     if (rows.length === 0 || !event) return;
+    if (missingFileCount > 0) {
+      setError(`${missingFileCount} row(s) have a file path but no uploaded file. Upload the matching files or remove those rows.`);
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -271,11 +275,13 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
     }
   }
 
-  if (!event) return <SkeletonDetail />;
-
   const successCount = results?.filter((r) => r.success).length ?? 0;
   const failCount = results?.filter((r) => !r.success).length ?? 0;
   const canFileMode = (r: CsvRow) => !!r.file_path && uploadedFiles.has(r.file_path);
+  const missingFileCount = rows.filter((r) => r.file_path && !uploadedFiles.has(r.file_path)).length;
+  const isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+  if (!event) return <SkeletonDetail />;
 
   return (
     <div className="space-y-6">
@@ -299,14 +305,12 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
               (and optional <code className="rounded bg-black/5 px-1 py-0.5 text-xs">file_path</code>).
             </li>
             <li>
-              Optionally upload <strong>participant files</strong> (PDF/PNG/JPG).
-              Rows whose <code className="rounded bg-black/5 px-1 py-0.5 text-xs">file_path</code>{" "}
-              matches an uploaded file use that file; otherwise a certificate is
-              generated from the event template.
+              Preview the rows. For rows with a <code className="rounded bg-black/5 px-1 py-0.5 text-xs">file_path</code>,
+              upload the matching file inline. Rows without a file are
+              system-generated from the event template.
             </li>
             <li>
-              Preview the rows, then <strong>Add Participants</strong> to import them
-              into this event.
+              Click <strong>Add Participants</strong> to import them into this event.
             </li>
           </ol>
         </div>
@@ -358,26 +362,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-tertiary mb-1">
-              Participant Files (PDF, PNG, JPG) — optional
-            </label>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".pdf,.png,.jpg,.jpeg"
-              multiple
-              onChange={handleFilesChange}
-              disabled={event?.status === "archive"}
-              className="input disabled:opacity-50"
-            />
-            {uploadedFiles.size > 0 && (
-              <p className="mt-1 text-xs text-tertiary">
-                {uploadedFiles.size} file(s) uploaded
-              </p>
-            )}
-          </div>
-
           <div className="flex justify-end gap-2">
             <Link
               href={`/events/${eventId}`}
@@ -419,6 +403,15 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
             </div>
           </div>
 
+          {missingFileCount > 0 && (
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-3 text-sm">
+              <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-warning-text)]" />
+              <p className="text-[var(--color-warning-text)]">
+                {missingFileCount} row(s) have a file path but no uploaded file. Upload the matching files or remove those rows before submitting.
+              </p>
+            </div>
+          )}
+
           <div className="app-card divide-y divide-border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -427,6 +420,8 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Email</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">File Path</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">File</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Mode</th>
                   <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
                 </tr>
@@ -435,6 +430,8 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                 {rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((row, i) => {
                   const globalIdx = page * PAGE_SIZE + i;
                   const hasFile = canFileMode(row);
+                  const uploadedFile = row.file_path ? uploadedFiles.get(row.file_path) : undefined;
+                  const fileInputId = `file-upload-${globalIdx}`;
                   return (
                     <tr key={globalIdx} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
                       <td className="py-3 pl-4 text-tertiary text-xs">{globalIdx + 1}</td>
@@ -442,20 +439,87 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                       <td className="text-tertiary">{row.email}</td>
                       <td className="text-xs">
                         {row.file_path ? (
-                          hasFile ? (
-                            <span className="text-[var(--color-success-text)]">{row.file_path}</span>
+                          <span className="text-[var(--color-text)]">{row.file_path}</span>
+                        ) : (
+                          <span className="text-tertiary">—</span>
+                        )}
+                      </td>
+                      <td className="text-xs">
+                        {row.file_path ? (
+                          hasFile && uploadedFile ? (
+                            <div className="flex items-center gap-2">
+                              {uploadedFile.type.startsWith("image/") ? (
+                                <img
+                                  src={`data:${uploadedFile.type};base64,${uploadedFile.data}`}
+                                  alt={uploadedFile.name}
+                                  className="size-8 rounded border border-[var(--color-border)] object-cover"
+                                />
+                              ) : (
+                                <FileIcon className="size-8 p-1.5 text-[var(--color-brand-600)] bg-[var(--color-brand-50)] rounded border border-[var(--color-border)]" />
+                              )}
+                              <span className="truncate max-w-[120px] text-[var(--color-success-text)]">{uploadedFile.name}</span>
+                            </div>
                           ) : (
-                            <span className="text-[var(--color-warning-text)]" title="File not uploaded">{row.file_path} ⚠</span>
+                            <label
+                              htmlFor={fileInputId}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-brand-600)] cursor-pointer transition-colors hover:bg-[var(--color-brand-50)]"
+                            >
+                              <UploadIcon className="size-3" />
+                              Upload
+                            </label>
                           )
                         ) : (
                           <span className="text-tertiary">—</span>
+                        )}
+                        {row.file_path && (
+                          <input
+                            id={fileInputId}
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleRowFileUpload(globalIdx, file);
+                              e.target.value = "";
+                            }}
+                          />
+                        )}
+                      </td>
+                      <td>
+                        {row.file_path ? (
+                          hasFile ? (
+                            <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-success-text)]">
+                              Uploaded
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-warning-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-warning-text)]"
+                              title={
+                                isLocalhost
+                                  ? `No file uploaded for "${row.file_path}"`
+                                  : undefined
+                              }
+                            >
+                              <AlertTriangleIcon className="size-3" />
+                              Not uploadable
+                              {isLocalhost && (
+                                <span className="ml-1 font-normal opacity-80">
+                                  missing {row.file_path}
+                                </span>
+                              )}
+                            </span>
+                          )
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-muted)]">
+                            System-generated
+                          </span>
                         )}
                       </td>
                       <td>
                         <select
                           value={row.mode}
                           onChange={() => toggleRowMode(globalIdx)}
-                          disabled={!hasFile && row.mode === "template"}
+                          disabled={!hasFile}
                           className="input px-2 py-1 text-xs disabled:opacity-50"
                         >
                           <option value="template">Template</option>
@@ -463,12 +527,23 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                         </select>
                       </td>
                       <td className="text-right">
-                        <button
-                          onClick={() => removeRow(globalIdx)}
-                          className="btn btn-danger"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          {row.file_path && hasFile && (
+                            <button
+                              onClick={() => removeRowFile(globalIdx)}
+                              className="btn btn-ghost p-1"
+                              title="Remove uploaded file"
+                            >
+                              <XIcon className="size-3.5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => removeRow(globalIdx)}
+                            className="btn btn-danger"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -514,7 +589,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={loading || rows.length === 0}
+              disabled={loading || rows.length === 0 || missingFileCount > 0}
               className="btn-brand disabled:opacity-50"
             >
               {loading ? "Adding..." : `Add ${rows.length} Participant(s)`}
@@ -583,7 +658,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                 setResults(null);
                 setPage(0);
                 if (csvRef.current) csvRef.current.value = "";
-                if (fileRef.current) fileRef.current.value = "";
               }}
               className="btn-brand"
             >
