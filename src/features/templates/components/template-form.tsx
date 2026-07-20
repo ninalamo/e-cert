@@ -133,17 +133,13 @@ export default function TemplateForm({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex gap-1.5 p-1 bg-[var(--color-surface-secondary)] rounded-xl flex-1">
+          <div className="tab-bar flex-1">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => setMode(tab.key)}
-                className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                  mode === tab.key
-                    ? "bg-white text-[var(--color-text)] shadow-sm"
-                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
-                }`}
+                className={`tab-item ${mode === tab.key ? "tab-item--active" : ""}`}
               >
                 {tab.label}
               </button>

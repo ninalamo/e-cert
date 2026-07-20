@@ -753,4 +753,41 @@
   .status-warning {
     background-color: var(--color-warning-bg); color: var(--color-warning-text);
   }
+
+  /* ── iOS Segmented Control (Tab Bar) — uniform app-wide ──── */
+  .tab-bar {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    background-color: var(--color-surface-tertiary);
+    border-radius: 0.5625rem;
+  }
+  .tab-item {
+    flex: 1;
+    flex-shrink: 0;
+    padding: 0.375rem 1rem;
+    border-radius: 0.4375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-align: center;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    background: transparent;
+    border: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab-item:hover:not(.tab-item--active) {
+    color: var(--color-text-secondary);
+  }
+  .tab-item--active {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-ios-sm);
+  }
+  .dark .tab-item--active {
+    background-color: var(--color-surface-hover);
+  }
 }

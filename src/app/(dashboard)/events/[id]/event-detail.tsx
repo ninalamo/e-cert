@@ -458,17 +458,13 @@ export default function EventDetail({
         </div>
       </div>
 
-      <div className="flex gap-1 p-1 bg-surface-tertiary rounded-xl">
+      <div className="tab-bar">
         {(["details", "attendees"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => switchTab(tab)}
-            className={`flex-1 shrink-0 text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg whitespace-nowrap transition-all duration-200 cursor-pointer ${
-              activeTab === tab
-                ? "bg-brand-600 text-white shadow-[var(--shadow-ios-sm)]"
-                : "text-tertiary hover:text-secondary"
-            }`}
+            className={`tab-item ${activeTab === tab ? "tab-item--active" : ""}`}
           >
             {tab === "details" ? "Details" : "Attendees"}
           </button>

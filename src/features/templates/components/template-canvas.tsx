@@ -60,6 +60,22 @@ const FONT_SIZES = [
   "24px", "28px", "32px", "36px", "48px", "60px", "72px",
 ];
 
+interface SizePreset {
+  label: string;
+  w: number;
+  h: number;
+}
+
+const SIZE_PRESETS: SizePreset[] = [
+  { label: "A4", w: 1123, h: 794 },
+  { label: "Letter", w: 1056, h: 816 },
+  { label: "A3", w: 1587, h: 1123 },
+  { label: "Legal", w: 1056, h: 688 },
+  { label: "A5", w: 794, h: 559 },
+];
+
+const DEFAULT_SIZE_PRESET = "A4";
+
 function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
@@ -226,8 +242,15 @@ export default function TemplateCanvas({
   const [orientation, setOrientation] = useState<"portrait" | "landscape">(
     initialOrientation
   );
-  const CANVAS_W = orientation === "landscape" ? 1123 : 794;
-  const CANVAS_H = orientation === "landscape" ? 794 : 1123;
+  const [sizePreset, setSizePreset] = useState(DEFAULT_SIZE_PRESET);
+  const [customW, setCustomW] = useState(1123);
+  const [customH, setCustomH] = useState(794);
+
+  const preset = SIZE_PRESETS.find((p) => p.label === sizePreset);
+  const baseW = preset ? preset.w : customW;
+  const baseH = preset ? preset.h : customH;
+  const CANVAS_W = orientation === "landscape" ? baseW : baseH;
+  const CANVAS_H = orientation === "landscape" ? baseH : baseW;
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -247,7 +270,7 @@ export default function TemplateCanvas({
   useEffect(() => {
     onChange(elementsToHtml(elements, CANVAS_W, CANVAS_H));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elements, orientation]);
+  }, [elements, orientation, sizePreset, customW, customH]);
 
   const isSelected = (id: string) => selectedIds.includes(id);
   const firstSel =
@@ -651,6 +674,50 @@ export default function TemplateCanvas({
         )}
 
         <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
+        <div className="flex items-center gap-1.5">
+          <select
+            value={sizePreset}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "Custom") {
+                setSizePreset("Custom");
+              } else {
+                setSizePreset(val);
+              }
+            }}
+            className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none"
+            title="Canvas size"
+          >
+            {SIZE_PRESETS.map((p) => (
+              <option key={p.label} value={p.label}>
+                {p.label} ({p.w}×{p.h})
+              </option>
+            ))}
+            <option value="Custom">Custom</option>
+          </select>
+          {sizePreset === "Custom" && (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={customW}
+                onChange={(e) => setCustomW(Math.max(100, parseInt(e.target.value) || 100))}
+                className="w-16 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] focus:border-[var(--color-brand-500)] focus:outline-none"
+                min={100}
+                title="Width (px)"
+              />
+              <span className="text-xs text-[var(--color-text-muted)]">×</span>
+              <input
+                type="number"
+                value={customH}
+                onChange={(e) => setCustomH(Math.max(100, parseInt(e.target.value) || 100))}
+                className="w-16 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] focus:border-[var(--color-brand-500)] focus:outline-none"
+                min={100}
+                title="Height (px)"
+              />
+            </div>
+          )}
+        </div>
 
         <div className="flex gap-1 p-0.5 bg-[var(--color-surface-secondary)] rounded-lg">
           <button

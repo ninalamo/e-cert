@@ -81,9 +81,9 @@ export function SkeletonDetail() {
         </div>
         <Skeleton className="h-7 w-20 rounded-full" />
       </div>
-      <div className="flex gap-1 p-1 bg-surface-tertiary rounded-xl">
-        <Skeleton className="h-9 flex-1 rounded-lg" />
-        <Skeleton className="h-9 flex-1 rounded-lg" />
+      <div className="tab-bar">
+        <Skeleton className="h-8 flex-1 rounded-md" />
+        <Skeleton className="h-8 flex-1 rounded-md" />
       </div>
       <div className="app-card p-4 space-y-3">
         <Skeleton className="h-4 w-28" />
@@ -119,11 +119,10 @@ export function SkeletonEventDetail({
         <Skeleton className="h-8 w-56" />
         <Skeleton className="h-7 w-20 rounded-full" />
       </div>
-      <div className="flex gap-1 p-1 bg-surface-tertiary rounded-xl">
-        <Skeleton className="h-9 flex-1 rounded-lg" />
-        <Skeleton className="h-9 flex-1 rounded-lg" />
+      <div className="tab-bar">
+        <Skeleton className="h-8 flex-1 rounded-md" />
+        <Skeleton className="h-8 flex-1 rounded-md" />
       </div>
-
       {activeTab === "details" ? (
         <div className="space-y-6">
           <div className="app-card p-4">
