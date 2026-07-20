@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -296,9 +297,12 @@ export default function CertificateDetail({
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <h3 className="text-sm font-semibold mb-3">Verification</h3>
           <div className="flex items-center gap-4">
-            <img
+            <Image
               src={qrDataUrl}
               alt={`QR code for ${certificate.certificate_number}`}
+              width={120}
+              height={120}
+              unoptimized
               className="size-[100px] sm:size-[120px] rounded-xl border bg-white p-1 shrink-0"
             />
             <div className="min-w-0">

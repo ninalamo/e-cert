@@ -1,11 +1,15 @@
-import { chromium, type Browser } from "playwright";
+import puppeteer, { type Browser } from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 
 let browserInstance: Browser | null = null;
 
 async function getBrowser(): Promise<Browser> {
-  if (!browserInstance || !browserInstance.isConnected()) {
-    browserInstance = await chromium.launch({
+  if (!browserInstance || !browserInstance.connected) {
+    const executablePath = await chromium.executablePath();
+    browserInstance = await puppeteer.launch({
       headless: true,
+      executablePath,
+      args: chromium.args,
     });
   }
   return browserInstance;
@@ -36,7 +40,7 @@ export async function renderHtmlToPdf(
       margin = { top: "0", right: "0", bottom: "0", left: "0" },
     } = options;
 
-    await page.setContent(html, { waitUntil: "networkidle" });
+    await page.setContent(html, { waitUntil: "load" });
 
     const pdfBuffer = await page.pdf({
       format,

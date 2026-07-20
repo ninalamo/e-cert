@@ -11,7 +11,7 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   private resolvePath(relativePath: string): string {
-    return path.join(STORAGE_ROOT, relativePath);
+    return path.join(/* turbopackIgnore: true */ STORAGE_ROOT, relativePath);
   }
 
   async writeFile(relativePath: string, data: Buffer): Promise<string> {
