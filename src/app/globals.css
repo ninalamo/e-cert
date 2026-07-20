@@ -329,7 +329,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-surface-muted text-text;
+    @apply bg-surface-muted text-primary;
     font-family: var(--font-sans);
     min-height: 100dvh;
   }
@@ -674,6 +674,7 @@
     font-family: var(--font-display);
     font-size: 1.0625rem; font-weight: 600;
     letter-spacing: -0.02em;
+    color: var(--color-text);
   }
 
   /* ── iOS-style Table ────────────────────────────── */

@@ -26,7 +26,7 @@ function trimPatternTrailingDash(pattern: string): string {
   return `${trimmed}${sep}####`;
 }
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   getEventWithStatsAction,
   updateEventAction,
@@ -124,7 +124,6 @@ export default function EventDetail({
   initialTemplates?: CertificateTemplate[];
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [data, setData] = useState<EventDetailData | null>(initialData);
   const [loading, setLoading] = useState(!initialData);
   const [templates, setTemplates] = useState<CertificateTemplate[]>(initialTemplates);
@@ -135,24 +134,28 @@ export default function EventDetail({
   const [templateMsg, setTemplateMsg] = useState<string | null>(null);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
 
-  const urlTab = searchParams.get("tab");
-  const activeTab: "details" | "attendees" =
-    urlTab === "attendees" ? "attendees" : "details";
+  const [activeTab, setActiveTab] = useState<"details" | "attendees">(
+    initialTab
+  );
 
   function switchTab(tab: "details" | "attendees") {
-    const params = new URLSearchParams(searchParams.toString());
-    if (tab === "attendees") params.set("tab", "attendees");
-    else params.delete("tab");
-    router.replace(`/events/${eventId}?${params.toString()}`, { scroll: false });
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    if (tab === "attendees") url.searchParams.set("tab", "attendees");
+    else url.searchParams.delete("tab");
+    window.history.replaceState(null, "", url.toString());
   }
   const [previewOpen, setPreviewOpen] = useState(false);
   const [editName, setEditName] = useState(false);
   const [nameValue, setNameValue] = useState("");
+  const [nameSaving, setNameSaving] = useState(false);
   const [editFields, setEditFields] = useState(false);
+  const [fieldsSaving, setFieldsSaving] = useState(false);
   const [fieldsValue, setFieldsValue] = useState({
     event_date: "",
     description: "",
     organizer: "",
+    location: "",
     certificate_title: "",
     certificate_number_pattern: "",
     valid_until: "",
@@ -254,6 +257,19 @@ export default function EventDetail({
 
   async function confirmStatusChange() {
     if (!statusTarget) return;
+
+    if (statusTarget.target === "active") {
+      const missing: string[] = [];
+      if (!data?.event.template_id) missing.push("a template");
+      if (!data?.event.event_date) missing.push("a certificate issue date");
+      if (missing.length > 0) {
+        setStatusError(
+          `Set ${missing.join(" and ")} in the Details/Template sections before activating.`
+        );
+        return;
+      }
+    }
+
     setStatusBusy(true);
     setStatusError(null);
     try {
@@ -285,10 +301,12 @@ export default function EventDetail({
 
   async function handleNameSave() {
     if (!data || !nameValue.trim()) return;
+    setNameSaving(true);
     const result = await updateEventAction(eventId, { name: nameValue.trim() });
     if (!result?.error && result?.event) {
       setData((prev) => (prev ? { ...prev, event: result.event! } : prev));
     }
+    setNameSaving(false);
     setEditName(false);
   }
 
@@ -330,10 +348,12 @@ export default function EventDetail({
 
   async function handleFieldsSave() {
     if (!data) return;
+    setFieldsSaving(true);
     const result = await updateEventAction(eventId, {
       event_date: fieldsValue.event_date || undefined,
       description: fieldsValue.description || undefined,
       organizer: fieldsValue.organizer || undefined,
+      location: fieldsValue.location || undefined,
       certificate_title: fieldsValue.certificate_title || undefined,
       certificate_number_pattern: trimPatternTrailingDash(fieldsValue.certificate_number_pattern) || undefined,
       valid_until: fieldsValue.valid_until || undefined,
@@ -341,6 +361,7 @@ export default function EventDetail({
     if (!result?.error && result?.event) {
       setData((prev) => (prev ? { ...prev, event: result.event! } : prev));
     }
+    setFieldsSaving(false);
     setEditFields(false);
   }
 
@@ -354,6 +375,13 @@ export default function EventDetail({
   const showArchiveTip = event.status === "active" && isExpired(event.valid_until);
   const canManageAttendees = event.status === "draft" || event.status === "active";
   const canIssue = event.status === "active";
+  const showMissingFieldsWarning =
+    event.status === "draft" && (!event.template_id || !event.event_date);
+
+  const missingFields: string[] = [];
+  if (!event.template_id) missingFields.push("a template");
+  if (!event.event_date) missingFields.push("a Certificate Issue Date");
+  const missingFieldsMessage = `Set ${missingFields.join(" and ")} before activating this event.`;
 
   return (
     <div className="space-y-6">
@@ -385,8 +413,8 @@ export default function EventDetail({
               onChange={(e) => setNameValue(e.target.value)}
               className="font-heading text-2xl font-bold tracking-tight input flex-1"
             />
-            <button type="submit" className="btn-save">
-              Save
+            <button type="submit" className="btn-save" disabled={nameSaving}>
+              {nameSaving ? "Saving..." : "Save"}
             </button>
             <button
               type="button"
@@ -400,7 +428,7 @@ export default function EventDetail({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h1
-                className={`font-heading text-2xl font-bold tracking-tight ${
+                className={`font-heading text-2xl font-bold tracking-tight text-white ${
                   event.status === "draft"
                     ? "cursor-pointer rounded-lg px-1 -mx-1 hover:bg-surface-hover transition-colors"
                     : ""
@@ -458,6 +486,20 @@ export default function EventDetail({
         </div>
       </div>
 
+      {showMissingFieldsWarning && (
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-4 text-sm">
+          <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-warning-text)]" />
+          <div>
+            <p className="font-medium text-[var(--color-warning-text)]">
+              Required fields missing
+            </p>
+            <p className="mt-0.5 text-[var(--color-warning-text)] opacity-80">
+              {missingFieldsMessage}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="tab-bar">
         {(["details", "attendees"] as const).map((tab) => (
           <button
@@ -479,8 +521,8 @@ export default function EventDetail({
                 <p className="section-title">Event Details</p>
                 {editFields ? (
                   <div className="flex items-center gap-2 ml-auto">
-                    <button type="button" onClick={handleFieldsSave} className="btn-save">
-                      Save
+                    <button type="button" onClick={handleFieldsSave} className="btn-save" disabled={fieldsSaving}>
+                      {fieldsSaving ? "Saving..." : "Save"}
                     </button>
                     <button type="button" onClick={() => setEditFields(false)} className="btn-cancel">
                       Cancel
@@ -494,6 +536,7 @@ export default function EventDetail({
                         event_date: event.event_date ?? "",
                         description: event.description ?? "",
                         organizer: event.organizer ?? "",
+                        location: event.location ?? "",
                         certificate_title: event.certificate_title ?? "",
                         certificate_number_pattern: event.certificate_number_pattern ?? "",
                         valid_until: event.valid_until ?? "",
@@ -560,6 +603,14 @@ export default function EventDetail({
                     />
                   </div>
                   <div>
+                    <label className="block text-xs text-tertiary mb-1">Location</label>
+                    <input
+                      value={fieldsValue.location}
+                      onChange={(e) => setFieldsValue((p) => ({ ...p, location: e.target.value }))}
+                      className="input text-sm"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-xs text-tertiary mb-1">Certificate Issue Date</label>
                     <input
                       type="date"
@@ -609,6 +660,10 @@ export default function EventDetail({
                     <span className="text-sm text-tertiary">Organizer</span>
                     <span className="text-sm font-medium">{event.organizer || "\u2014"}</span>
                   </div>
+                  <div className="flex items-center justify-between px-1 py-2.5">
+                    <span className="text-sm text-tertiary">Location</span>
+                    <span className="text-sm font-medium">{event.location || "\u2014"}</span>
+                  </div>
                   {event.event_date && (
                     <div className="flex items-center justify-between px-1 py-2.5">
                       <span className="text-sm text-tertiary">Certificate Issue Date</span>
@@ -642,6 +697,10 @@ export default function EventDetail({
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-sm text-tertiary">Organizer</span>
                   <span className="text-sm font-medium">{event.organizer || "\u2014"}</span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-tertiary">Location</span>
+                  <span className="text-sm font-medium">{event.location || "\u2014"}</span>
                 </div>
                 {event.event_date && (
                   <div className="flex items-center justify-between px-4 py-3">
@@ -832,25 +891,17 @@ export default function EventDetail({
               const selected = statusTarget?.target === t.target;
               const missingTemplate = !event.template_id;
               const missingIssueDate = !event.event_date;
-              const blocked =
-                t.target === "active" && (missingTemplate || missingIssueDate);
+              const needsWarning =
+                t.target === "active" && selected && (missingTemplate || missingIssueDate);
               return (
                 <button
                   key={t.target}
                   type="button"
-                  onClick={() => !blocked && setStatusTarget(t)}
-                  disabled={blocked}
-                  title={
-                    blocked
-                      ? "A template and a certificate issue date must be set before activating this event"
-                      : undefined
-                  }
+                  onClick={() => setStatusTarget(t)}
                   className={`w-full rounded-xl border px-4 py-3 text-left transition-all ${
-                    blocked
-                      ? "cursor-not-allowed opacity-50"
-                      : selected
-                        ? "border-[var(--color-brand-600)] bg-[var(--color-brand-100)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)]"
+                    selected
+                      ? "border-brand-600 bg-brand-500/15"
+                      : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)]"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -860,8 +911,8 @@ export default function EventDetail({
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-tertiary">
-                    {blocked
-                      ? "Set a template and a Certificate Issue Date in the Details/Template sections before activating."
+                    {needsWarning
+                      ? missingFieldsMessage
                       : t.message}
                   </p>
                 </button>
@@ -869,7 +920,7 @@ export default function EventDetail({
             })}
 
             {statusTarget?.target === "active" && event.template_id && (
-              <div className="rounded-xl border border-border bg-surface-secondary p-4">
+              <div className="rounded-xl border border-border bg-surface-secondary p-4 text-black">
                 <p className="text-sm font-semibold mb-2">Template handling</p>
                 <div className="space-y-2">
                   <label className="flex items-start gap-2 cursor-pointer">
@@ -880,8 +931,8 @@ export default function EventDetail({
                       onChange={() => setTemplateMode("lock")}
                       className="mt-0.5"
                     />
-                    <span className="text-xs text-tertiary">
-                      <span className="font-medium text-secondary">Lock original</span> — keep using the current template. It becomes locked (uneditable) while this event is draft or active.
+                    <span className="text-xs">
+                      <span className="font-medium">Lock original</span> &mdash; keep using the current template. It becomes locked (uneditable) while this event is draft or active.
                     </span>
                   </label>
                   <label className="flex items-start gap-2 cursor-pointer">
@@ -892,8 +943,8 @@ export default function EventDetail({
                       onChange={() => setTemplateMode("copy")}
                       className="mt-0.5"
                     />
-                    <span className="text-xs text-tertiary">
-                      <span className="font-medium text-secondary">Make a copy</span> — clone the template into a new locked copy mapped only to this event.
+                    <span className="text-xs">
+                      <span className="font-medium">Make a copy</span> &mdash; clone the template into a new locked copy mapped only to this event.
                     </span>
                   </label>
                 </div>
@@ -912,18 +963,11 @@ export default function EventDetail({
             <Button
               variant={statusTarget?.target === "archive" ? "destructive" : "default"}
               onClick={confirmStatusChange}
-              disabled={statusBusy || (statusTarget?.target === "active" && (!event.template_id || !event.event_date))}
-              title={
-                statusTarget?.target === "active" && (!event.template_id || !event.event_date)
-                  ? "A template and a certificate issue date must be set before activating this event"
-                  : undefined
-              }
+              disabled={statusBusy}
             >
               {statusBusy
                 ? "Working..."
-                : statusTarget?.target === "active" && (!event.template_id || !event.event_date)
-                  ? "Set Template & Issue Date first"
-                  : statusTarget?.label ?? "Confirm"}
+                : statusTarget?.label ?? "Confirm"}
             </Button>
           </DialogFooter>
         </DialogContent>
