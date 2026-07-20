@@ -33,6 +33,7 @@ export default function WhatsNew({ userKey }: { userKey: string }) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_PREFIX + userKey)) {
       setOpen(true);
