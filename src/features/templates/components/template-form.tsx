@@ -4,6 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import TemplateCanvas from "./template-canvas";
 import CodeEditor from "@/components/ui/code-editor";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { InfoIcon } from "lucide-react";
 
 interface TemplateFormProps {
   initialData?: {
@@ -38,6 +48,9 @@ export default function TemplateForm({
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("design");
   const [advanced, setAdvanced] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   function toggleAdvanced() {
     setAdvanced((prev) => {
@@ -53,6 +66,11 @@ export default function TemplateForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setShowSaveConfirm(true);
+  }
+
+  async function confirmSave() {
+    setShowSaveConfirm(false);
     setError(null);
     setLoading(true);
 
@@ -178,6 +196,11 @@ export default function TemplateForm({
               onChange={setHtmlContent}
               css={cssContent}
               onCssChange={setCssContent}
+              fullscreen={fullscreen}
+              onFullscreenChange={setFullscreen}
+              submitLabel={submitLabel}
+              loading={loading}
+              disabled={disabled}
             />
           </div>
         ) : mode === "html" ? (
@@ -228,21 +251,23 @@ export default function TemplateForm({
         )}
       </fieldset>
 
-      <div className="flex justify-end gap-3 pt-2">
-        <Link
-          href="/templates"
-          className="btn-cancel"
-        >
-          Cancel
-        </Link>
-        <button
-          type="submit"
-          disabled={loading || disabled}
-          className="btn-save disabled:opacity-50"
-        >
-          {loading ? "Saving..." : submitLabel}
-        </button>
-      </div>
+      {!fullscreen && (
+        <div className="flex justify-end gap-3 pt-2">
+          <Link
+            href="/templates"
+            className="btn-cancel"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={loading || disabled}
+            className="btn-save disabled:opacity-50"
+          >
+            {loading ? "Saving..." : submitLabel}
+          </button>
+        </div>
+      )}
     </form>
   );
 }

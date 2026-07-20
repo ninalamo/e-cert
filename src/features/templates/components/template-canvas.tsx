@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Rnd } from "react-rnd";
 import { PLACEHOLDER_FIELDS } from "./placeholder-field";
 import {
@@ -42,6 +43,11 @@ interface TemplateCanvasProps {
   onChange: (html: string) => void;
   css: string;
   onCssChange: (css: string) => void;
+  fullscreen?: boolean;
+  onFullscreenChange?: (fullscreen: boolean) => void;
+  submitLabel?: string;
+  loading?: boolean;
+  disabled?: boolean;
 }
 
 const FONT_FAMILIES = [
@@ -231,6 +237,11 @@ export default function TemplateCanvas({
   onChange,
   css,
   onCssChange,
+  fullscreen = false,
+  onFullscreenChange,
+  submitLabel = "Save",
+  loading = false,
+  disabled = false,
 }: TemplateCanvasProps) {
   const parsed0 = parseHtmlToElements(value);
   const initialOrientation: "portrait" | "landscape" =
@@ -266,6 +277,16 @@ export default function TemplateCanvas({
     h: number;
   } | null>(null);
   const marqueeStart = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && fullscreen) {
+        onFullscreenChange?.(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen, onFullscreenChange]);
 
   useEffect(() => {
     onChange(elementsToHtml(elements, CANVAS_W, CANVAS_H));
@@ -583,8 +604,8 @@ export default function TemplateCanvas({
   const canvasBg = extractBackgroundUrl(css);
   const selCount = selectedIds.length;
 
-  return (
-    <div className="space-y-2">
+  const content = (
+    <>
       <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-ios-sm)]">
         <button
           type="button"
@@ -743,6 +764,41 @@ export default function TemplateCanvas({
             Portrait
           </button>
         </div>
+
+        <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
+        <button
+          type="button"
+          onClick={() => onFullscreenChange?.(!fullscreen)}
+          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97]"
+          title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+        >
+          {fullscreen ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          )}
+          {fullscreen ? "Exit" : "Fullscreen"}
+        </button>
+
+        {fullscreen && (
+          <>
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+            <Link
+              href="/templates"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97]"
+            >
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              disabled={loading || disabled}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-600)] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97] disabled:opacity-50"
+            >
+              {loading ? "Saving..." : submitLabel}
+            </button>
+          </>
+        )}
 
         <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
 
@@ -912,7 +968,7 @@ export default function TemplateCanvas({
         className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3"
         onKeyDown={handleKeyDown}
         tabIndex={0}
-        style={{ maxHeight: "calc(100vh - 320px)" }}
+        style={{ maxHeight: fullscreen ? "calc(100vh - 80px)" : "calc(100vh - 320px)" }}
       >
         <div className="inline-block bg-[var(--color-surface)] p-1.5 rounded-lg shadow-sm">
           <Ruler orientation="horizontal" length={CANVAS_W} />
@@ -1031,6 +1087,20 @@ export default function TemplateCanvas({
           );
         }
       `}</style>
+    </>
+  );
+
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-surface)] p-2 gap-2">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {content}
     </div>
   );
 }
