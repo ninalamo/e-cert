@@ -2,6 +2,9 @@
   command = "next build"
   publish = ".next"
 
+  [build.environment]
+    SECRETS_SCAN_OMIT_KEYS = "DB_PROVIDER,AUTH_URL,AUTH_SECRET,NEXTAUTH_SECRET,NEXTAUTH_URL,SSO_FEATURE_FLAG,EMAIL_FEATURE_FLAG,GMAIL_USER,GMAIL_APP_PASSWORD,SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
