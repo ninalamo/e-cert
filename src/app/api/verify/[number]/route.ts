@@ -10,6 +10,7 @@ export async function GET(
   const { data: certificate, error } = await supabaseAdmin
     .from("certificates")
     .select(`
+      id,
       certificate_number,
       recipient_name,
       issued_at,
@@ -53,6 +54,7 @@ export async function GET(
 
   return NextResponse.json({
     valid: true,
+    id: certificate.id,
     certificate_number: certificate.certificate_number,
     recipient_name: certificate.recipient_name,
     issued_date: certificate.issued_at,

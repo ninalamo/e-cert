@@ -6,6 +6,7 @@ import { Suspense } from "react";
 
 export interface VerificationResult {
   valid: boolean;
+  id?: string;
   certificate_number?: string;
   recipient_name?: string;
   issued_date?: string;
@@ -154,6 +155,14 @@ function VerifySearchInner() {
               </span>
             </div>
           </div>
+          {result.id && (
+            <a
+              href={`/my/certificates/${result.id}`}
+              className="btn-brand mt-2 w-full text-center"
+            >
+              View Certificate
+            </a>
+          )}
         </div>
       )}
     </div>

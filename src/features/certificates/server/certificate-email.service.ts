@@ -27,7 +27,7 @@ export async function sendCertificateEmail(
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const downloadUrl = `${baseUrl}/api/certificates/${certificate.id}/download`;
-  const viewUrl = options?.skip_pdf ? `${baseUrl}/view/${certificate.id}` : downloadUrl;
+  const viewUrl = options?.skip_pdf ? `${baseUrl}/my/certificates/${certificate.id}` : downloadUrl;
   const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
 
   const subject = `Your Certificate ${certificate.certificate_number} is Ready`;
