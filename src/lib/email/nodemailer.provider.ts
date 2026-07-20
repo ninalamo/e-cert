@@ -6,6 +6,19 @@ export class NodemailerProvider implements EmailProvider {
   private transporter: Transporter;
 
   constructor() {
+    const isLocalhost =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+    if (isLocalhost) {
+      console.log(`[Nodemailer:dev] SMTP config:`, {
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        secure: Number(process.env.SMTP_PORT) === 465,
+        user: process.env.SMTP_USER,
+        from: process.env.SMTP_FROM,
+        hasPass: !!process.env.SMTP_PASS,
+      });
+    }
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT) || 587,
