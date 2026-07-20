@@ -32,6 +32,7 @@ export abstract class BaseRepository<T> {
     if (filters) {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null) {
+          if (value === "") return [];
           query = query.eq(key, value);
         }
       }

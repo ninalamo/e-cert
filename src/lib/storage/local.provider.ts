@@ -32,7 +32,7 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async getSignedUrl(relativePath: string): Promise<string> {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
     return `${appUrl}/api/storage/${relativePath}`;
   }
 
