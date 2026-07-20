@@ -214,6 +214,7 @@ export async function issueCertificatesForCompleted(
             location: event.location,
             organizer: event.organizer,
             certificate_title: event.certificate_title,
+            certificate_number_pattern: event.certificate_number_pattern,
           },
         });
 

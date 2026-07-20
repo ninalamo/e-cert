@@ -46,7 +46,8 @@ CREATE TABLE certificate_templates (
   html_content TEXT NOT NULL DEFAULT '',
   css_content TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(organization_id, name)
 );
 
 CREATE TABLE events (
@@ -59,6 +60,7 @@ CREATE TABLE events (
   location TEXT,
   organizer TEXT,
   certificate_title TEXT DEFAULT 'Certificate of Participation',
+  certificate_number_pattern TEXT NOT NULL DEFAULT 'EPOCH',
   valid_until DATE,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'archive')),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -111,6 +113,15 @@ CREATE TABLE certificate_emails (
   error_message TEXT
 );
 
+CREATE TABLE certificate_sequences (
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  pattern TEXT NOT NULL,
+  next_value INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (organization_id, pattern)
+);
+
 -- ============================================================
 -- 3. INDEXES
 -- ============================================================
@@ -129,6 +140,70 @@ CREATE INDEX idx_certificates_event ON certificates(event_id);
 CREATE INDEX idx_certificates_number ON certificates(certificate_number);
 CREATE INDEX idx_certificates_email ON certificates(recipient_email);
 CREATE INDEX idx_certificate_emails_cert ON certificate_emails(certificate_id);
+CREATE INDEX idx_events_template ON events(template_id);
+CREATE INDEX idx_attendees_certificate ON event_attendees(certificate_id);
+
+-- ============================================================
+-- 3b. updated_at TRIGGER
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_organizations_updated_at
+  BEFORE UPDATE ON organizations
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_user_memberships_updated_at
+  BEFORE UPDATE ON user_memberships
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_cert_templates_updated_at
+  BEFORE UPDATE ON certificate_templates
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_events_updated_at
+  BEFORE UPDATE ON events
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_certificates_updated_at
+  BEFORE UPDATE ON certificates
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_event_attendees_updated_at
+  BEFORE UPDATE ON event_attendees
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ============================================================
+-- 3c. CERTIFICATE NUMBER SEQUENCE
+-- Shared per-(organization, pattern) counter so two events using the
+-- same pattern draw from one counter -> no collisions.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION next_certificate_number(
+  p_org_id UUID,
+  p_pattern TEXT
+)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_next INTEGER;
+BEGIN
+  INSERT INTO certificate_sequences (organization_id, pattern, next_value)
+  VALUES (p_org_id, p_pattern, 2)
+  ON CONFLICT (organization_id, pattern)
+  DO UPDATE SET next_value = certificate_sequences.next_value + 1
+  RETURNING certificate_sequences.next_value INTO v_next;
+
+  RETURN v_next;
+END;
+$$;
 
 -- ============================================================
 -- 4. ROW LEVEL SECURITY
@@ -282,14 +357,3 @@ DELETE FROM auth.users;
 --       admin@lyceumalabang.edu.ph      / password123
 --       staff@lyceumalabang.edu.ph      / password123
 --       participant@lyceumalabang.edu.ph / password123
-
--- ============================================================
--- 6. MIGRATION: Event status rename (published→active, completed→archive)
--- ============================================================
--- Run this section against an EXISTING database that was created with
--- the old status values ('published', 'completed'). Safe to re-run.
-
-UPDATE events SET status = 'active' WHERE status = 'published';
-UPDATE events SET status = 'archive' WHERE status = 'completed';
-ALTER TABLE events DROP CONSTRAINT IF EXISTS events_status_check;
-ALTER TABLE events ADD CONSTRAINT events_status_check CHECK (status IN ('draft', 'active', 'archive'));

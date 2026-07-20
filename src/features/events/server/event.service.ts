@@ -50,7 +50,7 @@ export async function getEventWithStats(id: string, client?: SupabaseClient) {
 
 export async function createEvent(
   data: Pick<Event, "organization_id" | "name"> &
-    Partial<Pick<Event, "description" | "event_date" | "location" | "organizer" | "certificate_title" | "valid_until" | "template_id">>,
+    Partial<Pick<Event, "description" | "event_date" | "location" | "organizer" | "certificate_title" | "certificate_number_pattern" | "valid_until" | "template_id">>,
   client?: SupabaseClient
 ): Promise<{ event: Event | null; error?: string }> {
   const { data: event, error } = await repos(client ?? (await createClient())).eventRepo.create({
@@ -60,6 +60,7 @@ export async function createEvent(
     location: data.location ?? null,
     organizer: data.organizer ?? null,
     certificate_title: data.certificate_title ?? "Certificate of Participation",
+    certificate_number_pattern: data.certificate_number_pattern ?? "EPOCH",
     valid_until: data.valid_until ?? null,
     template_id: data.template_id ?? null,
     status: "draft",
@@ -73,7 +74,7 @@ export async function createEvent(
 
 export async function updateEvent(
   id: string,
-  data: Partial<Pick<Event, "name" | "description" | "event_date" | "location" | "organizer" | "certificate_title" | "valid_until" | "status" | "template_id">>,
+  data: Partial<Pick<Event, "name" | "description" | "event_date" | "location" | "organizer" | "certificate_title" | "certificate_number_pattern" | "valid_until" | "status" | "template_id">>,
   client?: SupabaseClient
 ): Promise<{ event: Event | null; error?: string }> {
   const { eventRepo } = repos(client ?? (await createClient()));

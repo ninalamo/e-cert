@@ -46,11 +46,16 @@ export async function issueCertificate(data: {
     location?: string | null;
     organizer?: string | null;
     certificate_title?: string | null;
+    certificate_number_pattern?: string | null;
   };
 }): Promise<{ certificate: Certificate | null; error?: string; emailSent?: boolean }> {
   const client = await createClient();
   const certRepo = repo(client);
-  const number = await generateCertificateNumber();
+  const number = await generateCertificateNumber({
+    organizationId: data.organization_id,
+    pattern: data.event?.certificate_number_pattern ?? null,
+    client,
+  });
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const verifyUrl = `${baseUrl}/verify?number=${number}`;

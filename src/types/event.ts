@@ -8,6 +8,7 @@ export interface Event {
   location: string | null;
   organizer: string | null;
   certificate_title: string | null;
+  certificate_number_pattern: string;
   valid_until: string | null;
   status: "draft" | "active" | "archive";
   created_at: string;

@@ -28,6 +28,7 @@ export async function createEventAction(data: {
   location?: string;
   organizer?: string;
   certificate_title?: string;
+  certificate_number_pattern?: string;
   valid_until?: string;
   template_id?: string;
 }) {
@@ -45,6 +46,7 @@ export async function updateEventAction(
     location?: string;
     organizer?: string;
     certificate_title?: string;
+    certificate_number_pattern?: string;
     valid_until?: string;
     status?: "draft" | "active" | "archive";
     template_id?: string;
@@ -103,6 +105,7 @@ export async function issueEventCertificateAction(data: {
       location: event.location,
       organizer: event.organizer,
       certificate_title: event.certificate_title,
+      certificate_number_pattern: event.certificate_number_pattern,
     },
   });
 

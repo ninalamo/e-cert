@@ -1,6 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
+function sanitizePrefix(raw: string): string {
+  const upper = raw.toUpperCase();
+  const cleaned = upper
+    .split("")
+    .filter((ch, i, arr) => {
+      if (/[A-Z0-9]/.test(ch)) return true;
+      if (ch === "-") return i + 1 < arr.length && /[A-Z0-9]/.test(arr[i + 1]);
+      return false;
+    })
+    .join("");
+  return cleaned.replace(/-+$/, "");
+}
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -105,6 +118,7 @@ export default function EventDetail({
     description: "",
     organizer: "",
     certificate_title: "",
+    certificate_number_pattern: "",
     valid_until: "",
   });
   const [statusTarget, setStatusTarget] = useState<{
@@ -281,6 +295,7 @@ export default function EventDetail({
       description: fieldsValue.description || undefined,
       organizer: fieldsValue.organizer || undefined,
       certificate_title: fieldsValue.certificate_title || undefined,
+      certificate_number_pattern: fieldsValue.certificate_number_pattern || undefined,
       valid_until: fieldsValue.valid_until || undefined,
     });
     if (!result?.error && result?.event) {
@@ -431,6 +446,7 @@ export default function EventDetail({
                         description: event.description ?? "",
                         organizer: event.organizer ?? "",
                         certificate_title: event.certificate_title ?? "",
+                        certificate_number_pattern: event.certificate_number_pattern ?? "",
                         valid_until: event.valid_until ?? "",
                       });
                       setEditFields(true);
@@ -451,6 +467,20 @@ export default function EventDetail({
                       onChange={(e) => setFieldsValue((p) => ({ ...p, certificate_title: e.target.value }))}
                       className="input text-sm"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-tertiary mb-1">
+                      Certificate Number Pattern
+                    </label>
+                    <input
+                      value={fieldsValue.certificate_number_pattern}
+                      onChange={(e) => setFieldsValue((p) => ({ ...p, certificate_number_pattern: e.target.value }))}
+                      placeholder="ABC-#### (leave blank for epoch default)"
+                      className="input text-sm"
+                    />
+                    <p className="text-[11px] text-tertiary mt-1">
+                      Use <code>#</code> for the incremental counter (shared per pattern). Blank = epoch + random fallback.
+                    </p>
                   </div>
                   <div>
                     <label className="block text-xs text-tertiary mb-1">Description</label>
@@ -504,6 +534,10 @@ export default function EventDetail({
                   <div className="flex items-center justify-between px-1 py-2.5">
                     <span className="text-sm text-tertiary">Certificate Title</span>
                     <span className="text-sm font-medium">{event.certificate_title || "\u2014"}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-1 py-2.5">
+                    <span className="text-sm text-tertiary">Number Pattern</span>
+                    <span className="text-sm font-medium">{event.certificate_number_pattern || "\u2014"}</span>
                   </div>
                   {event.description && (
                     <div className="flex items-center justify-between px-1 py-2.5">
@@ -656,6 +690,51 @@ export default function EventDetail({
               {templateMsg && (
                 <span className="text-xs text-tertiary">{templateMsg}</span>
               )}
+            </div>
+            <div className="mt-3 border-t border-border pt-3">
+              <label htmlFor="cert_number_prefix" className="block text-xs font-semibold text-tertiary mb-1">
+                Certificate Number Prefix (optional)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="cert_number_prefix"
+                  value={fieldsValue.certificate_number_pattern.replace(/#+$/, "")}
+                  onChange={(e) => setFieldsValue((p) => ({ ...p, certificate_number_pattern: `${sanitizePrefix(e.target.value)}####` }))}
+                  disabled={event.status !== "draft"}
+                  placeholder="CERT-"
+                  className="input text-sm disabled:opacity-50"
+                />
+                <span className="text-sm text-tertiary font-mono">####</span>
+              </div>
+              <p className="mt-1 text-[11px] text-tertiary">
+                A <code>#</code> counter is appended automatically (shared per prefix). Blank = epoch + random fallback.
+              </p>
+              {fieldsValue.certificate_number_pattern && (
+                <p className="mt-1 text-[11px] text-tertiary">
+                  Next certificate will look like:{" "}
+                  <code className="rounded bg-surface-tertiary px-1 py-0.5 font-mono">
+                    {fieldsValue.certificate_number_pattern.replace(/#+$/, (m) => m.replace(/#/g, "0"))}
+                  </code>
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  const result = await updateEventAction(eventId, {
+                    certificate_number_pattern: fieldsValue.certificate_number_pattern || undefined,
+                  });
+                  if (!result?.error && result?.event) {
+                    setData((prev) => (prev ? { ...prev, event: result.event! } : prev));
+                    setTemplateMsg("Number pattern saved.");
+                  } else {
+                    setTemplateMsg(result?.error ?? "Failed to save pattern");
+                  }
+                }}
+                disabled={event.status !== "draft"}
+                className="btn-brand-soft mt-2 disabled:opacity-50"
+              >
+                Save Pattern
+              </button>
             </div>
           </div>
 
