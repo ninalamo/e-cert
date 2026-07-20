@@ -160,6 +160,18 @@ export default function Sidebar({ role }: { role: UserRole }) {
           );
         })}
       </nav>
+      <div className="mt-4 border-t border-default pt-4">
+        <Link
+          href="/faq"
+          className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
+            isActivePath(pathname, "/faq")
+              ? "bg-brand-600 text-black font-medium"
+              : "text-secondary hover:bg-surface-hover"
+          }`}
+        >
+          <span>FAQ</span>
+        </Link>
+      </div>
     </aside>
   );
 }
