@@ -204,6 +204,10 @@ export default function AttendeesManager({
       metadata.file_data = editFile.data;
       metadata.file_name = editFile.name;
       metadata.file_type = editFile.type;
+    } else if (editMode === "file" && !editFile) {
+      metadata.file_data = editTarget.metadata?.file_data ?? null;
+      metadata.file_name = editTarget.metadata?.file_name ?? null;
+      metadata.file_type = editTarget.metadata?.file_type ?? null;
     } else if (editMode === "template") {
       metadata.file_data = null;
       metadata.file_name = null;
@@ -645,9 +649,11 @@ export default function AttendeesManager({
                   Certificate File
                 </label>
                 {editTarget?.metadata?.file_name && !editFile && (
-                  <p className="text-xs text-tertiary mb-2">
-                    Current: {editTarget.metadata.file_name}
-                  </p>
+                  <div className="flex items-center gap-2 rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)] px-3 py-2 mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-success-text)] shrink-0"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span className="text-xs font-medium text-[var(--color-success-text)] truncate">{editTarget.metadata.file_name}</span>
+                    <span className="text-xs text-[var(--color-text-muted)] ml-auto shrink-0">Uploaded</span>
+                  </div>
                 )}
                 <label
                   className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors cursor-pointer ${
@@ -688,7 +694,9 @@ export default function AttendeesManager({
                       </button>
                     </>
                   ) : (
-                    <span className="text-tertiary">Tap to upload PDF, PNG, or JPG</span>
+                    <span className="text-tertiary">
+                      {editTarget?.metadata?.file_name ? "Tap to replace with a new file" : "Tap to upload PDF, PNG, or JPG"}
+                    </span>
                   )}
                 </label>
               </div>

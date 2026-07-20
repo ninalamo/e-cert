@@ -36,6 +36,84 @@ import {
   DownloadIcon,
 } from "lucide-react";
 
+async function handleDownloadPdf(certificateId: string, certificateNumber: string) {
+  try {
+    const res = await fetch(`/api/certificates/${certificateId}/view-data`);
+    if (!res.ok) return;
+    const { certificate, template, event, qrDataUrl, orgName } = await res.json();
+    if (!template) return;
+
+    const srcDoc = `<!DOCTYPE html><html><head><meta name="viewport" content="width=960"><style>body{margin:0;overflow:hidden;}${template.css_content ?? ""}</style></head><body>${template.html_content
+      .replace(/\{\{recipient_name\}\}/g, certificate.recipient_name)
+      .replace(/\{\{certificate_number\}\}/g, certificate.certificate_number)
+      .replace(/\{\{issued_date\}\}/g, new Date(certificate.issued_at).toLocaleDateString())
+      .replace(/\{\{organization_name\}\}/g, orgName)
+      .replace(/\{\{event_name\}\}/g, event?.name ?? "")
+      .replace(/\{\{event_date\}\}/g, event?.event_date ? new Date(event.event_date).toLocaleDateString() : "")
+      .replace(/\{\{event_location\}\}/g, event?.location ?? "")
+      .replace(/\{\{event_organizer\}\}/g, event?.organizer ?? "")
+      .replace(/\{\{certificate_title\}\}/g, event?.certificate_title ?? "")
+      .replace(/\{\{expiry_date\}\}/g, certificate.expires_at ? new Date(certificate.expires_at).toLocaleDateString() : "")
+      .replace(/\{\{qr_code\}\}/g, `<img src="${qrDataUrl}" width="128" height="128" />`)
+    }</body></html>`;
+
+    const container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.left = "-9999px";
+    container.style.top = "0";
+    container.style.width = "960px";
+    document.body.appendChild(container);
+
+    const iframe = document.createElement("iframe");
+    iframe.style.width = "960px";
+    iframe.style.height = "680px";
+    iframe.style.border = "none";
+    container.appendChild(iframe);
+
+    await new Promise<void>((resolve) => {
+      iframe.onload = () => resolve();
+      iframe.srcdoc = srcDoc;
+    });
+
+    await new Promise((r) => setTimeout(r, 500));
+
+    const html2pdf = (await import("html2pdf.js")).default;
+    const pdfBlob = await html2pdf()
+      .set({
+        margin: 0,
+        filename: `${certificateNumber}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" as const },
+      })
+      .from(iframe.contentDocument!.body)
+      .outputPdf("blob");
+
+    const pdfBase64 = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
+      reader.readAsDataURL(pdfBlob);
+    });
+
+    fetch(`/api/certificates/${certificateId}/save-pdf`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pdf_base64: pdfBase64 }),
+    }).catch(() => {});
+
+    document.body.removeChild(container);
+
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${certificateNumber}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+  }
+}
+
 interface CertificateDetailProps {
   certificateId: string;
   showAdminFeatures?: boolean;
@@ -177,16 +255,14 @@ export default function CertificateDetail({
               <span className="hidden sm:inline">Revoke</span>
             </button>
           )}
-          <a
-            href={`/api/certificates/${certificate.id}/pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => handleDownloadPdf(certificate.id, certificate.certificate_number)}
             className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-brand-600)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-ios-sm)] hover:bg-[var(--color-brand-700)] active:scale-[0.97] transition-all"
           >
             <DownloadIcon className="size-4" />
             <span className="hidden sm:inline">Download PDF</span>
             <span className="sm:hidden">PDF</span>
-          </a>
+          </button>
         </div>
       </div>
 

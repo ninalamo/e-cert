@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as certService from "@/features/certificates/server/certificate.service";
+import { getCertificatePdfBuffer } from "@/features/certificates/server/certificate.service";
 
 export async function GET(
   _request: NextRequest,
@@ -16,8 +17,20 @@ export async function GET(
     return NextResponse.json({ error: "Certificate has been revoked" }, { status: 410 });
   }
 
+  const cachedPdf = (certificate.metadata as Record<string, unknown> | null)
+    ?.rendered_pdf;
+  if (typeof cachedPdf === "string") {
+    const pdfBuffer = Buffer.from(cachedPdf, "base64");
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${certificate.certificate_number}.pdf"`,
+      },
+    });
+  }
+
   try {
-    const pdfBuffer = await certService.getCertificatePdfBuffer(certificate);
+    const pdfBuffer = await getCertificatePdfBuffer(certificate);
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         "Content-Type": "application/pdf",
@@ -25,6 +38,7 @@ export async function GET(
       },
     });
   } catch {
-    return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    return NextResponse.redirect(`${baseUrl}/certificates/${id}`);
   }
 }

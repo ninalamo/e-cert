@@ -38,6 +38,8 @@ export async function issueCertificate(data: {
   metadata?: Record<string, unknown>;
   send_email?: boolean;
   user_id?: string;
+  skip_pdf?: boolean;
+  existing_pdf_base64?: string;
   event?: {
     name?: string | null;
     event_date?: string | null;
@@ -58,7 +60,9 @@ export async function issueCertificate(data: {
   let renderedHtml: string | null = null;
   let renderedPdfBase64: string | null = null;
 
-  if (data.template_id) {
+  if (data.existing_pdf_base64) {
+    renderedPdfBase64 = data.existing_pdf_base64;
+  } else if (data.template_id && !data.skip_pdf) {
     const { getTemplate } = await import("@/features/templates/server/template.service");
     const template = await getTemplate(data.template_id);
     if (template) {
@@ -91,6 +95,32 @@ export async function issueCertificate(data: {
       });
       renderedPdfBase64 = pdfBuffer.toString("base64");
     }
+  } else if (data.template_id && data.skip_pdf) {
+    const { getTemplate } = await import("@/features/templates/server/template.service");
+    const template = await getTemplate(data.template_id);
+    if (template) {
+      renderedHtml = renderTemplate(
+        template.html_content,
+        template.css_content ?? "",
+        {
+          recipient_name: data.recipient_name,
+          certificate_number: number,
+          issued_date: new Date().toLocaleDateString(),
+          organization_name: ORG_NAME,
+          event_name: data.event?.name ?? "",
+          event_date: data.event?.event_date
+            ? new Date(data.event.event_date).toLocaleDateString()
+            : "",
+          event_location: data.event?.location ?? "",
+          event_organizer: data.event?.organizer ?? "",
+          certificate_title: data.event?.certificate_title ?? "",
+          expiry_date: data.expires_at
+            ? new Date(data.expires_at).toLocaleDateString()
+            : "",
+          qr_code: `<img src="${qrDataUrl}" width="128" height="128" />`,
+        }
+      );
+    }
   }
 
   const metadata: Record<string, unknown> = {
@@ -117,7 +147,7 @@ export async function issueCertificate(data: {
 
   if (data.send_email && data.user_id) {
     const { sendCertificateEmail } = await import("./certificate-email.service");
-    const emailResult = await sendCertificateEmail(certificate.id, data.user_id);
+    const emailResult = await sendCertificateEmail(certificate.id, data.user_id, undefined, { skip_pdf: true });
     return { certificate, emailSent: emailResult.success, error: emailResult.error };
   }
 

@@ -37,7 +37,7 @@ export function certificateEmailHtml(data: {
       </table>
       <div style="text-align:center;margin:0 0 32px;">
         <a href="${data.downloadUrl}" style="display:inline-block;background-color:#18181b;color:#ffffff;padding:14px 36px;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:0.5px;">
-          Download Certificate (PDF)
+          View Certificate
         </a>
       </div>
       <p style="color:#71717a;font-size:13px;text-align:center;margin:0 0 8px;">

@@ -19,14 +19,18 @@ export class NodemailerProvider implements EmailProvider {
 
   async sendEmail(options: SendEmailOptions): Promise<void> {
     const { to, subject, html, text, attachments } = options;
+    const toStr = Array.isArray(to) ? to.join(", ") : to;
+    console.log(`[Nodemailer] Sending to=${toStr}, subject="${subject}", hasAttachments=${!!attachments?.length}`);
 
-    await this.transporter.sendMail({
+    const result = await this.transporter.sendMail({
       from: process.env.SMTP_FROM,
-      to: Array.isArray(to) ? to.join(", ") : to,
+      to: toStr,
       subject,
       html,
       text,
       attachments,
     });
+
+    console.log(`[Nodemailer] Success: messageId=${result.messageId}, accepted=${result.accepted}, rejected=${result.rejected}`);
   }
 }
