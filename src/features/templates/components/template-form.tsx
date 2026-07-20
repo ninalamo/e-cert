@@ -268,6 +268,40 @@ export default function TemplateForm({
           </button>
         </div>
       )}
+
+      <Dialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Changes?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to save these changes?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-start gap-3 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-3 text-sm">
+            <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-info-text)]" />
+            <p className="text-[var(--color-info-text)]">
+              This will update the template with your changes.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveConfirm(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmSave} disabled={loading}>
+              {loading ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {loading && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--color-surface)]/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="size-8 animate-spin rounded-full border-2 border-[var(--color-brand-600)] border-t-transparent" />
+            <p className="text-sm font-medium text-[var(--color-text)]">Saving changes...</p>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
