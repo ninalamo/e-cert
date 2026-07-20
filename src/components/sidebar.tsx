@@ -23,7 +23,7 @@ const navItems: NavItem[] = [
     href: "/certificates",
     children: [
       { label: "Records", href: "/certificates" },
-      { label: "Editor", href: "/templates" },
+      { label: "Template", href: "/templates" },
     ],
     roles: ["admin", "staff"],
   },
