@@ -69,11 +69,12 @@ export async function bulkAddAttendeesAction(data: {
 
 export async function issueCertificatesForCompletedAction(
   eventId: string,
-  options?: { send_email?: boolean }
+  options?: { send_email?: boolean; attendeeIds?: string[] }
 ) {
   const session = await requireRole(["admin", "staff"]);
   return attendeeService.issueCertificatesForCompleted(eventId, {
     send_email: options?.send_email ?? true,
     user_id: session.id,
+    attendeeIds: options?.attendeeIds,
   });
 }

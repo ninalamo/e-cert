@@ -242,17 +242,23 @@ export default function EventDetail({
     if (!data) return;
     setIssueBusy(true);
     setIssueMessage(null);
-    const result = await issueCertificatesForCompletedAction(eventId, {
-      send_email: true,
-    });
-    setIssueBusy(false);
-    const failed = result.results.filter((r) => !r.success).length;
-    setIssueMessage(
-      `${result.issued} issued, ${result.emailed} emailed` +
-        (failed ? `, ${failed} failed` : "")
-    );
-    setSelectedAttendeeIds([]);
-    setAttendeeRefresh((n) => n + 1);
+    try {
+      const result = await issueCertificatesForCompletedAction(eventId, {
+        send_email: true,
+        attendeeIds: selectedAttendeeIds,
+      });
+      const failed = result.results.filter((r) => !r.success).length;
+      setIssueMessage(
+        `${result.issued} issued, ${result.emailed} emailed` +
+          (failed ? `, ${failed} failed` : "")
+      );
+      setSelectedAttendeeIds([]);
+      setAttendeeRefresh((n) => n + 1);
+    } catch (err) {
+      setIssueMessage(err instanceof Error ? err.message : "Failed to issue certificates");
+    } finally {
+      setIssueBusy(false);
+    }
   }
 
   async function handleDeleteEvent() {

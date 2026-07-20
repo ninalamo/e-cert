@@ -151,7 +151,7 @@ export async function bulkAddAttendees(
  */
 export async function issueCertificatesForCompleted(
   eventId: string,
-  options?: { send_email?: boolean; user_id?: string },
+  options?: { send_email?: boolean; user_id?: string; attendeeIds?: string[] },
   client?: SupabaseClient
 ): Promise<{
   issued: number;
@@ -173,7 +173,10 @@ export async function issueCertificatesForCompleted(
     return { issued: 0, emailed: 0, skipped: 0, results: [] };
   }
 
-  const all = await attendeeRepo.findByEventId(eventId);
+  const allAttendees = await attendeeRepo.findByEventId(eventId);
+  const all = options?.attendeeIds?.length
+    ? allAttendees.filter((a) => options.attendeeIds!.includes(a.id))
+    : allAttendees;
 
   let issued = 0;
   let emailed = 0;
