@@ -46,7 +46,6 @@ export async function GET(request: NextRequest) {
   try {
     const admin = getSeedAdmin();
     const users = await getSeededUsersDetail(admin);
-    const seededEmails = new Set(SEED_USERS.map((u) => u.email));
 
     return NextResponse.json({
       status: "ok",

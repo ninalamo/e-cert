@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, startTransition } from "react";
 import { getEmailLogsAction, sendCertificateEmailAction } from "../server/certificate.actions";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 
@@ -22,7 +22,9 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
 
   useEffect(() => {
     if (!loaded && !loading) {
-      loadLogs();
+      startTransition(() => {
+        loadLogs();
+      });
     }
   }, [loaded, loading, loadLogs]);
 

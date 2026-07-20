@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ORG_ID } from "@/lib/org";
 import { DEFAULT_ROLE, getHomePathForRole, getCurrentSession } from "@/lib/permissions";
-import { loginSchema, type LoginInput, type RegisterInput } from "../schemas/auth.schema";
+import { loginSchema, type RegisterInput } from "../schemas/auth.schema";
 
 export async function loginAction(
   _prev: { error?: string; success?: boolean; redirectTo?: string } | undefined,

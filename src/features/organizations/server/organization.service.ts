@@ -17,10 +17,10 @@ function repos(client: SupabaseClient) {
  * "Creating" an org is disabled; users are added as members of ORG_ID instead.
  * Kept for compatibility but returns an error if called.
  */
-export async function createOrganization(
-  _name: string,
-  _ownerId: string
-): Promise<{ org: Organization | null; error?: string }> {
+export async function createOrganization(): Promise<{
+  org: Organization | null;
+  error?: string;
+}> {
   return { org: null, error: "Organization management is disabled in single-org mode" };
 }
 

@@ -22,7 +22,7 @@ export default function Breadcrumbs() {
   return (
     <Breadcrumb className="mb-4">
       <BreadcrumbList>
-        {items.map((item, i) => (
+        {items.map((item) => (
           <React.Fragment key={item.href}>
             <BreadcrumbItem>
               {item.isCurrent ? (

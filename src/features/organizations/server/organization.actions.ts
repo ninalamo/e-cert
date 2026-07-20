@@ -4,7 +4,7 @@ import * as orgService from "./organization.service";
 import { requireRole } from "@/lib/permissions";
 import type { UserRole } from "@/types/organization";
 
-export async function createOrganizationAction(_name: string) {
+export async function createOrganizationAction() {
   return { error: "Organization management is disabled in single-org mode" };
 }
 
@@ -23,7 +23,7 @@ export async function addMemberAction(
   email: string,
   role: UserRole
 ) {
-  const session = await requireRole(["admin"]);
+  await requireRole(["admin"]);
   return orgService.addMember(organizationId, email, role, undefined);
 }
 

@@ -52,6 +52,19 @@ export async function listUsers(): Promise<ManagedUser[]> {
   }));
 }
 
+export async function setUserRole(
+  userId: string,
+  role: UserRole
+): Promise<{ error?: string }> {
+  const { error } = await supabaseAdmin
+    .from("user_memberships")
+    .update({ role, updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("organization_id", ORG_ID);
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function banUser(
   userId: string
 ): Promise<{ error?: string }> {

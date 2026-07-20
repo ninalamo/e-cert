@@ -6,7 +6,7 @@ import { ORG_ID } from "@/lib/org";
 import { getEventsAction, deleteEventAction } from "@/features/events/server/event.actions";
 import type { Event } from "@/types/event";
 import { SkeletonTable } from "@/components/ui/skeleton";
-import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon, ChevronRightIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,

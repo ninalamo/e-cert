@@ -52,7 +52,6 @@ export async function seedUsers(admin = getSeedAdmin()) {
         user_metadata: { name: user.name },
       });
       if (error) throw new Error(`createUser ${user.email}: ${error.message}`);
-      userId === user.id;
       void data;
     }
 

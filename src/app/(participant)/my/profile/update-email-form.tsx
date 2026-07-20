@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function UpdateEmailForm({ currentEmail }: { currentEmail: string }) {
   const [state, formAction, pending] = useActionState(
-    async (_prev: { error?: string; success?: boolean }, formData: FormData) => {
+    async (_prev: { error?: string; success?: boolean } | undefined, formData: FormData) => {
       const email = String(formData.get("email") ?? "");
       if (!email || email === currentEmail) {
         return { error: "Enter a different email address" };

@@ -1,12 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import * as templateService from "./template.service";
 import { requireRole } from "@/lib/permissions";
 
 export async function getTemplatesAction(organizationId: string) {
-  const session = await requireRole(["admin", "staff"]);
+  await requireRole(["admin", "staff"]);
   return templateService.getTemplatesWithLockState(organizationId);
 }
 

@@ -212,7 +212,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
   }
 
   function removeSelected() {
-    const toRemove = Array.from(selected);
     setRows((prev) => {
       const removed = prev.filter((_, i) => selected.has(i));
       setRemovedRows((r) => [...r, ...removed]);

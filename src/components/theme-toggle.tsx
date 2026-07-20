@@ -9,12 +9,14 @@ export function ThemeToggle() {
   const [dark, setDark] = React.useState(false);
 
   React.useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem("theme");
-    setDark(
-      stored === "dark" ||
-        (!stored && window.matchMedia("(prefers-color-scheme:dark)").matches)
-    );
+    React.startTransition(() => {
+      setMounted(true);
+      const stored = localStorage.getItem("theme");
+      setDark(
+        stored === "dark" ||
+          (!stored && window.matchMedia("(prefers-color-scheme:dark)").matches)
+      );
+    });
   }, []);
 
   const toggleTheme = () => {

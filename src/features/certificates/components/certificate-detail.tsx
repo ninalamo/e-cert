@@ -33,7 +33,6 @@ import {
   UserIcon,
   InfoIcon,
   DownloadIcon,
-  ExternalLinkIcon,
 } from "lucide-react";
 
 interface CertificateDetailProps {

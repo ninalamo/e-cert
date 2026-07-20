@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, startTransition } from "react";
 import Link from "next/link";
 import {
   getTemplatesAction,
@@ -50,7 +50,7 @@ export default function TemplatesTable() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sort, setSort] = useState<SortKey>("created-desc");
   const [previewTemplate, setPreviewTemplate] = useState<CertificateTemplate | null>(null);
-  const [certHeight, setCertHeight] = useState(680);
+  const [, setCertHeight] = useState(680);
   const [deleteTarget, setDeleteTarget] = useState<TemplateRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -73,7 +73,9 @@ export default function TemplatesTable() {
   }, []);
 
   useEffect(() => {
-    loadTemplates();
+    startTransition(() => {
+      loadTemplates();
+    });
   }, [loadTemplates]);
 
   const filtered = useMemo(() => {

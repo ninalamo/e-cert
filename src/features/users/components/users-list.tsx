@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, startTransition } from "react";
 import {
   listUsersAction,
   banUserAction,
   unbanUserAction,
   deleteUserAction,
+  setUserRoleAction,
 } from "../server/user.actions";
+import type { UserRole } from "@/types/organization";
 import { getCurrentUser } from "@/features/auth/server/auth.actions";
 import { usePagination, Paginator } from "@/components/ui/paginator";
 import { SkeletonTable } from "@/components/ui/skeleton";
-import type { UserRole } from "@/types/organization";
 
 interface ManagedUser {
   id: string;
@@ -43,7 +44,9 @@ export default function UsersList() {
   }, []);
 
   useEffect(() => {
-    loadUsers();
+    startTransition(() => {
+      loadUsers();
+    });
   }, [loadUsers]);
 
   async function handleBan(userId: string) {
@@ -69,6 +72,15 @@ export default function UsersList() {
   async function handleDelete(userId: string) {
     if (!confirm("Delete this user permanently? This cannot be undone.")) return;
     const result = await deleteUserAction(userId);
+    if (result?.error) {
+      alert(result.error);
+    } else {
+      loadUsers();
+    }
+  }
+
+  async function handleRoleChange(userId: string, role: UserRole) {
+    const result = await setUserRoleAction(userId, role);
     if (result?.error) {
       alert(result.error);
     } else {
@@ -126,9 +138,23 @@ export default function UsersList() {
                     <td className="text-sm">{user.email}</td>
                     <td className="text-sm text-tertiary">{user.name || "—"}</td>
                     <td>
-                      <span className="status-pill status-draft">
-                        {user.role ?? "none"}
-                      </span>
+                      {user.id === currentUserId ? (
+                        <span className="status-pill status-draft">
+                          {user.role ?? "none"}
+                        </span>
+                      ) : (
+                        <select
+                          value={user.role ?? "participant"}
+                          onChange={(e) =>
+                            handleRoleChange(user.id, e.target.value as UserRole)
+                          }
+                          className="rounded-md border px-2 py-1 text-sm"
+                        >
+                          <option value="participant">participant</option>
+                          <option value="staff">staff</option>
+                          <option value="admin">admin</option>
+                        </select>
+                      )}
                     </td>
                     <td>
                       {user.is_attendee ? (

@@ -48,7 +48,7 @@ export async function issueCertificate(data: {
 }): Promise<{ certificate: Certificate | null; error?: string; emailSent?: boolean }> {
   const client = await createClient();
   const certRepo = repo(client);
-  const number = await generateCertificateNumber(data.organization_id);
+  const number = await generateCertificateNumber();
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const verifyUrl = `${baseUrl}/verify?number=${number}`;
