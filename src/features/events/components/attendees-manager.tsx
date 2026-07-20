@@ -18,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon } from "lucide-react";
+import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon, EyeIcon } from "lucide-react";
 
 const PAGE_SIZE = 25;
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
@@ -330,12 +330,9 @@ export default function AttendeesManager({
                       className="size-4 rounded border-border-strong accent-[var(--color-brand-600)] disabled:opacity-50"
                     />
                   </th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden sm:table-cell">Email</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Issued</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden lg:table-cell">Has Uploaded PDF</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden lg:table-cell">Cert Option</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden md:table-cell">Status</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name (Email)</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Certificate Issue</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden sm:table-cell">Document Type</th>
                   {!readOnly && (
                     <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
                   )}
@@ -358,46 +355,34 @@ export default function AttendeesManager({
                     </td>
                     <td className="py-3 px-2">
                       <p className="font-medium text-[var(--color-text)]">{a.name}</p>
-                      <p className="text-xs text-[var(--color-text-muted)] sm:hidden">{a.email}</p>
+                      <p className="text-xs text-[var(--color-text-muted)]">({a.email})</p>
                     </td>
-                    <td className="py-3 px-2 text-[var(--color-text-muted)] hidden sm:table-cell">{a.email}</td>
                     <td className="py-3 px-2">
                       {a.certificate_id ? (
-                        <Link href={`/certificates/${a.certificate_id}?eventId=${eventId}`} className="badge-blue">
-                          Yes
-                        </Link>
+                        <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-success-text)]">Yes</span>
                       ) : (
-                        <span className="text-xs text-[var(--color-text-muted)]">No</span>
+                        <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">No</span>
                       )}
                     </td>
-                    <td className="py-3 px-2 text-xs hidden lg:table-cell">
-                      {a.metadata?.file_data ? (
-                        <span className="text-[var(--color-success-text)] font-medium">Yes</span>
+                    <td className="py-3 px-2 hidden sm:table-cell">
+                      {a.metadata?.generation_mode === "file" ? (
+                        <span className="inline-flex items-center rounded-full bg-[var(--color-brand-100)] px-2 py-0.5 text-xs font-medium text-[var(--color-brand-700)]">Uploaded</span>
                       ) : (
-                        <span className="text-[var(--color-text-muted)]">No</span>
+                        <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">System-Generated</span>
                       )}
-                    </td>
-                    <td className="py-3 px-2 text-xs text-[var(--color-text-muted)] hidden lg:table-cell">
-                      {a.metadata?.generation_mode === "file" ? "Uploaded" : "System Generated"}
-                    </td>
-                    <td className="py-3 px-2 hidden md:table-cell">
-                      {(() => {
-                        const status = getAttendeeStatus(a);
-                        if (status === "issued") {
-                          return <Link href={`/certificates/${a.certificate_id}?eventId=${eventId}`} className="badge-blue">Issued</Link>;
-                        }
-                        if (status === "revoked") {
-                          return <span className="badge-amber">Revoked</span>;
-                        }
-                        if (status === "expired") {
-                          return <span className="badge-amber">Expired</span>;
-                        }
-                        return <span className="text-xs text-[var(--color-text-muted)]">Not issued</span>;
-                      })()}
                     </td>
                     {!readOnly && (
                       <td className="py-3 pr-4">
                         <div className="flex items-center justify-end gap-1">
+                          {a.certificate_id && (
+                            <Link
+                              href={`/certificates/${a.certificate_id}?eventId=${eventId}`}
+                              className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
+                              title="View Certificate"
+                            >
+                              <EyeIcon className="size-4" />
+                            </Link>
+                          )}
                           <button
                             type="button"
                             onClick={() => openEdit(a)}
