@@ -45,7 +45,14 @@ export default function CertificateViewer({
     try {
       const res = await fetch(`/api/certificates/${certificate.id}/download`);
       if (!res.ok) {
-        window.location.href = `/api/certificates/${certificate.id}/download`;
+        const contentType = res.headers.get("Content-Type") ?? "";
+        if (contentType.includes("application/pdf")) {
+          window.location.href = `/api/certificates/${certificate.id}/download`;
+        }
+        return;
+      }
+      const contentType = res.headers.get("Content-Type") ?? "";
+      if (!contentType.includes("application/pdf")) {
         return;
       }
       const blob = await res.blob();

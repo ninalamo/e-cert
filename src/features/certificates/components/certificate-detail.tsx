@@ -40,7 +40,14 @@ async function handleDownloadPdf(certificateId: string, certificateNumber: strin
   try {
     const res = await fetch(`/api/certificates/${certificateId}/download`);
     if (!res.ok) {
-      window.location.href = `/api/certificates/${certificateId}/download`;
+      const contentType = res.headers.get("Content-Type") ?? "";
+      if (contentType.includes("application/pdf")) {
+        window.location.href = `/api/certificates/${certificateId}/download`;
+      }
+      return;
+    }
+    const contentType = res.headers.get("Content-Type") ?? "";
+    if (!contentType.includes("application/pdf")) {
       return;
     }
     const blob = await res.blob();
