@@ -74,7 +74,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
   const [removedRows, setRemovedRows] = useState<CsvRow[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<Map<string, UploadedFile>>(new Map());
   const [page, setPage] = useState(0);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [results, setResults] = useState<SubmitResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +82,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const totalPages = Math.ceil(rows.length / PAGE_SIZE);
-  const pageRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   useEffect(() => {
     let active = true;
@@ -151,7 +149,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
 
       setRows(parsed);
       setPage(0);
-      setSelected(new Set());
     };
     reader.readAsText(file);
   }, []);
@@ -203,22 +200,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
       if (removed) setRemovedRows((r) => [...r, removed]);
       return prev.filter((_, i) => i !== globalIndex);
     });
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.delete(globalIndex);
-      return next;
-    });
     setPage((p) => Math.min(p, Math.max(0, Math.ceil(rows.length / PAGE_SIZE) - 2)));
-  }
-
-  function removeSelected() {
-    setRows((prev) => {
-      const removed = prev.filter((_, i) => selected.has(i));
-      setRemovedRows((r) => [...r, ...removed]);
-      return prev.filter((_, i) => !selected.has(i));
-    });
-    setSelected(new Set());
-    setPage(0);
   }
 
   function setAllMode(mode: "template" | "file") {
@@ -228,34 +210,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
         return { ...r, mode };
       })
     );
-  }
-
-  function setSelectedMode(mode: "template" | "file") {
-    setRows((prev) =>
-      prev.map((r, i) => {
-        if (!selected.has(i)) return r;
-        if (mode === "file" && (!r.file_path || !uploadedFiles.has(r.file_path))) return r;
-        return { ...r, mode };
-      })
-    );
-  }
-
-  function toggleSelectAll() {
-    const pageIndices = pageRows.map((_, i) => page * PAGE_SIZE + i);
-    const allSelected = pageIndices.every((i) => selected.has(i));
-    if (allSelected) {
-      setSelected((prev) => {
-        const next = new Set(prev);
-        pageIndices.forEach((i) => next.delete(i));
-        return next;
-      });
-    } else {
-      setSelected((prev) => {
-        const next = new Set(prev);
-        pageIndices.forEach((i) => next.add(i));
-        return next;
-      });
-    }
   }
 
   async function handleSubmit() {
@@ -438,7 +392,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                   return;
                 }
                 setPage(0);
-                setSelected(new Set());
                 setStep("preview");
               }}
               disabled={rows.length === 0}
@@ -463,19 +416,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
               <button onClick={() => setAllMode("file")} className="btn">
                 All → File
               </button>
-              {selected.size > 0 && (
-                <>
-                  <button onClick={() => setSelectedMode("template")} className="btn">
-                    Selected → Template
-                  </button>
-                  <button onClick={() => setSelectedMode("file")} className="btn">
-                    Selected → File
-                  </button>
-                  <button onClick={removeSelected} className="btn btn-danger">
-                    Remove Selected ({selected.size})
-                  </button>
-                </>
-              )}
             </div>
           </div>
 
@@ -483,15 +423,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)]">
-                  <th className="w-12 py-3 pl-4 text-left">
-                    <input
-                      type="checkbox"
-                      checked={pageRows.length > 0 && pageRows.every((_, i) => selected.has(page * PAGE_SIZE + i))}
-                      onChange={toggleSelectAll}
-                      className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
-                    />
-                  </th>
-                  <th className="w-8 py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
+                  <th className="w-8 py-3 pl-4 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Email</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">File Path</th>
@@ -500,27 +432,12 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                 </tr>
               </thead>
               <tbody>
-                {pageRows.map((row, i) => {
+                {rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((row, i) => {
                   const globalIdx = page * PAGE_SIZE + i;
                   const hasFile = canFileMode(row);
                   return (
                     <tr key={globalIdx} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
-                      <td className="py-3 pl-4">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(globalIdx)}
-                          onChange={() => {
-                            setSelected((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(globalIdx)) next.delete(globalIdx);
-                              else next.add(globalIdx);
-                              return next;
-                            });
-                          }}
-                          className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
-                        />
-                      </td>
-                      <td className="text-tertiary text-xs">{globalIdx + 1}</td>
+                      <td className="py-3 pl-4 text-tertiary text-xs">{globalIdx + 1}</td>
                       <td className="font-medium text-[var(--color-text)]">{row.name}</td>
                       <td className="text-tertiary">{row.email}</td>
                       <td className="text-xs">
@@ -664,7 +581,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                 setRows([]);
                 setRemovedRows([]);
                 setResults(null);
-                setSelected(new Set());
                 setPage(0);
                 if (csvRef.current) csvRef.current.value = "";
                 if (fileRef.current) fileRef.current.value = "";

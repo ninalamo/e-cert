@@ -30,12 +30,14 @@ const steps = [
 ];
 
 export default function WhatsNew({ userKey }: { userKey: string }) {
-  const [open, setOpen] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      !localStorage.getItem(STORAGE_PREFIX + userKey)
-  );
+  const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!localStorage.getItem(STORAGE_PREFIX + userKey)) {
+      setOpen(true);
+    }
+  }, [userKey]);
 
   useEffect(() => {
     if (!open) return;
