@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ORG_ID } from "@/lib/org";
 import { getEventAction } from "@/features/events/server/event.actions";
 import { getTemplatesAction } from "@/features/templates/server/template.actions";
@@ -13,6 +14,8 @@ import { SkeletonDetail } from "@/components/ui/skeleton";
 import { InfoIcon, DownloadIcon, UploadIcon, XIcon, AlertTriangleIcon, FileIcon } from "lucide-react";
 
 const PAGE_SIZE = 25;
+const MAX_FILE_MB = 10;
+const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg"];
 
 interface CsvRow {
   name: string;
@@ -35,18 +38,6 @@ interface SubmitResult {
   error?: string;
 }
 
-function renderTemplateHtml(
-  html: string,
-  css: string,
-  vars: Record<string, string>
-): string {
-  let rendered = html;
-  for (const [key, value] of Object.entries(vars)) {
-    rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
-  }
-  return `<!DOCTYPE html><html><head><style>${css}</style></head><body>${rendered}</body></html>`;
-}
-
 function downloadCsv(filename: string, headers: string[], rows: string[][]) {
   const escape = (v: string) =>
     v.includes(",") || v.includes('"') || v.includes("\n")
@@ -65,7 +56,7 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
-export default function UploadCsvForm({ eventId }: { eventId: string }) {
+export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: string; isAdmin?: boolean }) {
   const [event, setEvent] = useState<Event | null>(null);
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
 
@@ -114,7 +105,10 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
         return;
       }
 
-      const header = lines[0].toLowerCase().split(",").map((h) => h.trim());
+      const splitRow = (line: string) =>
+        line.split(/\t|,/).map((c) => c.trim());
+
+      const header = splitRow(lines[0].toLowerCase());
       const nameIdx = header.indexOf("name");
       const emailIdx = header.indexOf("email");
       const filePathIdx = header.indexOf("file_path");
@@ -126,10 +120,10 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
 
       const parsed: CsvRow[] = [];
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(",").map((c) => c.trim());
+        const cols = splitRow(lines[i]);
         const name = cols[nameIdx] ?? "";
         const email = cols[emailIdx] ?? "";
-        const filePath = filePathIdx !== -1 ? (cols[filePathIdx] ?? "") : "";
+        const filePath = filePathIdx !== -1 ? (cols[filePathIdx] ?? "").split(/[\\/]/).pop() ?? "" : "";
         if (name && email) {
           parsed.push({
             name,
@@ -148,6 +142,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
 
       setRows(parsed);
       setPage(0);
+      setStep("preview");
     };
     reader.readAsText(file);
   }, []);
@@ -156,13 +151,14 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const base64 = (ev.target?.result as string).split(",")[1] ?? "";
-      const uploaded: UploadedFile = { name: file.name, data: base64, type: file.type };
-      setUploadedFiles((prev) => new Map(prev).set(file.name, uploaded));
+      const baseName = file.name.split(/[\\/]/).pop() || file.name;
+      const uploaded: UploadedFile = { name: baseName, data: base64, type: file.type };
+      setUploadedFiles((prev) => new Map(prev).set(baseName, uploaded));
       setRows((prev) =>
         prev.map((r, i) =>
           i !== rowIndex
             ? r
-            : { ...r, file_path: file.name, mode: "file" as const }
+            : { ...r, file_path: baseName, mode: "file" as const }
         )
       );
     };
@@ -184,16 +180,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
     });
   }, []);
 
-  function toggleRowMode(index: number) {
-    setRows((prev) => {
-      const next = [...prev];
-      const row = next[index];
-      if (!row.file_path || !uploadedFiles.has(row.file_path)) return prev;
-      next[index] = { ...row, mode: row.mode === "template" ? "file" : "template" };
-      return next;
-    });
-  }
-
   function removeRow(globalIndex: number) {
     setRows((prev) => {
       const removed = prev[globalIndex];
@@ -201,15 +187,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
       return prev.filter((_, i) => i !== globalIndex);
     });
     setPage((p) => Math.min(p, Math.max(0, Math.ceil(rows.length / PAGE_SIZE) - 2)));
-  }
-
-  function setAllMode(mode: "template" | "file") {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (mode === "file" && (!r.file_path || !uploadedFiles.has(r.file_path))) return r;
-        return { ...r, mode };
-      })
-    );
   }
 
   async function handleSubmit() {
@@ -222,8 +199,9 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
     setError(null);
 
     const attendees = rows.map((r) => {
+      const useFile = !!r.file_path && uploadedFiles.has(r.file_path);
       let metadata: AttendeeMetadata | undefined;
-      if (r.mode === "file" && r.file_path) {
+      if (useFile) {
         const f = uploadedFiles.get(r.file_path);
         if (f) {
           metadata = {
@@ -234,14 +212,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
           };
         }
       } else if (template) {
-        const html = renderTemplateHtml(template.html_content, template.css_content ?? "", {
-          recipient_name: r.name,
-          certificate_number: "",
-          issued_date: new Date().toLocaleDateString(),
-          organization_name: "Organization",
-          qr_code: "",
-        });
-        metadata = { generation_mode: "template", html };
+        metadata = { generation_mode: "template" };
       }
       return { name: r.name, email: r.email, metadata };
     });
@@ -278,13 +249,35 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
   const successCount = results?.filter((r) => r.success).length ?? 0;
   const failCount = results?.filter((r) => !r.success).length ?? 0;
   const canFileMode = (r: CsvRow) => !!r.file_path && uploadedFiles.has(r.file_path);
-  const missingFileCount = rows.filter((r) => r.file_path && !uploadedFiles.has(r.file_path)).length;
+
+  const validateUploadedFile = (f: UploadedFile): string | null => {
+    if (!ACCEPTED_TYPES.includes(f.type)) {
+      return "Unsupported file type";
+    }
+    const bytes = Math.ceil((f.data.length * 3) / 4);
+    if (bytes > MAX_FILE_MB * 1024 * 1024) {
+      return `Exceeds ${MAX_FILE_MB} MB limit`;
+    }
+    return null;
+  };
+
+  const rowFileError = (r: CsvRow): string | null => {
+    if (!r.file_path) return null;
+    const f = uploadedFiles.get(r.file_path);
+    if (!f) return "Certificate not attached";
+    return validateUploadedFile(f);
+  };
+
+  const invalidFileCount = rows.filter(
+    (r) => r.file_path && rowFileError(r) !== null && rowFileError(r) !== "Certificate not attached"
+  ).length;
+  const missingFileCount = invalidFileCount;
   const isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
   if (!event) return <SkeletonDetail />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--color-text)]">
           Upload CSV
@@ -294,7 +287,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
         </p>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-4 text-sm">
+      <div className="flex items-start gap-3 rounded-2xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-4 text-sm">
         <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-info-text)]" />
         <div className="space-y-1.5 text-[var(--color-info-text)]">
           <p className="font-medium">How it works</p>
@@ -317,14 +310,14 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
       </div>
 
       {error && (
-        <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
           <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
           <p className="text-[var(--color-danger-text)]">{error}</p>
         </div>
       )}
 
       {step === "upload" && (
-        <div className="app-card space-y-4 p-4">
+        <div className="app-card space-y-5 p-5">
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <label className="block text-sm font-semibold text-[var(--color-text)]">
@@ -335,10 +328,10 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                 onClick={() =>
                   downloadCsv(
                     "sample-attendees.csv",
-                    ["name", "email", "file_path"],
+                    ["name", "email"],
                     [
-                      ["Juan Dela Cruz", "juan@example.com", ""],
-                      ["Maria Santos", "maria@example.com", "maria-cert.pdf"],
+                      ["Juan Dela Cruz", "juan@example.com"],
+                      ["Maria Santos", "maria@example.com"],
                     ]
                   )
                 }
@@ -348,41 +341,37 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                 Download sample
               </button>
             </div>
-            <p className="mb-2 text-xs text-tertiary">
-              Columns: <code className="rounded bg-black/5 px-1 py-0.5">name, email</code>{" "}
-              (with optional <code className="rounded bg-black/5 px-1 py-0.5">file_path</code>)
+            <p className="mb-3 text-xs text-tertiary">
+              Columns: <code className="rounded bg-black/5 px-1 py-0.5">name, email</code>
             </p>
-            <input
-              ref={csvRef}
-              type="file"
-              accept=".csv,.txt"
-              onChange={handleCsvChange}
-              disabled={event?.status === "archive"}
-              className="input disabled:opacity-50"
-            />
+            <label
+              className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)] px-4 py-10 text-center transition-colors hover:border-[var(--color-brand-500)] hover:bg-[var(--color-brand-50)] ${
+                event?.status === "archive" ? "pointer-events-none opacity-50" : ""
+              }`}
+            >
+              <UploadIcon className="size-7 text-[var(--color-brand-600)]" />
+              <span className="text-sm font-medium text-[var(--color-text)]">
+                Tap to choose a CSV file
+              </span>
+              <span className="text-xs text-tertiary">.csv or .txt</span>
+              <input
+                ref={csvRef}
+                type="file"
+                accept=".csv,.txt"
+                onChange={handleCsvChange}
+                disabled={event?.status === "archive"}
+                className="hidden"
+              />
+            </label>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Link
-              href={`/events/${eventId}`}
-              className="btn-cancel"
-            >
-              Back to Event
-            </Link>
-            <button
-              onClick={() => {
-                if (rows.length === 0) {
-                  setError("Please upload a CSV first");
-                  return;
-                }
-                setPage(0);
-                setStep("preview");
-              }}
-              disabled={rows.length === 0}
-              className="btn-brand disabled:opacity-50"
-            >
-              Preview {rows.length} Row(s)
-            </button>
+              <Link
+                href={`/events/${eventId}?tab=attendees`}
+                className="btn-cancel"
+              >
+                Back to Event
+              </Link>
           </div>
         </div>
       )}
@@ -393,21 +382,13 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
             <p className="text-sm text-tertiary">
               {rows.length} participant(s) — Page {page + 1} of {totalPages || 1}
             </p>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setAllMode("template")} className="btn">
-                All → Template
-              </button>
-              <button onClick={() => setAllMode("file")} className="btn">
-                All → File
-              </button>
-            </div>
           </div>
 
           {missingFileCount > 0 && (
-            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-3 text-sm">
+            <div className="flex items-start gap-3 rounded-2xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-3 text-sm">
               <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-warning-text)]" />
               <p className="text-[var(--color-warning-text)]">
-                {missingFileCount} row(s) have a file path but no uploaded file. Upload the matching files or remove those rows before submitting.
+                {missingFileCount} attached certificate(s) are invalid. Attach a valid file (PDF/PNG/JPG, up to {MAX_FILE_MB} MB) or remove those rows before submitting.
               </p>
             </div>
           )}
@@ -419,10 +400,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                   <th className="w-8 py-3 pl-4 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Email</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">File Path</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">File</th>
                   <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Mode</th>
                   <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -437,41 +415,66 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                       <td className="py-3 pl-4 text-tertiary text-xs">{globalIdx + 1}</td>
                       <td className="font-medium text-[var(--color-text)]">{row.name}</td>
                       <td className="text-tertiary">{row.email}</td>
-                      <td className="text-xs">
-                        {row.file_path ? (
-                          <span className="text-[var(--color-text)]">{row.file_path}</span>
-                        ) : (
-                          <span className="text-tertiary">—</span>
-                        )}
+                      <td>
+                        {(() => {
+                          if (!row.file_path) {
+                            return (
+                              <span className="inline-flex items-center rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-muted)]">
+                                Ready — generated from template
+                              </span>
+                            );
+                          }
+                          const err = rowFileError(row);
+                          if (!err) {
+                            return (
+                              <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-success-text)]">
+                                Ready — with attached file
+                              </span>
+                            );
+                          }
+                          if (err === "Certificate not attached") {
+                            return (
+                              <span className="inline-flex items-center rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-muted)]">
+                                Certificate not attached
+                              </span>
+                            );
+                          }
+                          return (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-warning-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-warning-text)]"
+                              title={err}
+                            >
+                              <AlertTriangleIcon className="size-3" />
+                              {err}
+                            </span>
+                          );
+                        })()}
                       </td>
-                      <td className="text-xs">
-                        {row.file_path ? (
-                          hasFile && uploadedFile ? (
-                            <div className="flex items-center gap-2">
-                              {uploadedFile.type.startsWith("image/") ? (
-                                <img
-                                  src={`data:${uploadedFile.type};base64,${uploadedFile.data}`}
-                                  alt={uploadedFile.name}
-                                  className="size-8 rounded border border-[var(--color-border)] object-cover"
-                                />
-                              ) : (
-                                <FileIcon className="size-8 p-1.5 text-[var(--color-brand-600)] bg-[var(--color-brand-50)] rounded border border-[var(--color-border)]" />
-                              )}
-                              <span className="truncate max-w-[120px] text-[var(--color-success-text)]">{uploadedFile.name}</span>
-                            </div>
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {hasFile ? (
+                            <>
+                              <span className="hidden sm:inline truncate max-w-[120px] text-[var(--color-success-text)] text-xs mr-1">
+                                {uploadedFile?.name}
+                              </span>
+                              <button
+                                onClick={() => removeRowFile(globalIdx)}
+                                className="btn btn-ghost inline-flex items-center gap-1 px-2 py-1 text-xs"
+                                title="Clear attached certificate"
+                              >
+                                <XIcon className="size-3.5" />
+                                Clear
+                              </button>
+                            </>
                           ) : (
                             <label
                               htmlFor={fileInputId}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-brand-600)] cursor-pointer transition-colors hover:bg-[var(--color-brand-50)]"
                             >
                               <UploadIcon className="size-3" />
-                              Upload
+                              Attach Certificate
                             </label>
-                          )
-                        ) : (
-                          <span className="text-tertiary">—</span>
-                        )}
-                        {row.file_path && (
+                          )}
                           <input
                             id={fileInputId}
                             type="file"
@@ -483,60 +486,6 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                               e.target.value = "";
                             }}
                           />
-                        )}
-                      </td>
-                      <td>
-                        {row.file_path ? (
-                          hasFile ? (
-                            <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-success-text)]">
-                              Uploaded
-                            </span>
-                          ) : (
-                            <span
-                              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-warning-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-warning-text)]"
-                              title={
-                                isLocalhost
-                                  ? `No file uploaded for "${row.file_path}"`
-                                  : undefined
-                              }
-                            >
-                              <AlertTriangleIcon className="size-3" />
-                              Not uploadable
-                              {isLocalhost && (
-                                <span className="ml-1 font-normal opacity-80">
-                                  missing {row.file_path}
-                                </span>
-                              )}
-                            </span>
-                          )
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-muted)]">
-                            System-generated
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <select
-                          value={row.mode}
-                          onChange={() => toggleRowMode(globalIdx)}
-                          disabled={!hasFile}
-                          className="input px-2 py-1 text-xs disabled:opacity-50"
-                        >
-                          <option value="template">Template</option>
-                          <option value="file" disabled={!hasFile}>File</option>
-                        </select>
-                      </td>
-                      <td className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {row.file_path && hasFile && (
-                            <button
-                              onClick={() => removeRowFile(globalIdx)}
-                              className="btn btn-ghost p-1"
-                              title="Remove uploaded file"
-                            >
-                              <XIcon className="size-3.5" />
-                            </button>
-                          )}
                           <button
                             onClick={() => removeRow(globalIdx)}
                             className="btn btn-danger"
@@ -588,6 +537,18 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
               Back
             </button>
             <button
+              type="button"
+              onClick={() => {
+                setRows([]);
+                setPage(0);
+                setStep("upload");
+                if (csvRef.current) csvRef.current.value = "";
+              }}
+              className="btn"
+            >
+              Reset
+            </button>
+            <button
               onClick={handleSubmit}
               disabled={loading || rows.length === 0 || missingFileCount > 0}
               className="btn-brand disabled:opacity-50"
@@ -599,13 +560,23 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
       )}
 
       {step === "results" && results && (
-        <div className="space-y-4 max-w-2xl">
-          <div className="flex gap-4 text-sm">
-            <span className="font-medium text-[var(--color-success-text)]">{successCount} added</span>
-            {failCount > 0 && (
-              <span className="font-medium text-[var(--color-danger-text)]">{failCount} failed</span>
-            )}
-          </div>
+        <div className="space-y-4">
+          {failCount === 0 ? (
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)] p-3 text-sm">
+              <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-success-text)]" />
+              <p className="font-medium text-[var(--color-success-text)]">
+                Upload complete — {successCount} participant(s) added successfully.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+              <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
+              <p className="font-medium text-[var(--color-danger-text)]">
+                Upload finished with {successCount} added and {failCount} failed.
+                {isAdmin ? " See details below." : " Contact an administrator if you need the error details."}
+              </p>
+            </div>
+          )}
 
           {removedRows.length > 0 && (
             <div className="flex items-start gap-3 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-3 text-sm">
@@ -634,7 +605,9 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
                       {r.success ? (
                         <span className="status-badge status-badge--active">Added</span>
                       ) : (
-                        <span className="status-badge status-badge--danger">{r.error ?? "Failed"}</span>
+                        <span className="status-badge status-badge--danger">
+                          {isAdmin ? (r.error ?? "Failed") : "Failed"}
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -645,7 +618,7 @@ export default function UploadCsvForm({ eventId }: { eventId: string }) {
 
           <div className="flex justify-end gap-2">
             <Link
-              href={`/events/${eventId}`}
+              href={`/events/${eventId}?tab=attendees`}
               className="btn-cancel"
             >
               Back to Event

@@ -1,4 +1,5 @@
 import UploadCsvForm from "./upload-csv-form";
+import { getCurrentSession } from "@/lib/permissions";
 
 export default async function UploadCsvPage({
   params,
@@ -6,5 +7,7 @@ export default async function UploadCsvPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <UploadCsvForm eventId={id} />;
+  const session = await getCurrentSession();
+  const isAdmin = session?.role === "admin";
+  return <UploadCsvForm eventId={id} isAdmin={isAdmin} />;
 }
