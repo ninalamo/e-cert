@@ -29,15 +29,23 @@ const STATUS_OPTIONS: { value: Event["status"]; label: string }[] = [
   { value: "archive", label: "Archived" },
 ];
 
-export default function EventsList({ canDelete = true }: { canDelete?: boolean }) {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [ready, setReady] = useState(false);
+export default function EventsList({
+  canDelete = true,
+  initialEvents = [],
+}: {
+  canDelete?: boolean;
+  initialEvents?: Event[];
+}) {
+  const [events, setEvents] = useState<Event[]>(initialEvents);
+  const [ready, setReady] = useState(initialEvents.length > 0);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<Set<Event["status"]>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
+    if (initialEvents.length > 0) return;
     let active = true;
     getEventsAction(ORG_ID).then((data) => {
       if (active) {
@@ -46,7 +54,7 @@ export default function EventsList({ canDelete = true }: { canDelete?: boolean }
       }
     });
     return () => { active = false; };
-  }, []);
+  }, [initialEvents]);
 
   const filtered = useMemo(() => {
     let list = events;
@@ -81,8 +89,10 @@ export default function EventsList({ canDelete = true }: { canDelete?: boolean }
     if (result?.error) {
       alert(result.error);
     } else {
+      setRefreshing(true);
       const refreshed = await getEventsAction(ORG_ID);
       setEvents(refreshed);
+      setRefreshing(false);
       setDeleteTarget(null);
     }
   }
@@ -140,21 +150,21 @@ export default function EventsList({ canDelete = true }: { canDelete?: boolean }
         </div>
       </div>
 
-      {!ready && <SkeletonTable rows={5} />}
+      {(!ready || refreshing) && <SkeletonTable rows={5} />}
 
-      {ready && events.length === 0 && (
+      {ready && !refreshing && events.length === 0 && (
         <div className="app-card p-12 text-center">
           <p className="text-sm text-tertiary">No events yet. Create your first one.</p>
         </div>
       )}
 
-      {ready && events.length > 0 && filtered.length === 0 && (
+      {ready && !refreshing && events.length > 0 && filtered.length === 0 && (
         <div className="app-card p-12 text-center">
           <p className="text-sm text-tertiary">No events match your filters.</p>
         </div>
       )}
 
-      {ready && filtered.length > 0 && (
+      {ready && !refreshing && filtered.length > 0 && (
         <div className="app-card divide-y divide-border overflow-hidden">
           {filtered.map((event) => (
             <div

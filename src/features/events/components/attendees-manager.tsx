@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon, EyeIcon } from "lucide-react";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
 
 type FilterStatus = "all" | "not_issued" | "issued" | "revoked" | "expired";
@@ -54,6 +54,7 @@ export default function AttendeesManager({
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -115,9 +116,9 @@ export default function AttendeesManager({
     return list;
   }, [attendees, search, filter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages - 1);
-  const pageRows = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  const pageRows = filtered.slice(safePage * pageSize, (safePage + 1) * pageSize);
 
   const allPageSelected =
     pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
@@ -407,32 +408,57 @@ export default function AttendeesManager({
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={safePage === 0}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPage(i)}
-                  className={`rounded border px-3 py-1 text-sm ${
-                    i === safePage ? "bg-brand-600 text-white" : "hover:bg-gray-50"
-                  }`}
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+              <p className="text-xs text-tertiary">
+                Showing {safePage * pageSize + 1}–
+                {Math.min((safePage + 1) * pageSize, filtered.length)} of {filtered.length}
+              </p>
+              <div className="flex items-center gap-3">
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(0);
+                  }}
+                  className="input py-1.5 text-xs w-auto"
+                  aria-label="Rows per page"
                 >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={safePage >= totalPages - 1}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-              >
-                Next
-              </button>
+                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt} / page
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={safePage === 0}
+                    className="rounded-lg border border-[var(--color-border-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)] active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setPage(i)}
+                      className={`min-w-[2rem] rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors active:scale-[0.97] ${
+                        i === safePage
+                          ? "border-[var(--color-brand-700)] bg-[var(--color-brand-600)] text-white"
+                          : "border-[var(--color-border-strong)] text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]"
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={safePage >= totalPages - 1}
+                    className="rounded-lg border border-[var(--color-border-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)] active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </>

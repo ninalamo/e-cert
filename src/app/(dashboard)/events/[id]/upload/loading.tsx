@@ -1,5 +1,5 @@
-import { SkeletonDetail } from "@/components/ui/skeleton";
+import { SkeletonUpload } from "@/components/ui/skeleton";
 
 export default function Loading() {
-  return <SkeletonDetail />;
+  return <SkeletonUpload />;
 }

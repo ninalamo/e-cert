@@ -15,13 +15,17 @@ export interface DashboardStats {
 // share a single fetch instead of each firing their own on mount.
 let cachedStats: DashboardStats | null = null;
 let inflight: Promise<DashboardStats> | null = null;
+let cacheTime = 0;
+const CACHE_TTL_MS = 60_000;
 
 async function loadStats(): Promise<DashboardStats> {
-  if (cachedStats) return cachedStats;
+  const now = Date.now();
+  if (cachedStats && now - cacheTime < CACHE_TTL_MS) return cachedStats;
   if (!inflight) {
     inflight = getDashboardStatsAction(ORG_ID)
       .then((data) => {
         cachedStats = data;
+        cacheTime = Date.now();
         inflight = null;
         return data;
       })

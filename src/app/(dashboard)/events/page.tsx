@@ -1,9 +1,12 @@
 import EventsList from "@/features/events/components/events-list";
 import { getCurrentSession, canDelete } from "@/lib/permissions";
+import { getEvents } from "@/features/events/server/event.service";
+import { ORG_ID } from "@/lib/org";
 
 export default async function EventsPage() {
   const session = await getCurrentSession();
   const canUserDelete = canDelete(session?.role ?? "participant");
+  const initialEvents = await getEvents(ORG_ID);
 
   return (
     <div className="space-y-6">
@@ -15,7 +18,7 @@ export default async function EventsPage() {
           Manage your events and issue certificates
         </p>
       </div>
-      <EventsList canDelete={canUserDelete} />
+      <EventsList canDelete={canUserDelete} initialEvents={initialEvents} />
     </div>
   );
 }

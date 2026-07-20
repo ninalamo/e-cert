@@ -9,7 +9,7 @@ import { bulkAddAttendeesAction } from "@/features/events/server/attendee.action
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import type { AttendeeMetadata } from "@/types/event-attendee";
-import { SkeletonDetail } from "@/components/ui/skeleton";
+import { SkeletonUpload } from "@/components/ui/skeleton";
 import { InfoIcon, DownloadIcon, UploadIcon, XIcon, AlertTriangleIcon } from "lucide-react";
 
 const PAGE_SIZE = 25;
@@ -55,8 +55,16 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
-export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: string; isAdmin?: boolean }) {
-  const [event, setEvent] = useState<Event | null>(null);
+export default function UploadCsvForm({
+  eventId,
+  isAdmin = false,
+  initialEvent = null,
+}: {
+  eventId: string;
+  isAdmin?: boolean;
+  initialEvent?: Event | null;
+}) {
+  const [event, setEvent] = useState<Event | null>(initialEvent);
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
 
   const [step, setStep] = useState<"upload" | "preview" | "results">("upload");
@@ -73,6 +81,7 @@ export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: s
   const totalPages = Math.ceil(rows.length / PAGE_SIZE);
 
   useEffect(() => {
+    if (initialEvent) return;
     let active = true;
     getEventAction(eventId).then((e) => {
       if (!active || !e) return;
@@ -88,7 +97,21 @@ export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: s
       }
     });
     return () => { active = false; };
-  }, [eventId]);
+  }, [eventId, initialEvent]);
+
+  useEffect(() => {
+    if (!initialEvent) return;
+    if (initialEvent.status === "archive") {
+      setError("This event is archived. CSV uploads are no longer available.");
+    }
+    if (initialEvent.template_id) {
+      let active = true;
+      getTemplatesAction(initialEvent.organization_id).then((ts) => {
+        if (active) setTemplate(ts.find((t) => t.id === initialEvent.template_id) ?? null);
+      });
+      return () => { active = false; };
+    }
+  }, [initialEvent]);
 
   const handleCsvChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -272,13 +295,13 @@ export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: s
   ).length;
   const missingFileCount = invalidFileCount;
 
-  if (!event) return <SkeletonDetail />;
+  if (!event) return <SkeletonUpload />;
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--color-text)]">
-          Upload CSV
+          Bulk Import — Participants
         </h1>
         <p className="mt-1 text-sm text-tertiary">
           Bulk add participants for: {event.name}
@@ -395,11 +418,10 @@ export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: s
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)]">
-                  <th className="w-8 py-3 pl-4 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Email</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
-                  <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
+                  <th className="w-8 py-3 pl-4 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Participant</th>
+                  <th className="py-3 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
+                  <th className="py-3 pr-4 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -410,10 +432,11 @@ export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: s
                   const fileInputId = `file-upload-${globalIdx}`;
                   return (
                     <tr key={globalIdx} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
-                      <td className="py-3 pl-4 text-tertiary text-xs">{globalIdx + 1}</td>
-                      <td className="font-medium text-[var(--color-text)]">{row.name}</td>
-                      <td className="text-tertiary">{row.email}</td>
-                      <td>
+                      <td className="py-3 pl-4 text-center text-tertiary text-xs">{globalIdx + 1}</td>
+                      <td className="text-left font-medium text-[var(--color-text)]">
+                        {row.name} <span className="font-normal text-tertiary">({row.email})</span>
+                      </td>
+                      <td className="text-center">
                         {(() => {
                           if (!row.file_path) {
                             return (
@@ -448,27 +471,27 @@ export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: s
                           );
                         })()}
                       </td>
-                      <td className="text-right">
-                        <div className="flex items-center justify-end gap-1">
+                       <td className="text-center">
+                         <div className="flex items-center justify-center gap-2">
                           {hasFile ? (
                             <>
                               <span className="hidden sm:inline truncate max-w-[120px] text-[var(--color-success-text)] text-xs mr-1">
                                 {uploadedFile?.name}
                               </span>
-                              <button
-                                onClick={() => removeRowFile(globalIdx)}
-                                className="btn btn-ghost inline-flex items-center gap-1 px-2 py-1 text-xs"
-                                title="Clear attached certificate"
-                              >
-                                <XIcon className="size-3.5" />
-                                Clear
-                              </button>
+                               <button
+                                 onClick={() => removeRowFile(globalIdx)}
+                                 className="btn-danger-text inline-flex items-center gap-1 px-2 py-1 text-xs"
+                                 title="Clear attached certificate"
+                               >
+                                 <XIcon className="size-3.5" />
+                                 Clear
+                               </button>
                             </>
                           ) : (
-                            <label
-                              htmlFor={fileInputId}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-brand-600)] cursor-pointer transition-colors hover:bg-[var(--color-brand-50)]"
-                            >
+                             <label
+                               htmlFor={fileInputId}
+                               className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-brand-100)] px-3 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] cursor-pointer transition-colors hover:bg-[var(--color-brand-200)] active:scale-[0.97]"
+                             >
                               <UploadIcon className="size-3" />
                               Attach Certificate
                             </label>
@@ -484,12 +507,12 @@ export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: s
                               e.target.value = "";
                             }}
                           />
-                          <button
-                            onClick={() => removeRow(globalIdx)}
-                            className="btn btn-danger"
-                          >
-                            Remove
-                          </button>
+                           <button
+                             onClick={() => removeRow(globalIdx)}
+                             className="btn-danger-text"
+                           >
+                             Remove
+                           </button>
                         </div>
                       </td>
                     </tr>
@@ -589,17 +612,19 @@ export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: s
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)]">
-                  <th className="py-3 pl-4 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Email</th>
-                  <th className="py-3 pr-4 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
+                  <th className="w-8 py-3 pl-4 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
+                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Participant</th>
+                  <th className="py-3 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {results.map((r, i) => (
                   <tr key={i} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
-                    <td className="py-3 pl-4 font-medium text-[var(--color-text)]">{r.name}</td>
-                    <td className="py-3 text-tertiary">{r.email}</td>
-                    <td className="py-3 pr-4">
+                    <td className="py-3 pl-4 text-center text-tertiary text-xs">{i + 1}</td>
+                    <td className="text-left font-medium text-[var(--color-text)]">
+                      {r.name} <span className="font-normal text-tertiary">({r.email})</span>
+                    </td>
+                    <td className="py-3 text-center">
                       {r.success ? (
                         <span className="status-badge status-badge--active">Added</span>
                       ) : (

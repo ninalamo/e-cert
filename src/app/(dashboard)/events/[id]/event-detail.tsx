@@ -26,7 +26,7 @@ function trimPatternTrailingDash(pattern: string): string {
   return `${trimmed}${sep}####`;
 }
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   getEventWithStatsAction,
   updateEventAction,
@@ -37,7 +37,7 @@ import AttendeesManager from "@/features/events/components/attendees-manager";
 import { getTemplatesAction } from "@/features/templates/server/template.actions";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
-import { SkeletonDetail } from "@/components/ui/skeleton";
+import { SkeletonEventDetail } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -106,20 +106,37 @@ export default function EventDetail({
   eventId,
   canDelete = false,
   initialTab = "details",
+  initialData = null,
+  initialTemplates = [],
 }: {
   eventId: string;
   canDelete?: boolean;
   initialTab?: "details" | "attendees";
+  initialData?: EventDetailData | null;
+  initialTemplates?: CertificateTemplate[];
 }) {
   const router = useRouter();
-  const [data, setData] = useState<EventDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const searchParams = useSearchParams();
+  const [data, setData] = useState<EventDetailData | null>(initialData);
+  const [loading, setLoading] = useState(!initialData);
+  const [templates, setTemplates] = useState<CertificateTemplate[]>(initialTemplates);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>(
+    initialData?.event.template_id ?? ""
+  );
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templateMsg, setTemplateMsg] = useState<string | null>(null);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "attendees">(initialTab);
+
+  const urlTab = searchParams.get("tab");
+  const activeTab: "details" | "attendees" =
+    urlTab === "attendees" ? "attendees" : "details";
+
+  function switchTab(tab: "details" | "attendees") {
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "attendees") params.set("tab", "attendees");
+    else params.delete("tab");
+    router.replace(`/events/${eventId}?${params.toString()}`, { scroll: false });
+  }
   const [previewOpen, setPreviewOpen] = useState(false);
   const [editName, setEditName] = useState(false);
   const [nameValue, setNameValue] = useState("");
@@ -150,6 +167,7 @@ export default function EventDetail({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialData) return;
     let active = true;
     getEventWithStatsAction(eventId).then((result) => {
       if (active) {
@@ -161,11 +179,14 @@ export default function EventDetail({
     return () => {
       active = false;
     };
-  }, [eventId]);
+  }, [eventId, initialData]);
 
   useEffect(() => {
+    if (initialTemplates.length > 0) return;
+    const orgId = data?.event.organization_id;
+    if (!orgId) return;
     let active = true;
-    getTemplatesAction(data?.event.organization_id ?? "")
+    getTemplatesAction(orgId)
       .then((t) => {
         if (active) setTemplates(t);
       })
@@ -173,7 +194,7 @@ export default function EventDetail({
     return () => {
       active = false;
     };
-  }, [data?.event.organization_id]);
+  }, [data?.event.organization_id, initialTemplates.length]);
 
   async function handleStatusChange(newStatus: Status): Promise<boolean> {
     if (!data) return false;
@@ -315,7 +336,7 @@ export default function EventDetail({
     setEditFields(false);
   }
 
-  if (loading) return <SkeletonDetail />;
+  if (loading) return <SkeletonEventDetail activeTab={initialTab} />;
   if (!data) return <p className="text-red-600 text-sm">Event not found</p>;
 
   const { event, template } = data;
@@ -421,7 +442,7 @@ export default function EventDetail({
           <button
             key={tab}
             type="button"
-            onClick={() => setActiveTab(tab)}
+            onClick={() => switchTab(tab)}
             className={`flex-1 shrink-0 text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg whitespace-nowrap transition-all duration-200 cursor-pointer ${
               activeTab === tab
                 ? "bg-brand-600 text-white shadow-[var(--shadow-ios-sm)]"
@@ -481,17 +502,28 @@ export default function EventDetail({
                   </div>
                   <div>
                     <label className="block text-xs text-tertiary mb-1">
-                      Certificate Number Pattern
+                      Certificate Number Prefix (optional)
                     </label>
-                    <input
-                      value={fieldsValue.certificate_number_pattern}
-                      onChange={(e) => setFieldsValue((p) => ({ ...p, certificate_number_pattern: e.target.value }))}
-                      placeholder="ABC-#### (leave blank for epoch default)"
-                      className="input text-sm"
-                    />
-                    <p className="text-[11px] text-tertiary mt-1">
-                      Use <code>#</code> for the incremental counter (shared per pattern). Blank = epoch + random fallback.
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={fieldsValue.certificate_number_pattern.replace(/#+$/, "")}
+                        onChange={(e) => setFieldsValue((p) => ({ ...p, certificate_number_pattern: `${sanitizePrefix(e.target.value)}####` }))}
+                        placeholder="CERT-"
+                        className="input text-sm"
+                      />
+                      <span className="text-sm text-tertiary font-mono">####</span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-tertiary">
+                      A <code>#</code> counter is appended automatically (shared per prefix). Blank = epoch + random fallback.
                     </p>
+                    {fieldsValue.certificate_number_pattern && (
+                      <p className="mt-1 text-[11px] text-tertiary">
+                        Next certificate will look like:{" "}
+                        <code className="rounded bg-surface-tertiary px-1 py-0.5 font-mono">
+                          {trimPatternTrailingDash(fieldsValue.certificate_number_pattern).replace(/#+$/, (m) => m.replace(/#/g, "0"))}
+                        </code>
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs text-tertiary mb-1">Description</label>
@@ -702,51 +734,6 @@ export default function EventDetail({
                 <span className="text-xs text-tertiary">{templateMsg}</span>
               )}
             </div>
-            <div className="mt-3 border-t border-border pt-3">
-              <label htmlFor="cert_number_prefix" className="block text-xs font-semibold text-tertiary mb-1">
-                Certificate Number Prefix (optional)
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="cert_number_prefix"
-                  value={fieldsValue.certificate_number_pattern.replace(/#+$/, "")}
-                  onChange={(e) => setFieldsValue((p) => ({ ...p, certificate_number_pattern: `${sanitizePrefix(e.target.value)}####` }))}
-                  disabled={event.status !== "draft"}
-                  placeholder="CERT-"
-                  className="input text-sm disabled:opacity-50"
-                />
-                <span className="text-sm text-tertiary font-mono">####</span>
-              </div>
-              <p className="mt-1 text-[11px] text-tertiary">
-                A <code>#</code> counter is appended automatically (shared per prefix). Blank = epoch + random fallback.
-              </p>
-              {fieldsValue.certificate_number_pattern && (
-                <p className="mt-1 text-[11px] text-tertiary">
-                  Next certificate will look like:{" "}
-                  <code className="rounded bg-surface-tertiary px-1 py-0.5 font-mono">
-                    {trimPatternTrailingDash(fieldsValue.certificate_number_pattern).replace(/#+$/, (m) => m.replace(/#/g, "0"))}
-                  </code>
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={async () => {
-                  const result = await updateEventAction(eventId, {
-                    certificate_number_pattern: trimPatternTrailingDash(fieldsValue.certificate_number_pattern) || undefined,
-                  });
-                  if (!result?.error && result?.event) {
-                    setData((prev) => (prev ? { ...prev, event: result.event! } : prev));
-                    setTemplateMsg("Number pattern saved.");
-                  } else {
-                    setTemplateMsg(result?.error ?? "Failed to save pattern");
-                  }
-                }}
-                disabled={event.status !== "draft"}
-                className="btn-brand-soft mt-2 disabled:opacity-50"
-              >
-                Save Pattern
-              </button>
-            </div>
           </div>
 
         </div>
@@ -826,15 +813,27 @@ export default function EventDetail({
 
             {(statusTransitions[event.status] ?? []).map((t) => {
               const selected = statusTarget?.target === t.target;
+              const missingTemplate = !event.template_id;
+              const missingIssueDate = !event.event_date;
+              const blocked =
+                t.target === "active" && (missingTemplate || missingIssueDate);
               return (
                 <button
                   key={t.target}
                   type="button"
-                  onClick={() => setStatusTarget(t)}
+                  onClick={() => !blocked && setStatusTarget(t)}
+                  disabled={blocked}
+                  title={
+                    blocked
+                      ? "A template and a certificate issue date must be set before activating this event"
+                      : undefined
+                  }
                   className={`w-full rounded-xl border px-4 py-3 text-left transition-all ${
-                    selected
-                      ? "border-[var(--color-brand-600)] bg-[var(--color-brand-100)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)]"
+                    blocked
+                      ? "cursor-not-allowed opacity-50"
+                      : selected
+                        ? "border-[var(--color-brand-600)] bg-[var(--color-brand-100)]"
+                        : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)]"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -843,7 +842,11 @@ export default function EventDetail({
                       {statusConfig[t.target].label}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-tertiary">{t.message}</p>
+                  <p className="mt-1 text-xs text-tertiary">
+                    {blocked
+                      ? "Set a template and a Certificate Issue Date in the Details/Template sections before activating."
+                      : t.message}
+                  </p>
                 </button>
               );
             })}
@@ -892,11 +895,18 @@ export default function EventDetail({
             <Button
               variant={statusTarget?.target === "archive" ? "destructive" : "default"}
               onClick={confirmStatusChange}
-              disabled={statusBusy}
+              disabled={statusBusy || (statusTarget?.target === "active" && (!event.template_id || !event.event_date))}
+              title={
+                statusTarget?.target === "active" && (!event.template_id || !event.event_date)
+                  ? "A template and a certificate issue date must be set before activating this event"
+                  : undefined
+              }
             >
               {statusBusy
                 ? "Working..."
-                : statusTarget?.label ?? "Confirm"}
+                : statusTarget?.target === "active" && (!event.template_id || !event.event_date)
+                  ? "Set Template & Issue Date first"
+                  : statusTarget?.label ?? "Confirm"}
             </Button>
           </DialogFooter>
         </DialogContent>
