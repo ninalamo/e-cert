@@ -123,6 +123,11 @@ function parseHtmlToElements(html: string): CanvasElement[] {
   return out;
 }
 
+function extractBackgroundUrl(css: string): string | null {
+  const m = css.match(/background-image:\s*url\(["']?([^"')]+)["']?\)/);
+  return m ? m[1] : null;
+}
+
 function setBackgroundInCss(css: string, dataUrl: string | null): string {
   const rule = `body, .cert-canvas {
   background-image: url("${dataUrl}");
@@ -340,6 +345,44 @@ export default function TemplateCanvas({
     );
   }
 
+  function moveSelectedForward() {
+    setElements((prev) => {
+      const sorted = [...prev].sort((a, b) => a.z - b.z);
+      const selected = sorted.filter((e) => isSelected(e.id));
+      const unselected = sorted.filter((e) => !isSelected(e.id));
+      if (selected.length === 0) return prev;
+
+      const maxSelZ = Math.max(...selected.map((e) => e.z));
+      const nextHigher = unselected.find((e) => e.z > maxSelZ);
+      if (!nextHigher) return prev;
+
+      return prev.map((e) => {
+        if (isSelected(e.id)) return { ...e, z: e.z + 1 };
+        if (e.id === nextHigher.id) return { ...e, z: e.z - 1 };
+        return e;
+      });
+    });
+  }
+
+  function moveSelectedBackward() {
+    setElements((prev) => {
+      const sorted = [...prev].sort((a, b) => a.z - b.z);
+      const selected = sorted.filter((e) => isSelected(e.id));
+      const unselected = sorted.filter((e) => !isSelected(e.id));
+      if (selected.length === 0) return prev;
+
+      const minSelZ = Math.min(...selected.map((e) => e.z));
+      const nextLower = [...unselected].reverse().find((e) => e.z < minSelZ);
+      if (!nextLower) return prev;
+
+      return prev.map((e) => {
+        if (isSelected(e.id)) return { ...e, z: e.z - 1 };
+        if (e.id === nextLower.id) return { ...e, z: e.z + 1 };
+        return e;
+      });
+    });
+  }
+
   function removeSelected() {
     setElements((prev) => prev.filter((e) => !isSelected(e.id)));
     setSelectedIds([]);
@@ -498,6 +541,7 @@ export default function TemplateCanvas({
   }, [marquee, elements]);
 
   const hasBackground = /__CERT_BACKGROUND__/.test(css);
+  const canvasBg = extractBackgroundUrl(css);
   const selCount = selectedIds.length;
 
   return (
@@ -684,6 +728,20 @@ export default function TemplateCanvas({
           </button>
           <button
             type="button"
+            onClick={moveSelectedForward}
+            className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
+          >
+            ↑ Forward
+          </button>
+          <button
+            type="button"
+            onClick={moveSelectedBackward}
+            className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
+          >
+            ↓ Back
+          </button>
+          <button
+            type="button"
             onClick={sendSelectedToBack}
             className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
           >
@@ -730,7 +788,9 @@ export default function TemplateCanvas({
               style={{
                 width: CANVAS_W,
                 height: CANVAS_H,
-                background: "transparent",
+                background: canvasBg
+                  ? `url("${canvasBg}") center / cover no-repeat`
+                  : "transparent",
               }}
               onMouseDown={handleCanvasMouseDown}
             >

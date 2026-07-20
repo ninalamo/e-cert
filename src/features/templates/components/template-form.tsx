@@ -251,8 +251,14 @@ export default function TemplateForm({
   );
 }
 
+const BG_MARKER = "/* __CERT_BACKGROUND__ */";
+const BG_BLOCK_RE = /\/\* __CERT_BACKGROUND__ \*\/[\s\S]*?}/;
+
 function prettifyCss(css: string): string {
-  let result = css
+  const bgMatch = css.match(BG_BLOCK_RE);
+  const stripped = css.replace(BG_BLOCK_RE, "").trim();
+
+  let result = stripped
     .replace(/\s*{\s*/g, " {\n  ")
     .replace(/\s*}\s*/g, "\n}\n")
     .replace(/\s*;\s*/g, ";\n  ")
@@ -279,7 +285,11 @@ function prettifyCss(css: string): string {
     }
   }
 
-  return formatted.join("\n") + "\n";
+  let output = formatted.join("\n") + "\n";
+  if (bgMatch) {
+    output = output.trimEnd() + "\n\n" + bgMatch[0] + "\n";
+  }
+  return output;
 }
 
 function prettifyHtml(html: string): string {

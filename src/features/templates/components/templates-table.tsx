@@ -21,7 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { InfoIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon } from "lucide-react";
 
 const CERT_WIDTH = 960;
 
@@ -143,21 +143,16 @@ export default function TemplatesTable() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <Link href="/templates/new" className="btn-brand">
+          <PlusIcon className="size-4" />
+          New Template
+        </Link>
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:w-72">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary pointer-events-none"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+        <div className="relative w-full sm:max-w-xs">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-tertiary" />
           <input
             type="text"
             value={query}
@@ -166,142 +161,141 @@ export default function TemplatesTable() {
               setPage(0);
             }}
             placeholder="Search templates..."
-            className="input w-full pl-9"
+            className="input pl-8 py-1.5 text-xs"
           />
         </div>
-
-        <div className="flex items-center gap-2">
-          <select
-            value={filter}
-            onChange={(e) => {
-              setFilter(e.target.value as FilterKey);
-              setPage(0);
-            }}
-            className="input text-sm w-auto"
-          >
-            {FILTERS.map((f) => (
-              <option key={f.key} value={f.key}>
+        <div className="flex flex-wrap items-center gap-2">
+          {FILTERS.map((f) => {
+            const active = filter === f.key;
+            return (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => {
+                  setFilter(f.key);
+                  setPage(0);
+                }}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                  active
+                    ? "border-[var(--color-brand-600)] bg-[var(--color-brand-600)] text-white"
+                    : "border-[var(--color-border-strong)] bg-[var(--color-surface)] text-tertiary hover:border-[var(--color-brand-300)]"
+                }`}
+              >
                 {f.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value as SortKey);
-              setPage(0);
-            }}
-            className="input text-sm w-auto"
-          >
-            {SORTS.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          <Link href="/templates/new" className="btn-brand whitespace-nowrap">
-            New Template
-          </Link>
+              </button>
+            );
+          })}
+          {filter !== "all" && (
+            <button
+              type="button"
+              onClick={() => {
+                setFilter("all");
+                setPage(0);
+              }}
+              className="text-xs text-tertiary hover:text-secondary cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
-      {loading && <SkeletonTable rows={6} />}
+      {loading && <SkeletonTable rows={5} />}
 
       {!loading && loaded && filtered.length === 0 && (
-        <div className="tbl-container">
-          <div className="p-8 text-center text-tertiary">
+        <div className="app-card p-12 text-center">
+          <p className="text-sm text-tertiary">
             {templates.length === 0
               ? "No templates yet. Create your first one."
               : "No templates match your search."}
-          </div>
+          </p>
         </div>
       )}
 
       {!loading && loaded && filtered.length > 0 && (
-        <div className="tbl-container">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th className="text-left">Name</th>
-                <th className="text-left">Description</th>
-                <th className="text-left">Created</th>
-                <th className="text-left">Status</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedItems.map((t) => (
-                <tr key={t.id}>
-                  <td className="font-medium">
-                    <Link
-                      href={`/templates/${t.id}`}
-                      className="hover:underline"
-                    >
-                      {t.name}
-                    </Link>
-                  </td>
-                  <td className="text-tertiary">{t.description || "—"}</td>
-                  <td className="text-tertiary">
-                    {new Date(t.created_at).toLocaleDateString()}
-                  </td>
-                  <td>
-                    {t.locked ? (
-                      <span
-                        title="Locked: used by a draft or active event. Archive the linked event(s) to edit."
-                        className="status-badge status-badge--archive"
-                      >
-                        Locked
-                      </span>
-                    ) : (
-                      <span className="text-xs text-tertiary">Editable</span>
-                    )}
-                  </td>
-                  <td className="text-right whitespace-nowrap">
-                    <button
-                      onClick={() => setPreviewTemplate(t)}
-                      className="text-xs text-info hover:underline mr-3"
-                    >
-                      Preview
-                    </button>
-                    {t.locked ? (
-                      <span
-                        title="Locked: used by a draft or active event"
-                        className="text-xs text-tertiary opacity-50 mr-3 cursor-not-allowed"
-                      >
-                        Edit
-                      </span>
-                    ) : (
-                      <Link
-                        href={`/templates/${t.id}`}
-                        className="text-xs text-info hover:underline mr-3"
-                      >
-                        Edit
-                      </Link>
-                    )}
-                    <button
-                      onClick={() => setDeleteTarget(t)}
-                      disabled={t.locked}
-                      title={t.locked ? "Locked: used by a draft or active event" : undefined}
-                      className="text-xs text-danger hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <Paginator
-            page={page}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalItems={filtered.length}
-            setPage={setPage}
-            setPageSize={(s) => {
-              setPageSize(s);
-            }}
-          />
+        <div className="app-card divide-y divide-border overflow-hidden">
+          {paginatedItems.map((t) => (
+            <div
+              key={t.id}
+              className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
+            >
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={`/templates/${t.id}`}
+                  className="font-medium text-[var(--color-text)] hover:underline"
+                >
+                  {t.name}
+                </Link>
+                <p className="mt-0.5 truncate text-xs text-tertiary">
+                  {t.description || "No description"}
+                  {" · "}
+                  {new Date(t.created_at).toLocaleDateString()}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                {t.locked ? (
+                  <span
+                    title="Locked: used by a draft or active event. Archive the linked event(s) to edit."
+                    className="status-pill status-archive"
+                  >
+                    Locked
+                  </span>
+                ) : (
+                  <span className="status-pill status-active">Editable</span>
+                )}
+                <button
+                  onClick={() => setPreviewTemplate(t)}
+                  className="btn-disclosure"
+                >
+                  Preview
+                </button>
+                {t.locked ? (
+                  <span
+                    title="Locked: used by a draft or active event"
+                    className="btn-icon opacity-50 cursor-not-allowed"
+                    aria-disabled="true"
+                  >
+                    <SearchIcon className="size-4" />
+                  </span>
+                ) : (
+                  <Link href={`/templates/${t.id}`} className="btn-disclosure">
+                    Edit
+                  </Link>
+                )}
+                {!t.locked ? (
+                  <button
+                    onClick={() => setDeleteTarget(t)}
+                    className="btn-icon btn-icon-danger"
+                    title="Delete template"
+                  >
+                    <Trash2Icon className="size-4" />
+                  </button>
+                ) : (
+                  <span
+                    title="Locked: used by a draft or active event"
+                    className="btn-icon"
+                    aria-disabled="true"
+                  >
+                    <Trash2Icon className="size-4" />
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
+      )}
+
+      {filtered.length > 0 && (
+        <Paginator
+          page={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filtered.length}
+          setPage={setPage}
+          setPageSize={(s) => {
+            setPageSize(s);
+          }}
+        />
       )}
 
       {previewTemplate && (
