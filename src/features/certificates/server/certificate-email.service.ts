@@ -25,6 +25,16 @@ export async function sendCertificateEmail(
   }
   console.log(`[EmailService] Certificate found: recipient=${certificate.recipient_email}, number=${certificate.certificate_number}`);
 
+  let orgName = ORG_NAME;
+  if (certificate.organization_id) {
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("name")
+      .eq("id", certificate.organization_id)
+      .single();
+    if (org?.name) orgName = org.name;
+  }
+
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const downloadUrl = `${baseUrl}/api/certificates/${certificate.id}/download`;
   const viewUrl = options?.skip_pdf ? `${baseUrl}/my/certificates/${certificate.id}` : downloadUrl;
@@ -56,7 +66,7 @@ export async function sendCertificateEmail(
     issuedDate: new Date(certificate.issued_at).toLocaleDateString(),
     downloadUrl: options?.skip_pdf ? viewUrl : downloadUrl,
     verifyUrl,
-    orgName: ORG_NAME,
+    orgName,
   });
 
   const emailProvider = getEmailProvider();
