@@ -35,6 +35,14 @@ import {
   InfoIcon,
   DownloadIcon,
 } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 async function handleDownloadPdf(certificateId: string, certificateNumber: string) {
   try {
@@ -183,6 +191,20 @@ export default function CertificateDetail({
           Back
         </Link>
       )}
+
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/certificates" />}>
+              Certificates
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{certificate.certificate_number}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

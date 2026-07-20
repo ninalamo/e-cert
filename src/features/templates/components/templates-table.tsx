@@ -50,14 +50,16 @@ export default function TemplatesTable() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sort, setSort] = useState<SortKey>("created-desc");
   const [previewTemplate, setPreviewTemplate] = useState<CertificateTemplate | null>(null);
+  const [previewScale, setPreviewScale] = useState(1);
   const [, setCertHeight] = useState(680);
   const [deleteTarget, setDeleteTarget] = useState<TemplateRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     function handleMessage(e: MessageEvent) {
-      if (typeof e.data === "number") {
-        setCertHeight(e.data);
+      if (typeof e.data === "object" && e.data?.type === "cert-height") {
+        setCertHeight(e.data.height);
+        setPreviewScale(e.data.scale);
       }
     }
     window.addEventListener("message", handleMessage);
@@ -130,6 +132,14 @@ export default function TemplatesTable() {
       setDeleteTarget(null);
     }
   }
+
+  function closePreview() {
+    setPreviewTemplate(null);
+    setCertHeight(680);
+    setPreviewScale(1);
+  }
+
+  const previewSrcDoc = previewTemplate ? buildPreviewSrcDoc(previewTemplate) : "";
 
   return (
     <div className="space-y-4">
@@ -297,30 +307,39 @@ export default function TemplatesTable() {
       {previewTemplate && (
         <>
           <div
-            className="fixed inset-0 z-50 bg-black/5 backdrop-blur-sm"
-            onClick={() => { setPreviewTemplate(null); setCertHeight(680); }}
+            className="fixed inset-0 z-50 bg-black/20 ios-blur-heavy"
+            onClick={closePreview}
           />
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-            <div className="relative pointer-events-auto" style={{ height: "85vh", aspectRatio: "297 / 210", maxWidth: "90vw" }}>
-              <iframe
-                srcDoc={`<!DOCTYPE html><html><head><meta name="viewport" content="width=${CERT_WIDTH}"><style>body{margin:0;overflow:hidden;}${previewTemplate.css_content ?? ""}</style></head><body>${previewTemplate.html_content.replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz").replace(/\{\{certificate_number\}\}/g, "CERT-000001").replace(/\{\{issued_date\}\}/g, new Date().toLocaleDateString()).replace(/\{\{organization_name\}\}/g, "Sample Organization")}<script>function send(){parent.postMessage(document.body.scrollHeight,"*")}send();new ResizeObserver(send).observe(document.body);</script></body></html>`}
-                className="w-full h-full bg-white block shadow-2xl"
-                title="Template Preview"
-              />
-              <div className="absolute bottom-4 right-4 flex items-center gap-2">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div className="relative pointer-events-auto bg-white rounded-2xl shadow-ios-xl overflow-hidden ios-blur" style={{ width: "min(90vw, 680px)" }}>
+              <div className="p-3 border-b border-default flex items-center justify-between bg-white/80">
+                <span className="text-sm font-semibold text-[var(--color-text)]">{previewTemplate.name}</span>
+                <button
+                  onClick={closePreview}
+                  className="btn-icon"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <div className="relative bg-[var(--color-surface-secondary)]" style={{ height: "calc(85vh - 120px)", overflow: "hidden" }}>
+                <iframe
+                  srcDoc={previewSrcDoc}
+                  className="w-full h-full border-0"
+                  title="Template Preview"
+                  style={{ transformOrigin: "top left", transform: `scale(${previewScale})`, width: `${100 / previewScale}%`, height: `${100 / previewScale}%` }}
+                />
+              </div>
+              <div className="p-3 border-t border-default flex items-center justify-between bg-white/80">
+                <span className="text-xs text-tertiary">
+                  {previewTemplate.description || "No description"}
+                </span>
                 <Link
                   href={`/templates/${previewTemplate.id}`}
-                  className="bg-white/80 text-black text-xs font-medium px-4 py-2 rounded-full shadow-lg backdrop-blur-md border border-black/5 hover:bg-white/90 transition-colors"
+                  className="btn-brand text-xs px-4 py-2"
                 >
-                  Edit in page
+                  Edit Template
                 </Link>
               </div>
-              <button
-                onClick={() => { setPreviewTemplate(null); setCertHeight(680); }}
-                className="absolute top-3 right-3 bg-white/80 text-black rounded-full w-8 h-8 flex items-center justify-center shadow-lg backdrop-blur-md border border-black/5 hover:bg-white/90 transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              </button>
             </div>
           </div>
         </>
@@ -352,4 +371,56 @@ export default function TemplatesTable() {
       </Dialog>
     </div>
   );
+}
+
+function buildPreviewSrcDoc(template: CertificateTemplate): string {
+  const replacements = {
+    "{{recipient_name}}": "Juan Dela Cruz",
+    "{{certificate_number}}": "CERT-000001",
+    "{{issued_date}}": new Date().toLocaleDateString(),
+    "{{organization_name}}": "Sample Organization",
+  };
+  let content = template.html_content;
+  for (const [placeholder, value] of Object.entries(replacements)) {
+    content = content.replace(new RegExp(placeholder.replace(/[{}]/g, "\\$&"), "g"), value);
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: ${CERT_WIDTH}px;
+      min-height: 100%;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    body {
+      overflow: visible;
+    }
+    ${template.css_content ?? ""}
+    .cert-content {
+      width: ${CERT_WIDTH}px;
+      min-height: 680px;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div class="cert-content">${content}</div>
+  <script>
+    function sendSize() {
+      const body = document.body;
+      const html = document.documentElement;
+      const height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+      const scale = window.innerWidth / ${CERT_WIDTH};
+      parent.postMessage({ type: 'cert-height', height: height, scale: scale }, '*');
+    }
+    sendSize();
+    new ResizeObserver(sendSize).observe(document.body);
+  </script>
+</body>
+</html>`;
 }

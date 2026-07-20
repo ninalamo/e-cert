@@ -51,6 +51,14 @@ import { CalendarIcon, MapPinIcon, ChevronRightIcon, InfoIcon, PlusIcon, UploadI
 import {
   issueCertificatesForCompletedAction,
 } from "@/features/events/server/attendee.actions";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 type Status = "draft" | "active" | "archive";
 
@@ -349,6 +357,19 @@ export default function EventDetail({
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/events" />}>
+              Events
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{event.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div>
         {editName ? (
           <form

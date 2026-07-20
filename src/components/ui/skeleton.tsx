@@ -224,3 +224,34 @@ export function SkeletonForm() {
     </div>
   );
 }
+
+export function SkeletonTemplateCard() {
+  return (
+    <div className="app-card p-4 space-y-3" aria-hidden="true">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-2 flex-1 min-w-0">
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-3.5 w-1/2" />
+        </div>
+        <Skeleton className="h-6 w-16 rounded-full" />
+      </div>
+      <div className="flex items-center justify-between pt-2 border-t border-default">
+        <Skeleton className="h-3.5 w-24" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className="h-6 w-10 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonTemplateGrid({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonTemplateCard key={i} />
+      ))}
+    </div>
+  );
+}

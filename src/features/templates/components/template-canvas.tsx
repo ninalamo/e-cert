@@ -715,17 +715,18 @@ export default function TemplateCanvas({
       />
 
       <div
-        className="cert-canvas overflow-auto rounded-md border bg-white p-4"
+        className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3"
         onKeyDown={handleKeyDown}
         tabIndex={0}
+        style={{ maxHeight: "calc(100vh - 320px)" }}
       >
-        <div className="inline-block bg-gray-100 p-2">
+        <div className="inline-block bg-[var(--color-surface)] p-1.5 rounded-lg shadow-sm">
           <Ruler orientation="horizontal" length={CANVAS_W} />
           <div className="flex">
             <Ruler orientation="vertical" length={CANVAS_H} />
             <div
               ref={canvasRef}
-              className="relative shadow"
+              className="relative shadow bg-white overflow-hidden"
               style={{
                 width: CANVAS_W,
                 height: CANVAS_H,

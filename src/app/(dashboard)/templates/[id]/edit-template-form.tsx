@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import TemplateForm from "@/features/templates/components/template-form";
 import {
   getTemplateAction,
@@ -9,26 +10,31 @@ import {
 } from "@/features/templates/server/template.actions";
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 export default function EditTemplateForm({ id }: { id: string }) {
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [locked, setLocked] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const loadTemplate = useCallback(async () => {
     setLoading(true);
     const data = await getTemplateAction(id);
     setTemplate(data);
     setLocked(await isTemplateLockedAction(id));
-    setLoaded(true);
     setLoading(false);
   }, [id]);
 
-  if (!loaded && !loading) {
+  useEffect(() => {
     loadTemplate();
-    return <SkeletonForm />;
-  }
+  }, [loadTemplate]);
 
   if (loading) {
     return <SkeletonForm />;
@@ -40,20 +46,36 @@ export default function EditTemplateForm({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/templates" />}>
+              Templates
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{template.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div>
-        <h1 className="text-2xl font-bold">Edit Template</h1>
-        <p className="text-muted-foreground text-sm">
-          Editing: {template.name}
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">Edit Template</h1>
+        <p className="text-tertiary text-sm mt-1">
+          {locked ? "This template is locked and cannot be edited." : "Customize your certificate design"}
         </p>
       </div>
+
       {locked && (
-        <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4 text-sm">
           <p className="text-[var(--color-danger-text)]">
             This template is locked because it is used by a draft or active
             event. Archive the linked event(s) to edit it.
           </p>
         </div>
       )}
+
       <TemplateForm
         initialData={{
           name: template.name,
