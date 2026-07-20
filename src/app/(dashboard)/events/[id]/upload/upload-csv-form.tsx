@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ORG_ID } from "@/lib/org";
 import { getEventAction } from "@/features/events/server/event.actions";
 import { getTemplatesAction } from "@/features/templates/server/template.actions";
@@ -11,7 +10,7 @@ import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import type { AttendeeMetadata } from "@/types/event-attendee";
 import { SkeletonDetail } from "@/components/ui/skeleton";
-import { InfoIcon, DownloadIcon, UploadIcon, XIcon, AlertTriangleIcon, FileIcon } from "lucide-react";
+import { InfoIcon, DownloadIcon, UploadIcon, XIcon, AlertTriangleIcon } from "lucide-react";
 
 const PAGE_SIZE = 25;
 const MAX_FILE_MB = 10;
@@ -272,7 +271,6 @@ export default function UploadCsvForm({ eventId, isAdmin = false }: { eventId: s
     (r) => r.file_path && rowFileError(r) !== null && rowFileError(r) !== "Certificate not attached"
   ).length;
   const missingFileCount = invalidFileCount;
-  const isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
   if (!event) return <SkeletonDetail />;
 

@@ -8,17 +8,24 @@ import type { CertificateTemplate } from "@/types/template";
 import Link from "next/link";
 
 function sanitizePrefix(raw: string): string {
-  const upper = raw.toUpperCase();
-  // Keep alphanumerics and hyphens; a hyphen is only valid when followed by an alnum.
-  const cleaned = upper
+  return raw
+    .toUpperCase()
     .split("")
-    .filter((ch, i, arr) => {
-      if (/[A-Z0-9]/.test(ch)) return true;
-      if (ch === "-") return i + 1 < arr.length && /[A-Z0-9]/.test(arr[i + 1]);
-      return false;
-    })
+    .filter((ch) => /[A-Z0-9-]/.test(ch))
     .join("");
-  return cleaned.replace(/-+$/, "");
+}
+
+function normalizePrefix(raw: string): string {
+  const cleaned = sanitizePrefix(raw);
+  if (/^-+$/.test(cleaned)) return "";
+  return cleaned;
+}
+
+function buildPattern(prefix: string): string {
+  const trimmed = normalizePrefix(prefix);
+  if (!trimmed) return "CERT-####";
+  const sep = trimmed.endsWith("-") ? "" : "-";
+  return `${trimmed}${sep}####`;
 }
 
 export default function NewEventPage() {
@@ -50,9 +57,7 @@ export default function NewEventPage() {
     return templates.find((t) => t.id === selectedTemplate) ?? null;
   }, [selectedTemplate, templates]);
 
-  const certPattern = certNumberPrefix.trim()
-    ? `${sanitizePrefix(certNumberPrefix.trim())}####`
-    : "CERT-####";
+  const certPattern = buildPattern(certNumberPrefix.trim());
   const sampleNumber = certPattern.replace(/#+$/, (m) => m.replace(/#/g, "0"));
 
   const previewSrcDoc = useMemo(() => {

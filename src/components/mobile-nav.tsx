@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ORG_NAME } from "@/lib/org";
 import { useDashboardStats } from "@/features/dashboard/components/use-dashboard-stats";
 import type { UserRole } from "@/types/organization";
@@ -141,12 +141,6 @@ export default function MobileNav({
   const [open, setOpen] = useState(false);
   const [certOpen, setCertOpen] = useState(true);
 
-  // Close the transient drawer whenever the route changes.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOpen(false);
-  }, [pathname]);
-
   const { stats } = useDashboardStats();
   const certCount = role !== "participant" ? (stats?.totalCertificates ?? null) : null;
 
@@ -202,7 +196,7 @@ export default function MobileNav({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div key={pathname} className="fixed inset-0 z-50 lg:hidden">
           <div
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setOpen(false)}

@@ -3,16 +3,27 @@
 import { useState, useEffect } from "react";
 
 function sanitizePrefix(raw: string): string {
-  const upper = raw.toUpperCase();
-  const cleaned = upper
+  return raw
+    .toUpperCase()
     .split("")
-    .filter((ch, i, arr) => {
-      if (/[A-Z0-9]/.test(ch)) return true;
-      if (ch === "-") return i + 1 < arr.length && /[A-Z0-9]/.test(arr[i + 1]);
-      return false;
-    })
+    .filter((ch) => /[A-Z0-9-]/.test(ch))
     .join("");
-  return cleaned.replace(/-+$/, "");
+}
+
+function normalizePrefix(raw: string): string {
+  const cleaned = sanitizePrefix(raw);
+  // Only strip a trailing dash when it leaves nothing meaningful
+  // (e.g. user typed only dashes). A prefix like "CERT-" is valid.
+  if (/^-+$/.test(cleaned)) return "";
+  return cleaned;
+}
+
+function trimPatternTrailingDash(pattern: string): string {
+  const prefix = pattern.replace(/#+$/, "");
+  const trimmed = normalizePrefix(prefix);
+  if (!trimmed) return pattern;
+  const sep = trimmed.endsWith("-") ? "" : "-";
+  return `${trimmed}${sep}####`;
 }
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -295,7 +306,7 @@ export default function EventDetail({
       description: fieldsValue.description || undefined,
       organizer: fieldsValue.organizer || undefined,
       certificate_title: fieldsValue.certificate_title || undefined,
-      certificate_number_pattern: fieldsValue.certificate_number_pattern || undefined,
+      certificate_number_pattern: trimPatternTrailingDash(fieldsValue.certificate_number_pattern) || undefined,
       valid_until: fieldsValue.valid_until || undefined,
     });
     if (!result?.error && result?.event) {
@@ -713,7 +724,7 @@ export default function EventDetail({
                 <p className="mt-1 text-[11px] text-tertiary">
                   Next certificate will look like:{" "}
                   <code className="rounded bg-surface-tertiary px-1 py-0.5 font-mono">
-                    {fieldsValue.certificate_number_pattern.replace(/#+$/, (m) => m.replace(/#/g, "0"))}
+                    {trimPatternTrailingDash(fieldsValue.certificate_number_pattern).replace(/#+$/, (m) => m.replace(/#/g, "0"))}
                   </code>
                 </p>
               )}
@@ -721,7 +732,7 @@ export default function EventDetail({
                 type="button"
                 onClick={async () => {
                   const result = await updateEventAction(eventId, {
-                    certificate_number_pattern: fieldsValue.certificate_number_pattern || undefined,
+                    certificate_number_pattern: trimPatternTrailingDash(fieldsValue.certificate_number_pattern) || undefined,
                   });
                   if (!result?.error && result?.event) {
                     setData((prev) => (prev ? { ...prev, event: result.event! } : prev));
