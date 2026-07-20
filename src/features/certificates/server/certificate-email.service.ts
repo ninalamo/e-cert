@@ -9,6 +9,14 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+const isLocalhost =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+function debug(...args: unknown[]) {
+  if (isLocalhost) console.log("[EmailService:dev]", ...args);
+}
+
 export async function sendCertificateEmail(
   certificateId: string,
   userId: string,
@@ -77,6 +85,12 @@ export async function sendCertificateEmail(
   console.log(`[EmailService] viewUrl=${viewUrl}, downloadUrl=${downloadUrl}`);
 
   try {
+    debug("Calling emailProvider.sendEmail", {
+      to: certificate.recipient_email,
+      subject,
+      hasAttachments: !!attachments,
+      provider: emailProvider.constructor?.name,
+    });
     await emailProvider.sendEmail({
       to: certificate.recipient_email,
       subject,
@@ -94,16 +108,29 @@ export async function sendCertificateEmail(
       sent_at: new Date().toISOString(),
     } as Partial<CertificateEmailLog>;
 
-    if (existingLog) {
-      await emailRepo.update(existingLog.id, logData);
-    } else {
-      await emailRepo.create({ certificate_id: certificateId, ...logData });
+    try {
+      if (existingLog) {
+        debug("Updating existing email log", existingLog.id, logData);
+        await emailRepo.update(existingLog.id, logData);
+      } else {
+        debug("Creating new email log", { certificate_id: certificateId, ...logData });
+        await emailRepo.create({ certificate_id: certificateId, ...logData });
+      }
+      debug("Email log write succeeded");
+    } catch (logErr) {
+      debug("Email log write FAILED:", logErr);
+      console.error("[EmailService] Failed to write email log:", logErr);
     }
 
     return { success: true };
   } catch (error) {
     console.error("[EmailService] Failed to send email:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    debug("Email send error detail:", {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+      raw: error,
+    });
 
     const logData = {
       sent_to: certificate.recipient_email,
@@ -114,10 +141,18 @@ export async function sendCertificateEmail(
       sent_at: new Date().toISOString(),
     } as Partial<CertificateEmailLog>;
 
-    if (existingLog) {
-      await emailRepo.update(existingLog.id, logData);
-    } else {
-      await emailRepo.create({ certificate_id: certificateId, ...logData });
+    try {
+      if (existingLog) {
+        debug("Updating existing email log (failed)", existingLog.id, logData);
+        await emailRepo.update(existingLog.id, logData);
+      } else {
+        debug("Creating new email log (failed)", { certificate_id: certificateId, ...logData });
+        await emailRepo.create({ certificate_id: certificateId, ...logData });
+      }
+      debug("Email log write (failed) succeeded");
+    } catch (logErr) {
+      debug("Email log write (failed) FAILED:", logErr);
+      console.error("[EmailService] Failed to write email log:", logErr);
     }
 
     return { success: false, error: errorMessage };
