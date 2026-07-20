@@ -5,6 +5,7 @@ import { CertificateRepository } from "./certificate.repository";
 import { getCertificatePdfBuffer } from "./certificate.service";
 import { ORG_NAME } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -17,7 +18,8 @@ export async function sendCertificateEmail(
   console.log(`[EmailService] sendCertificateEmail called: certId=${certificateId}, userId=${userId}, skip_pdf=${options?.skip_pdf}`);
   const supabase = client ?? (await createClient());
   const certRepo = new CertificateRepository(supabase);
-  const emailRepo = new CertificateEmailRepository(supabase);
+  const emailRepo = new CertificateEmailRepository(supabaseAdmin);
+  const existingLog = await emailRepo.findLatestByCertificateId(certificateId);
   const certificate = await certRepo.findById(certificateId);
   if (!certificate) {
     console.error(`[EmailService] Certificate not found: ${certificateId}`);
@@ -83,27 +85,40 @@ export async function sendCertificateEmail(
     });
     console.log(`[EmailService] Email sent successfully to ${certificate.recipient_email}`);
 
-    await emailRepo.create({
-      certificate_id: certificateId,
+    const logData = {
       sent_to: certificate.recipient_email,
       subject,
       sent_by: userId,
       status: "sent",
-    } as Partial<CertificateEmailLog>);
+      error_message: null,
+      sent_at: new Date().toISOString(),
+    } as Partial<CertificateEmailLog>;
+
+    if (existingLog) {
+      await emailRepo.update(existingLog.id, logData);
+    } else {
+      await emailRepo.create({ certificate_id: certificateId, ...logData });
+    }
 
     return { success: true };
   } catch (error) {
     console.error("[EmailService] Failed to send email:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
-    await emailRepo.create({
-      certificate_id: certificateId,
+    const logData = {
       sent_to: certificate.recipient_email,
       subject,
       sent_by: userId,
       status: "failed",
       error_message: errorMessage,
-    } as Partial<CertificateEmailLog>);
+      sent_at: new Date().toISOString(),
+    } as Partial<CertificateEmailLog>;
+
+    if (existingLog) {
+      await emailRepo.update(existingLog.id, logData);
+    } else {
+      await emailRepo.create({ certificate_id: certificateId, ...logData });
+    }
 
     return { success: false, error: errorMessage };
   }

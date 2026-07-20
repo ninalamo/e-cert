@@ -13,4 +13,11 @@ export class CertificateEmailRepository extends BaseRepository<CertificateEmailL
       { orderBy: "sent_at", ascending: false }
     );
   }
+
+  async findLatestByCertificateId(
+    certificateId: string
+  ): Promise<CertificateEmailLog | null> {
+    const logs = await this.findByCertificateId(certificateId);
+    return logs[0] ?? null;
+  }
 }
