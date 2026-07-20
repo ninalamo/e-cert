@@ -14,9 +14,9 @@ export default function DashboardShell({
   session: SessionUser;
 }) {
   return (
-    <div className="flex min-h-screen bg-surface-muted">
+    <div className="flex h-screen bg-surface-muted">
       <Sidebar role={session.role} />
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         <header className="flex items-center justify-between border-b border-default bg-surface px-6 py-3">
           <span className="text-sm font-medium text-secondary">{ORG_NAME}</span>
           <div className="flex items-center gap-2">

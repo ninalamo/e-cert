@@ -55,12 +55,6 @@ export default function CertificatesList({ initialQuery = "" }: { initialQuery?:
           onChange={(e) => setSearch(e.target.value)}
           className="w-96 rounded-md border px-3 py-2 text-sm"
         />
-        <Link
-          href="/certificates/issue"
-          className="btn-brand"
-        >
-          Issue Certificate
-        </Link>
       </div>
 
       {!ready && <SkeletonTable rows={6} />}

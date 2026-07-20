@@ -60,7 +60,7 @@ export default function Sidebar({ role }: { role: UserRole }) {
     .filter((item) => !item.roles || item.roles.includes(role));
 
   return (
-    <aside className="w-64 border-r border-default bg-surface-muted p-4">
+    <aside className="sticky top-0 h-screen w-64 shrink-0 overflow-y-auto border-r border-default bg-surface-muted p-4">
       <div className="mb-6">
         <Link href="/dashboard" className="text-lg font-bold text-brand-700">
           E-Cert
