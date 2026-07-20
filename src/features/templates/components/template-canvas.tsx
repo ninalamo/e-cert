@@ -3,6 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 import { PLACEHOLDER_FIELDS } from "./placeholder-field";
+import {
+  PlusIcon,
+  ImageIcon,
+  PaletteIcon,
+  CopyIcon,
+  ClipboardIcon,
+  MousePointerIcon,
+  Trash2Icon,
+  LayersIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  BoldIcon,
+  AlignLeftIcon,
+  AlignCenterIcon,
+  AlignRightIcon,
+} from "lucide-react";
 
 export interface CanvasElement {
   id: string;
@@ -546,132 +562,155 @@ export default function TemplateCanvas({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-1 rounded-md border bg-gray-50 p-1">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-ios-sm)]">
         <button
           type="button"
           onClick={addText}
-          className="rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-brand-100)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-200)] active:scale-[0.97]"
         >
-          + Add Text
+          <PlusIcon className="size-3.5" />
+          Text
         </button>
         <button
           type="button"
           onClick={() => imageInputRef.current?.click()}
-          className="rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-100 active:scale-[0.97]"
         >
-          Insert Image
+          <ImageIcon className="size-3.5" />
+          Image
         </button>
         <button
           type="button"
           onClick={() => bgInputRef.current?.click()}
-          className="rounded bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 px-2.5 py-1.5 text-xs font-semibold text-purple-700 transition-all hover:bg-purple-100 active:scale-[0.97]"
         >
-          Set Background
+          <PaletteIcon className="size-3.5" />
+          Background
         </button>
-        <span className="mx-1 h-5 w-px bg-gray-300" />
+
+        <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
         <button
           type="button"
           onClick={copySelection}
           disabled={selCount === 0}
-          className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97] disabled:opacity-40"
           title="Copy (Ctrl/Cmd+C)"
         >
-          Copy
+          <CopyIcon className="size-3.5" />
         </button>
         <button
           type="button"
           onClick={paste}
           disabled={clipboardCount === 0}
-          className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97] disabled:opacity-40"
           title="Paste (Ctrl/Cmd+V)"
         >
-          Paste
+          <ClipboardIcon className="size-3.5" />
         </button>
         <button
           type="button"
           onClick={selectEverything}
           disabled={elements.length === 0}
-          className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200 disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97] disabled:opacity-40"
           title="Select all (Ctrl/Cmd+A)"
         >
-          Select All
+          <MousePointerIcon className="size-3.5" />
         </button>
         <button
           type="button"
           onClick={removeSelected}
           disabled={selCount === 0}
-          className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100 disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97] disabled:opacity-40"
           title="Delete (Del)"
         >
-          Delete
+          <Trash2Icon className="size-3.5" />
         </button>
+
         {elements.length === 0 && (
-          <button
-            type="button"
-            onClick={() => seedStarter()}
-            className="rounded bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100"
-          >
-            Starter Layout
-          </button>
+          <>
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+            <button
+              type="button"
+              onClick={() => seedStarter()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-700 transition-all hover:bg-amber-100 active:scale-[0.97]"
+            >
+              Starter Layout
+            </button>
+          </>
         )}
+
         {hasBackground && (
           <button
             type="button"
             onClick={clearBackground}
-            className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97]"
           >
             Clear BG
           </button>
         )}
-        <span className="mx-1 h-5 w-px bg-gray-300" />
-        <span className="text-xs font-medium text-muted-foreground px-1">
-          Orientation:
-        </span>
-        <button
-          type="button"
-          onClick={() => setOrientation("landscape")}
-          className={`rounded px-2 py-1 text-xs ${orientation === "landscape" ? "bg-black text-white" : "bg-gray-100"}`}
-        >
-          Landscape
-        </button>
-        <button
-          type="button"
-          onClick={() => setOrientation("portrait")}
-          className={`rounded px-2 py-1 text-xs ${orientation === "portrait" ? "bg-black text-white" : "bg-gray-100"}`}
-        >
-          Portrait
-        </button>
-        <span className="mx-1 h-5 w-px bg-gray-300" />
-        <span className="text-xs font-medium text-muted-foreground px-1">
-          Fields:
-        </span>
-        {PLACEHOLDER_FIELDS.map((f) => (
+
+        <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
+        <div className="flex gap-1 p-0.5 bg-[var(--color-surface-secondary)] rounded-lg">
           <button
-            key={f.key}
             type="button"
-            disabled={selCount !== 1 || !firstSel || firstSel.type !== "text"}
-            onClick={() => {
-              if (!firstSel) return;
-              update(firstSel.id, {
-                content: `${firstSel.content}{{${f.key}}}`,
-              });
-            }}
-            className="rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-40"
+            onClick={() => setOrientation("landscape")}
+            className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+              orientation === "landscape"
+                ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
+                : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+            }`}
           >
-            {f.label}
+            Landscape
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setOrientation("portrait")}
+            className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+              orientation === "portrait"
+                ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
+                : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+            }`}
+          >
+            Portrait
+          </button>
+        </div>
+
+        <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
+        <div className="flex flex-wrap items-center gap-1">
+          {PLACEHOLDER_FIELDS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              disabled={selCount !== 1 || !firstSel || firstSel.type !== "text"}
+              onClick={() => {
+                if (!firstSel) return;
+                update(firstSel.id, {
+                  content: `${firstSel.content}{{${f.key}}}`,
+                });
+              }}
+              className="rounded-lg bg-[var(--color-brand-100)] px-2 py-1 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-200)] active:scale-[0.97] disabled:opacity-40"
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {selCount > 0 && (
-        <div className="flex flex-wrap items-center gap-1 rounded-md border bg-white p-1">
-          <span className="px-1 text-xs font-medium text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-ios-sm)]">
+          <span className="px-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
             {selCount} selected
           </span>
+
+          <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
           <select
             value={firstSel?.fontFamily ?? ""}
             onChange={(e) => updateSelected({ fontFamily: e.target.value })}
-            className="rounded border px-1 py-1 text-xs"
+            className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none"
             title="Font family"
           >
             <option value="">Font</option>
@@ -684,7 +723,7 @@ export default function TemplateCanvas({
           <select
             value={firstSel?.fontSize ?? ""}
             onChange={(e) => updateSelected({ fontSize: e.target.value })}
-            className="rounded border px-1 py-1 text-xs"
+            className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none"
             title="Font size"
           >
             <option value="">Size</option>
@@ -698,60 +737,90 @@ export default function TemplateCanvas({
             type="color"
             value={firstSel?.color ?? "#000000"}
             onChange={(e) => updateSelected({ color: e.target.value })}
-            className="h-7 w-8 cursor-pointer rounded border"
+            className="h-7 w-8 cursor-pointer rounded-lg border border-[var(--color-border-strong)] transition-all hover:border-[var(--color-brand-500)]"
             title="Text color"
           />
           <button
             type="button"
             onClick={() => updateSelected({ bold: !firstSel?.bold })}
-            className={`rounded px-2 py-1 text-sm ${firstSel?.bold ? "bg-gray-200 font-bold" : "hover:bg-gray-200"}`}
+            className={`inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-xs font-bold transition-all active:scale-[0.97] ${
+              firstSel?.bold
+                ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
+                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
+            }`}
           >
-            B
+            <BoldIcon className="size-3.5" />
           </button>
-          {(["left", "center", "right"] as const).map((a) => (
+
+          <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
+          <div className="flex gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
+            {([
+              { key: "left", icon: AlignLeftIcon },
+              { key: "center", icon: AlignCenterIcon },
+              { key: "right", icon: AlignRightIcon },
+            ] as const).map(({ key, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => updateSelected({ align: key })}
+                className={`rounded-md px-2 py-1 text-xs font-semibold transition-all ${
+                  firstSel?.align === key
+                    ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
+                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                }`}
+              >
+                <Icon className="size-3.5" />
+              </button>
+            ))}
+          </div>
+
+          <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
+          <div className="flex gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
             <button
-              key={a}
               type="button"
-              onClick={() => updateSelected({ align: a })}
-              className={`rounded px-2 py-1 text-xs ${firstSel?.align === a ? "bg-gray-200" : "hover:bg-gray-200"}`}
+              onClick={bringSelectedToFront}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97]"
+              title="Move to front"
             >
-              {a}
+              <LayersIcon className="size-3.5" />
+              Front
             </button>
-          ))}
-          <span className="mx-1 h-5 w-px bg-gray-300" />
-          <button
-            type="button"
-            onClick={bringSelectedToFront}
-            className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
-          >
-            Front
-          </button>
-          <button
-            type="button"
-            onClick={moveSelectedForward}
-            className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
-          >
-            ↑ Forward
-          </button>
-          <button
-            type="button"
-            onClick={moveSelectedBackward}
-            className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
-          >
-            ↓ Back
-          </button>
-          <button
-            type="button"
-            onClick={sendSelectedToBack}
-            className="rounded bg-gray-100 px-2 py-1 text-xs hover:bg-gray-200"
-          >
-            Back
-          </button>
+            <button
+              type="button"
+              onClick={moveSelectedForward}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97]"
+              title="Move forward one layer"
+            >
+              <ArrowUpIcon className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={moveSelectedBackward}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97]"
+              title="Move back one layer"
+            >
+              <ArrowDownIcon className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={sendSelectedToBack}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97]"
+              title="Move to back"
+            >
+              Back
+            </button>
+          </div>
+
+          <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
           <button
             type="button"
             onClick={removeSelected}
-            className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-danger-bg)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-danger-text)] transition-all hover:brightness-95 active:scale-[0.97]"
           >
+            <Trash2Icon className="size-3.5" />
             Delete
           </button>
         </div>
