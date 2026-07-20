@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import { ORG_ID, ORG_NAME } from "@/lib/org";
-import { getDashboardStatsAction } from "@/features/dashboard/server/dashboard.actions";
+import { useState } from "react";
+import { ORG_NAME } from "@/lib/org";
+import { useDashboardStats } from "@/features/dashboard/components/use-dashboard-stats";
 import type { UserRole } from "@/types/organization";
 
 type NavChild = { label: string; href: string };
@@ -37,20 +37,10 @@ function isActivePath(pathname: string, href: string, exact = false) {
 
 export default function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname();
-  const [certCount, setCertCount] = useState<number | null>(null);
   const [certOpen, setCertOpen] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const stats = await getDashboardStatsAction(ORG_ID);
-      if (!cancelled) setCertCount(stats.totalCertificates);
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { stats } = useDashboardStats();
+  const certCount = stats?.totalCertificates ?? null;
 
   const homeHref = role === "participant" ? "/my" : "/dashboard";
   const visibleNav = navItems

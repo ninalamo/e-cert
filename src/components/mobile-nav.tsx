@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { ORG_ID, ORG_NAME } from "@/lib/org";
-import { getDashboardStatsAction } from "@/features/dashboard/server/dashboard.actions";
+import { ORG_NAME } from "@/lib/org";
+import { useDashboardStats } from "@/features/dashboard/components/use-dashboard-stats";
 import type { UserRole } from "@/types/organization";
 
 type NavChild = { label: string; href: string };
@@ -139,26 +139,16 @@ export default function MobileNav({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [certCount, setCertCount] = useState<number | null>(null);
   const [certOpen, setCertOpen] = useState(true);
 
+  // Close the transient drawer whenever the route changes.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    if (role !== "participant") {
-      let cancelled = false;
-      async function load() {
-        const stats = await getDashboardStatsAction(ORG_ID);
-        if (!cancelled) setCertCount(stats.totalCertificates);
-      }
-      load();
-      return () => {
-        cancelled = true;
-      };
-    }
-  }, [role]);
+  const { stats } = useDashboardStats();
+  const certCount = role !== "participant" ? (stats?.totalCertificates ?? null) : null;
 
   const adminItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard" },

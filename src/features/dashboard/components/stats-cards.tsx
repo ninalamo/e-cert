@@ -1,33 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ORG_ID } from "@/lib/org";
-import { getDashboardStatsAction } from "../server/dashboard.actions";
 import { SkeletonCards } from "@/components/ui/skeleton";
-
-interface Stats {
-  totalCertificates: number;
-  activeCertificates: number;
-  revokedCertificates: number;
-  totalEmails: number;
-}
+import { useDashboardStats } from "./use-dashboard-stats";
 
 export default function StatsCards() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const data = await getDashboardStatsAction(ORG_ID);
-      if (!cancelled) {
-        setStats(data);
-        setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  const { stats, loading } = useDashboardStats();
 
   if (loading) {
     return <SkeletonCards count={4} />;
