@@ -365,7 +365,7 @@ export default function EventDetail({
                 <span
                   title="Active events cannot be deleted"
                   className="btn-icon"
-                  style={{ opacity: 0.4, cursor: "not-allowed" }}
+                  aria-disabled="true"
                 >
                   <Trash2Icon className="size-4" />
                 </span>
@@ -676,7 +676,7 @@ export default function EventDetail({
               onClick={() => canManageAttendees && setShowAddDialog(true)}
               disabled={!canManageAttendees}
               title={canManageAttendees ? undefined : "Attendees can only be added while the event is in Draft or Active"}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-brand-600)] px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow-ios-sm)] transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--color-brand-600)]"
+              className="btn-brand"
             >
               <PlusIcon className="size-4" />
               Add Attendee
@@ -686,7 +686,7 @@ export default function EventDetail({
               aria-disabled={!canManageAttendees}
               onClick={(e) => { if (!canManageAttendees) e.preventDefault(); }}
               title={canManageAttendees ? undefined : "Attendees can only be imported while the event is in Draft or Active"}
-              className={`inline-flex items-center gap-1.5 rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-4 py-2 text-sm font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97] cursor-pointer ${!canManageAttendees ? "opacity-50 pointer-events-none cursor-not-allowed" : ""}`}
+              className={`btn ${!canManageAttendees ? "opacity-50 pointer-events-none cursor-not-allowed" : ""}`}
             >
               <UploadIcon className="size-4" />
               Bulk Import
@@ -697,7 +697,7 @@ export default function EventDetail({
                 onClick={handleIssueSelected}
                 disabled={issueBusy || !canIssue}
                 title={canIssue ? undefined : "Certificates can only be issued while the event is Active"}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-brand-600)] px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow-ios-sm)] transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-brand"
               >
                 {issueBusy
                   ? "Issuing..."

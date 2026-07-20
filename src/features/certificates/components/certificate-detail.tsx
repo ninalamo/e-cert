@@ -218,7 +218,7 @@ export default function CertificateDetail({
 
   if (error || !certificate) {
     return (
-      <p className="text-center text-sm text-red-600 py-8">
+      <p className="text-center text-sm text-[var(--color-danger-text)] py-8">
         {error || "Not found"}
       </p>
     );
@@ -229,10 +229,10 @@ export default function CertificateDetail({
       {eventIdParam && (
         <Link
           href={`/events/${eventIdParam}?tab=attendees`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="btn btn-view"
         >
           <ArrowLeftIcon className="size-4" />
-          Return to Events
+          Back
         </Link>
       )}
 
@@ -249,7 +249,7 @@ export default function CertificateDetail({
           {showAdminFeatures && isAdmin && !certificate.revoked_at && (
             <button
               onClick={() => setRevokeDialogOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 active:scale-[0.97] transition-all"
+              className="btn-danger"
             >
               <ShieldOffIcon className="size-4" />
               <span className="hidden sm:inline">Revoke</span>
@@ -257,7 +257,7 @@ export default function CertificateDetail({
           )}
           <button
             onClick={() => handleDownloadPdf(certificate.id, certificate.certificate_number)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-brand-600)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-ios-sm)] hover:bg-[var(--color-brand-700)] active:scale-[0.97] transition-all"
+            className="btn-brand"
           >
             <DownloadIcon className="size-4" />
             <span className="hidden sm:inline">Download PDF</span>
@@ -266,18 +266,14 @@ export default function CertificateDetail({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+      <div className="app-card overflow-hidden">
         <div className="divide-y divide-[var(--color-border)]">
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="text-sm text-[var(--color-text-muted)]">Status</span>
             {certificate.revoked_at ? (
-              <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
-                Revoked
-              </span>
+              <span className="status-pill status-revoked">Revoked</span>
             ) : (
-              <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-                Active
-              </span>
+              <span className="status-pill status-active">Active</span>
             )}
           </div>
           <div className="flex items-center justify-between px-4 py-3.5">
@@ -316,18 +312,18 @@ export default function CertificateDetail({
       </div>
 
       {certificate.revoked_at && (
-        <div className="rounded-2xl bg-red-50 border border-red-100 p-4 text-sm text-red-700">
+        <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4 text-sm text-[var(--color-danger-text)]">
           <p className="font-medium">
             Revoked on {new Date(certificate.revoked_at).toLocaleDateString()}
           </p>
           {certificate.revoke_reason && (
-            <p className="mt-1 text-red-600">{certificate.revoke_reason}</p>
+            <p className="mt-1 text-[var(--color-danger-text)]/90">{certificate.revoke_reason}</p>
           )}
         </div>
       )}
 
       {event && (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+        <div className="app-card overflow-hidden">
           <div className="px-4 py-3 border-b border-[var(--color-border)]">
             <h3 className="text-sm font-semibold">Event</h3>
           </div>
@@ -370,7 +366,7 @@ export default function CertificateDetail({
       )}
 
       {qrDataUrl && (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="app-card p-4">
           <h3 className="text-sm font-semibold mb-3">Verification</h3>
           <div className="flex items-center gap-4">
             <Image
@@ -394,7 +390,7 @@ export default function CertificateDetail({
       )}
 
       {showAdminFeatures && isAdmin && !certificate.revoked_at && (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="app-card p-4">
           <EmailHistory certificateId={certificate.id} />
         </div>
       )}

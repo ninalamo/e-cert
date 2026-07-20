@@ -45,7 +45,7 @@ export default function MembersList() {
   return (
     <div className="space-y-6">
       {!loaded && !loading && (
-        <button onClick={loadMembers} className="text-sm text-blue-600 hover:underline">
+        <button onClick={loadMembers} className="btn-disclosure">
           Load members
         </button>
       )}

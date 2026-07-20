@@ -60,7 +60,7 @@ export default function Sidebar({ role }: { role: UserRole }) {
     .filter((item) => !item.roles || item.roles.includes(role));
 
   return (
-    <aside className="sticky top-0 h-screen w-64 shrink-0 overflow-y-auto border-r border-default bg-surface-muted p-4">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-r border-default bg-surface-muted p-4 lg:block">
       <div className="mb-6">
         <Link href="/dashboard" className="text-lg font-bold text-brand-700">
           E-Cert
@@ -106,12 +106,12 @@ export default function Sidebar({ role }: { role: UserRole }) {
               >
                 <span>{item.label}</span>
                 <div className="flex items-center gap-2">
-                  {certCount !== null && certCount > 0 && (
+                      {certCount !== null && certCount > 0 && (
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${
                         parentActive
                           ? "bg-black/15 text-black"
-                          : "bg-slate-200 text-tertiary"
+                          : "bg-surface-secondary text-tertiary"
                       }`}
                     >
                       {certCount}

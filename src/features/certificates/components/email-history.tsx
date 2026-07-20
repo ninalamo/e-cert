@@ -48,13 +48,13 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
   return (
     <div className="space-y-3">
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>
+        <div className="rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm text-[var(--color-danger-text)]">{error}</div>
       )}
       {success && (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-600">{success}</div>
+        <div className="rounded-md border border-[var(--color-success-border)] bg-[var(--color-success-bg)] p-3 text-sm text-[var(--color-success-text)]">{success}</div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div className="text-sm">
           {loading ? (
             <span className="text-muted-foreground">Loading...</span>
@@ -77,7 +77,7 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
         <button
           onClick={handleSend}
           disabled={sending}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+          className="btn-brand shrink-0"
         >
           {sending ? "Sending..." : "Email Certificate to Participant"}
         </button>

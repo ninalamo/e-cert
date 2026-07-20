@@ -94,32 +94,24 @@ export default function IssueForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>
+        <div className="rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm text-[var(--color-danger-text)]">{error}</div>
       )}
       {success && (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-600">{success}</div>
+        <div className="rounded-md border border-[var(--color-success-border)] bg-[var(--color-success-bg)] p-3 text-sm text-[var(--color-success-text)]">{success}</div>
       )}
 
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => setMode("template")}
-          className={`rounded-md px-4 py-2 text-sm ${
-            mode === "template"
-              ? "bg-brand-600 text-black"
-              : "border hover:bg-gray-50"
-          }`}
+          className={`btn ${mode === "template" ? "!bg-brand-600 !text-black" : ""}`}
         >
           Use Template
         </button>
         <button
           type="button"
           onClick={() => setMode("file")}
-          className={`rounded-md px-4 py-2 text-sm ${
-            mode === "file"
-              ? "bg-brand-600 text-black"
-              : "border hover:bg-gray-50"
-          }`}
+          className={`btn ${mode === "file" ? "!bg-brand-600 !text-black" : ""}`}
         >
           Upload PDF
         </button>
@@ -133,7 +125,7 @@ export default function IssueForm() {
           <select
             id="template_id"
             name="template_id"
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+            className="input mt-1"
           >
             <option value="">Select a template</option>
             {templates.map((t) => (
@@ -155,7 +147,7 @@ export default function IssueForm() {
             type="file"
             accept=".pdf"
             onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+            className="input mt-1"
           />
           <p className="mt-1 text-xs text-muted-foreground">
             Upload a pre-made certificate PDF.
@@ -173,7 +165,7 @@ export default function IssueForm() {
             name="recipient_name"
             type="text"
             required
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+            className="input mt-1"
           />
         </div>
         <div>
@@ -185,7 +177,7 @@ export default function IssueForm() {
             name="recipient_email"
             type="email"
             required
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+            className="input mt-1"
           />
         </div>
       </div>
@@ -207,7 +199,7 @@ export default function IssueForm() {
           id="send_email"
           name="send_email"
           type="checkbox"
-          className="h-4 w-4 rounded border-gray-300"
+          className="h-4 w-4 rounded border-default"
         />
         <label htmlFor="send_email" className="text-sm font-medium">
           Send certificate email to recipient

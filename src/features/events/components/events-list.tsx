@@ -201,7 +201,7 @@ export default function EventsList({ canDelete = true }: { canDelete?: boolean }
                         : "Only admins can delete events"
                     }
                     className="btn-icon"
-                    style={{ opacity: 0.4, cursor: "not-allowed" }}
+                    aria-disabled="true"
                   >
                     <Trash2Icon className="size-4" />
                   </span>

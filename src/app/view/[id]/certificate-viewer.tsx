@@ -86,18 +86,18 @@ export default function CertificateViewer({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto py-8 px-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">Certificate</h1>
-            <p className="text-xs text-gray-500 font-mono">{certificate.certificate_number}</p>
+    <div className="min-h-screen bg-surface-muted pt-safe pb-safe">
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold text-primary">Certificate</h1>
+            <p className="font-mono text-xs text-tertiary">{certificate.certificate_number}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {srcDoc && (
               <button
                 onClick={handleDownloadPdf}
-                className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-brand-600)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-brand-700)] active:scale-[0.97] transition-all"
+                className="btn-brand"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Download PDF
@@ -106,7 +106,7 @@ export default function CertificateViewer({
             {hasPdf && !srcDoc && (
               <a
                 href={`/api/certificates/${certificate.id}/download`}
-                className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-brand-600)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-brand-700)] active:scale-[0.97] transition-all"
+                className="btn-brand"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Download PDF
@@ -119,27 +119,27 @@ export default function CertificateViewer({
           <iframe
             ref={iframeRef}
             srcDoc={srcDoc}
-            className="mx-auto bg-white block rounded-2xl shadow-sm border border-gray-200"
+            className="app-card mx-auto block bg-white"
             style={{ width: "100%", height: "80vh", aspectRatio: "297 / 210", maxWidth: "100%" }}
             title="Certificate"
           />
         ) : pdfDataUrl ? (
           <iframe
             src={pdfDataUrl}
-            className="mx-auto bg-white block rounded-2xl shadow-sm border border-gray-200"
+            className="app-card mx-auto block bg-white"
             style={{ width: "100%", height: "80vh", aspectRatio: "297 / 210", maxWidth: "100%" }}
             title="Certificate"
           />
         ) : (
-          <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
-            <p className="text-sm text-gray-500">Certificate not available for preview.</p>
+          <div className="app-card p-8 text-center">
+            <p className="text-sm text-tertiary">Certificate not available for preview.</p>
           </div>
         )}
 
         <div className="mt-4 text-center">
           <a
             href={`/verify?number=${encodeURIComponent(certificate.certificate_number)}`}
-            className="text-xs text-gray-400 hover:text-gray-600"
+            className="text-xs text-tertiary hover:text-secondary"
           >
             Verify this certificate
           </a>
