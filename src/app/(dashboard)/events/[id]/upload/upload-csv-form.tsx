@@ -74,7 +74,9 @@ export default function UploadCsvForm({
   const [page, setPage] = useState(0);
   const [results, setResults] = useState<SubmitResult[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    initialEvent?.status === "archive" ? "This event is archived. CSV uploads are no longer available." : null
+  );
 
   const csvRef = useRef<HTMLInputElement>(null);
 
@@ -101,9 +103,6 @@ export default function UploadCsvForm({
 
   useEffect(() => {
     if (!initialEvent) return;
-    if (initialEvent.status === "archive") {
-      setError("This event is archived. CSV uploads are no longer available.");
-    }
     if (initialEvent.template_id) {
       let active = true;
       getTemplatesAction(initialEvent.organization_id).then((ts) => {

@@ -30,10 +30,13 @@ export async function getEvent(
 
 export async function getEventWithStats(id: string, client?: SupabaseClient) {
   const { eventRepo, certRepo, templateRepo } = repos(client ?? (await createClient()));
-  const event = await eventRepo.findById(id);
+
+  const [event, allCerts] = await Promise.all([
+    eventRepo.findById(id),
+    certRepo.findMany({ event_id: id }),
+  ]);
   if (!event) return null;
 
-  const allCerts = await certRepo.findMany({ event_id: id });
   const template = event.template_id ? await templateRepo.findById(event.template_id) : null;
 
   return {

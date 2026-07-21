@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useCallback } from "react";
 
 interface CodeEditorProps {
   value: string;
@@ -12,16 +12,7 @@ interface CodeEditorProps {
 export default function CodeEditor({ value, onChange, rows = 16, id }: CodeEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
-  const [lineCount, setLineCount] = useState(1);
-
-  const updateLineCount = useCallback(() => {
-    const count = value.split("\n").length;
-    setLineCount(count);
-  }, [value]);
-
-  useEffect(() => {
-    updateLineCount();
-  }, [updateLineCount]);
+  const lineCount = value.split("\n").length;
 
   const handleScroll = useCallback(() => {
     if (textareaRef.current && lineNumbersRef.current) {
@@ -36,26 +27,23 @@ export default function CodeEditor({ value, onChange, rows = 16, id }: CodeEdito
     [onChange]
   );
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Tab") {
-        e.preventDefault();
-        const textarea = textareaRef.current;
-        if (!textarea) return;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const textarea = textareaRef.current;
+      if (!textarea) return;
 
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const newValue = value.substring(0, start) + "  " + value.substring(end);
-        onChange(newValue);
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newValue = value.substring(0, start) + "  " + value.substring(end);
+      onChange(newValue);
 
-        requestAnimationFrame(() => {
-          textarea.selectionStart = start + 2;
-          textarea.selectionEnd = start + 2;
-        });
-      }
-    },
-    [value, onChange]
-  );
+      requestAnimationFrame(() => {
+        textarea.selectionStart = start + 2;
+        textarea.selectionEnd = start + 2;
+      });
+    }
+  };
 
   return (
     <div className="flex rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-secondary)] overflow-hidden font-mono text-sm">

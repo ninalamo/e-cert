@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import TemplateForm from "@/features/templates/components/template-form";
 import {
@@ -24,17 +24,19 @@ export default function EditTemplateForm({ id }: { id: string }) {
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const loadTemplate = useCallback(async () => {
-    setLoading(true);
-    const data = await getTemplateAction(id);
-    setTemplate(data);
-    setLocked(await isTemplateLockedAction(id));
-    setLoading(false);
-  }, [id]);
-
   useEffect(() => {
-    loadTemplate();
-  }, [loadTemplate]);
+    let active = true;
+    (async () => {
+      const data = await getTemplateAction(id);
+      if (!active) return;
+      setTemplate(data);
+      const isLocked = await isTemplateLockedAction(id);
+      if (!active) return;
+      setLocked(isLocked);
+      setLoading(false);
+    })();
+    return () => { active = false; };
+  }, [id]);
 
   if (loading) {
     return <SkeletonForm />;

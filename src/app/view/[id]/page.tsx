@@ -26,17 +26,17 @@ export default async function CertificateViewPage({
     redirect("/my/certificates");
   }
 
-  let template = null;
-  if (certificate.template_id) {
-    const templateRepo = new CertificateTemplateRepository(supabase);
-    template = await templateRepo.findById(certificate.template_id);
-  }
+  const templateRepo = new CertificateTemplateRepository(supabase);
+  const eventRepo = new EventRepository(supabase);
 
-  let event = null;
-  if (certificate.event_id) {
-    const eventRepo = new EventRepository(supabase);
-    event = await eventRepo.findById(certificate.event_id);
-  }
+  const [template, event] = await Promise.all([
+    certificate.template_id
+      ? templateRepo.findById(certificate.template_id)
+      : null,
+    certificate.event_id
+      ? eventRepo.findById(certificate.event_id)
+      : null,
+  ]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;

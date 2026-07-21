@@ -34,13 +34,6 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "without-description", label: "No description" },
 ];
 
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: "created-desc", label: "Newest" },
-  { key: "created-asc", label: "Oldest" },
-  { key: "name-asc", label: "Name A–Z" },
-  { key: "name-desc", label: "Name Z–A" },
-];
-
 export default function TemplatesTable() {
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -48,7 +41,7 @@ export default function TemplatesTable() {
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
-  const [sort, setSort] = useState<SortKey>("created-desc");
+  const [sort] = useState<SortKey>("created-desc");
   const [previewTemplate, setPreviewTemplate] = useState<CertificateTemplate | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
   const [, setCertHeight] = useState(680);
