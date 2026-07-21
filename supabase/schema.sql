@@ -32,7 +32,7 @@ CREATE TABLE user_memberships (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  role TEXT NOT NULL DEFAULT 'MEMBER',
+  role TEXT NOT NULL DEFAULT 'participant' CHECK (role IN ('admin', 'staff', 'participant')),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(user_id, organization_id)
@@ -355,6 +355,17 @@ ON CONFLICT (id) DO NOTHING;
 --
 --     Clean slate: remove all auth rows so GoTrue starts fresh.
 --     Safe to re-run.
+--
+--     PRODUCTION GUARD: set app.environment = 'production' on the database
+--     to block this section. Development/unset environments are allowed.
+--       ALTER DATABASE postgres SET app.environment = 'production';
+DO $$
+BEGIN
+  IF current_setting('app.environment', true) = 'production' THEN
+    RAISE EXCEPTION 'Refusing to delete auth users in production. Set app.environment to something other than ''production'' to override.';
+  END IF;
+END $$;
+
 DELETE FROM auth.refresh_tokens;
 DELETE FROM auth.sessions;
 DELETE FROM auth.identities;
