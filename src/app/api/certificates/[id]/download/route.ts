@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
 import { getCertificatePdfBuffer } from "@/features/certificates/server/certificate.service";
 import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { ORG_NAME } from "@/lib/org";
+import { supabaseAdmin } from "@/lib/supabase";
 
 function renderTemplate(html: string, css: string, variables: Record<string, string>): string {
   let rendered = html;
@@ -28,23 +28,26 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const supabase = await createClient();
-  const certRepo = new CertificateRepository(supabase);
+  const certRepo = new CertificateRepository(supabaseAdmin);
   const certificate = await certRepo.findById(id);
 
   if (!certificate) {
+    console.error(`[download] Certificate not found: ${id}`);
     return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
   }
 
   if (certificate.revoked_at) {
+    console.warn(`[download] Certificate revoked: ${id}`);
     return NextResponse.json({ error: "Certificate has been revoked" }, { status: 410 });
   }
 
-  const cachedPdf = (certificate.metadata as Record<string, unknown> | null)
-    ?.rendered_pdf;
+  const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
+
+  const cachedPdf = meta.rendered_pdf;
   if (typeof cachedPdf === "string") {
     const pdfBuffer = Buffer.from(cachedPdf, "base64");
     if (pdfBuffer.length > 4 && pdfBuffer.subarray(0, 4).toString() === "%PDF") {
+      console.log(`[download] Serving cached rendered_pdf for ${id}`);
       return new NextResponse(new Uint8Array(pdfBuffer), {
         headers: {
           "Content-Type": "application/pdf",
@@ -52,11 +55,39 @@ export async function GET(
         },
       });
     }
+    console.warn(`[download] metadata.rendered_pdf exists but invalid for ${id}`);
+  }
+
+  const cachedHtml = meta.rendered_html;
+  if (typeof cachedHtml === "string") {
+    try {
+      const pdfBuffer = await renderHtmlToPdf(cachedHtml, {
+        format: "A4",
+        landscape: true,
+        margin: { top: "0", right: "0", bottom: "0", left: "0" },
+      });
+      if (pdfBuffer.length > 4 && pdfBuffer.subarray(0, 4).toString() === "%PDF") {
+        const pdfBase64 = pdfBuffer.toString("base64");
+        await certRepo.update(id, {
+          metadata: { ...meta, rendered_pdf: pdfBase64 },
+        } as never);
+        console.log(`[download] Rendered PDF from cached rendered_html for ${id}`);
+        return new NextResponse(new Uint8Array(pdfBuffer), {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="${certificate.certificate_number}.pdf"`,
+          },
+        });
+      }
+    } catch (err) {
+      console.error(`[download] PDF render from cached rendered_html failed for ${id}:`, err);
+    }
   }
 
   try {
     const pdfBuffer = await getCertificatePdfBuffer(certificate);
     if (pdfBuffer.length > 4 && pdfBuffer.subarray(0, 4).toString() === "%PDF") {
+      console.log(`[download] Serving PDF from getCertificatePdfBuffer for ${id}`);
       return new NextResponse(new Uint8Array(pdfBuffer), {
         headers: {
           "Content-Type": "application/pdf",
@@ -81,7 +112,7 @@ export async function GET(
         let event = null;
         if (certificate.event_id) {
           const { EventRepository } = await import("@/features/events/server/event.repository");
-          const eventRepo = new EventRepository(supabase);
+          const eventRepo = new EventRepository(supabaseAdmin);
           event = await eventRepo.findById(certificate.event_id);
         }
 
@@ -114,6 +145,7 @@ export async function GET(
           metadata: { ...(certificate.metadata ?? {}), rendered_pdf: pdfBase64 },
         } as never);
 
+        console.log(`[download] On-demand rendered PDF from template for ${id}`);
         return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: {
             "Content-Type": "application/pdf",
@@ -122,9 +154,10 @@ export async function GET(
         });
       }
     } catch (err) {
-      console.error("On-demand PDF generation failed:", err);
+      console.error(`[download] On-demand PDF generation failed for ${id}:`, err);
     }
   }
 
+  console.error(`[download] No PDF source available for ${id} — template_id=${certificate.template_id}, file_path=${certificate.file_path}, metadata keys=${Object.keys(meta).join(",")}`);
   return NextResponse.json({ error: "PDF not available for this certificate" }, { status: 404 });
 }

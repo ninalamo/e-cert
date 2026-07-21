@@ -90,13 +90,32 @@ const statusTransitions: Record<Status, { target: Status; label: string; message
   ],
   active: [
     {
+      target: "draft",
+      label: "Revert to Draft",
+      message:
+        "This event will be moved back to Draft. Participants will no longer see it and certificate issuance will be disabled until re-activated.",
+    },
+    {
       target: "archive",
       label: "Archive",
       message:
         "This event will be archived. All editing, uploads, and certificate issuance will be permanently disabled.",
     },
   ],
-  archive: [],
+  archive: [
+    {
+      target: "draft",
+      label: "Revert to Draft",
+      message:
+        "This event will be unarchived and moved back to Draft. All editing and uploads will be re-enabled.",
+    },
+    {
+      target: "active",
+      label: "Reactivate",
+      message:
+        "This event will go live again. Participants will be able to see it and certificate issuance will be re-enabled.",
+    },
+  ],
 };
 
 type TemplateMode = "lock" | "copy";
@@ -374,7 +393,9 @@ export default function EventDetail({
   const canChangeStatus = transitions.length > 0;
   const showArchiveTip = event.status === "active" && isExpired(event.valid_until);
   const canManageAttendees = event.status === "draft" || event.status === "active";
-  const canIssue = event.status === "active";
+  const canIssue =
+    event.status === "active" &&
+    (!event.event_date || new Date() >= new Date(event.event_date));
   const showMissingFieldsWarning =
     event.status === "draft" && (!event.template_id || !event.event_date);
 
@@ -764,7 +785,7 @@ export default function EventDetail({
               <span className="font-medium">{template?.name ?? "No template"}</span>
               {event.status !== "draft" && (
                 <span
-                  title="Locked: this template cannot be edited while the event is draft or active"
+                  title="Locked: this template cannot be edited while the event is active or archived"
                   className="status-badge status-badge--archive ml-2"
                 >
                   Locked
@@ -849,7 +870,13 @@ export default function EventDetail({
                 type="button"
                 onClick={handleIssueSelected}
                 disabled={issueBusy || !canIssue}
-                title={canIssue ? undefined : "Certificates can only be issued while the event is Active"}
+                title={
+                  canIssue
+                    ? undefined
+                    : event.status !== "active"
+                      ? "Certificates can only be issued while the event is Active"
+                      : "Certificate issuance is available on or after the event date"
+                }
                 className="btn-brand"
               >
                 {issueBusy
@@ -932,7 +959,7 @@ export default function EventDetail({
                       className="mt-0.5"
                     />
                     <span className="text-xs">
-                      <span className="font-medium">Lock original</span> &mdash; keep using the current template. It becomes locked (uneditable) while this event is draft or active.
+                      <span className="font-medium">Lock original</span> &mdash; keep using the current template. It becomes locked (uneditable) while this event is active or archived.
                     </span>
                   </label>
                   <label className="flex items-start gap-2 cursor-pointer">

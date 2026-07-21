@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
@@ -19,10 +20,13 @@ export default function CertificateViewer({
   qrDataUrl,
   orgName,
 }: Props) {
-  const hasPdf = typeof (certificate.metadata as Record<string, unknown> | null)?.rendered_pdf === "string";
+  const printRef = useRef<HTMLDivElement>(null);
 
-  const srcDoc = template
-    ? `<!DOCTYPE html><html><head><meta name="viewport" content="width=960"><style>body{margin:0;overflow:hidden;}${template.css_content ?? ""}</style></head><body>${template.html_content
+  const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
+  const cachedHtml = typeof meta.rendered_html === "string" ? meta.rendered_html : null;
+
+  const certHtml = template
+    ? template.html_content
         .replace(/\{\{recipient_name\}\}/g, certificate.recipient_name)
         .replace(/\{\{certificate_number\}\}/g, certificate.certificate_number)
         .replace(/\{\{issued_date\}\}/g, new Date(certificate.issued_at).toLocaleDateString())
@@ -34,89 +38,101 @@ export default function CertificateViewer({
         .replace(/\{\{certificate_title\}\}/g, event?.certificate_title ?? "")
         .replace(/\{\{expiry_date\}\}/g, certificate.expires_at ? new Date(certificate.expires_at).toLocaleDateString() : "")
         .replace(/\{\{qr_code\}\}/g, `<img src="${qrDataUrl}" width="128" height="128" />`)
-    }</body></html>`
-    : null;
+    : cachedHtml;
 
-  const pdfDataUrl = hasPdf
-    ? `data:application/pdf;base64,${(certificate.metadata as Record<string, unknown>).rendered_pdf}`
-    : null;
+  const certCss = template?.css_content ?? "";
 
-  async function handleDownloadPdf() {
-    try {
-      const res = await fetch(`/api/certificates/${certificate.id}/download`);
-      if (!res.ok) {
-        const contentType = res.headers.get("Content-Type") ?? "";
-        if (contentType.includes("application/pdf")) {
-          window.location.href = `/api/certificates/${certificate.id}/download`;
-        }
-        return;
-      }
-      const contentType = res.headers.get("Content-Type") ?? "";
-      if (!contentType.includes("application/pdf")) {
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${certificate.certificate_number}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("PDF generation failed:", err);
-    }
+  function handlePrint() {
+    if (!certHtml) return;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>${certificate.certificate_number}</title>
+  <style>
+    @page { size: A4 landscape; margin: 0; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+    ${certCss}
+  </style>
+</head>
+<body>
+  ${certHtml}
+  <script>
+    window.onload = function() {
+      window.print();
+      window.onafterprint = function() { window.close(); };
+    };
+  <\/script>
+</body>
+</html>`);
+    printWindow.document.close();
   }
 
   return (
-    <div className="min-h-screen bg-surface-muted pt-safe pb-safe">
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-lg font-semibold text-primary">Certificate</h1>
-            <p className="font-mono text-xs text-tertiary">{certificate.certificate_number}</p>
+    <>
+      <div className="min-h-screen bg-surface-muted pt-safe pb-safe screen-only">
+        <div className="mx-auto max-w-4xl px-4 py-8">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold text-primary">Certificate</h1>
+              <p className="font-mono text-xs text-tertiary">{certificate.certificate_number}</p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {certHtml && (
+                <button onClick={handlePrint} className="btn-brand">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  Print
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {(srcDoc || hasPdf) && (
-              <button
-                onClick={handleDownloadPdf}
-                className="btn-brand"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download PDF
-              </button>
-            )}
-          </div>
-        </div>
 
-        {srcDoc ? (
-          <iframe
-            srcDoc={srcDoc}
-            className="app-card mx-auto block bg-white"
-            style={{ width: "100%", height: "80vh", aspectRatio: "297 / 210", maxWidth: "100%" }}
-            title="Certificate"
-          />
-        ) : pdfDataUrl ? (
-          <iframe
-            src={pdfDataUrl}
-            className="app-card mx-auto block bg-white"
-            style={{ width: "100%", height: "80vh", aspectRatio: "297 / 210", maxWidth: "100%" }}
-            title="Certificate"
-          />
-        ) : (
-          <div className="app-card p-8 text-center">
-            <p className="text-sm text-tertiary">Certificate not available for preview.</p>
-          </div>
-        )}
+          {certHtml ? (
+            <div
+              ref={printRef}
+              className="app-card mx-auto block bg-white overflow-hidden"
+              style={{ width: "100%", aspectRatio: "297 / 210", maxWidth: "100%" }}
+            >
+              <iframe
+                srcDoc={`<!DOCTYPE html><html><head><meta name="viewport" content="width=960"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}${certCss}</style></head><body>${certHtml}</body></html>`}
+                style={{ width: "100%", height: "100%", border: "none" }}
+                title="Certificate"
+              />
+            </div>
+          ) : (
+            <div className="app-card p-8 text-center">
+              <p className="text-sm text-tertiary">Certificate not available for preview.</p>
+            </div>
+          )}
 
-        <div className="mt-4 text-center">
-          <a
-            href={`/verify?number=${encodeURIComponent(certificate.certificate_number)}`}
-            className="text-xs text-tertiary hover:text-secondary"
-          >
-            Verify this certificate
-          </a>
+          <div className="mt-4 text-center">
+            <a
+              href={`/verify?number=${encodeURIComponent(certificate.certificate_number)}`}
+              className="text-xs text-tertiary hover:text-secondary"
+            >
+              Verify this certificate
+            </a>
+          </div>
         </div>
       </div>
-    </div>
+
+      <style>{`
+        @media print {
+          body > *:not(.print-only) { display: none !important; }
+          .print-only { display: block !important; }
+        }
+      `}</style>
+      <div className="print-only" style={{ display: "none" }}>
+        <style>{`
+          @page { size: A4 landscape; margin: 0; }
+          html, body { margin: 0; padding: 0; }
+          ${certCss}
+        `}</style>
+        <div dangerouslySetInnerHTML={{ __html: certHtml ?? "" }} />
+      </div>
+    </>
   );
 }

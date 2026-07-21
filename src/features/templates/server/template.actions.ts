@@ -44,7 +44,7 @@ export async function updateTemplateAction(
 ) {
   await requireRole(["admin", "staff"]);
   if (await templateService.isTemplateLocked(id)) {
-    return { template: null, error: "This template is locked because it is used by a draft or active event. Archive the linked event(s) to edit it." };
+    return { template: null, error: "This template is locked because it is used by an active or archived event. Archive the linked event(s) to edit it." };
   }
   return templateService.updateTemplate(id, {
     ...data,
@@ -56,7 +56,7 @@ export async function updateTemplateAction(
 export async function deleteTemplateAction(id: string) {
   await requireRole(["admin"]);
   if (await templateService.isTemplateLocked(id)) {
-    return { error: "This template is locked because it is used by a draft or active event. Archive the linked event(s) to delete it." };
+    return { error: "This template is locked because it is used by an active or archived event. Archive the linked event(s) to delete it." };
   }
   return templateService.deleteTemplate(id);
 }

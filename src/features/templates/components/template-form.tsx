@@ -83,14 +83,59 @@ export default function TemplateForm({
 
     if (result?.error) {
       setError(result.error);
-      setLoading(false);
     }
+    setLoading(false);
   }
+
+  function handlePrintPreview() {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>${name || "Certificate"} - Print Sample</title>
+  <style>
+    @page { size: A4 landscape; margin: 0; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+    ${cssContent}
+  </style>
+</head>
+<body>
+  ${htmlContent
+    .replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz")
+    .replace(/\{\{certificate_number\}\}/g, "CERT-000001")
+    .replace(/\{\{issued_date\}\}/g, new Date().toLocaleDateString())
+    .replace(/\{\{organization_name\}\}/g, "Sample Organization")
+  }
+  <script>
+    window.onload = function() {
+      window.print();
+      window.onafterprint = function() { window.close(); };
+    };
+  <\/script>
+</body>
+</html>`);
+    printWindow.document.close();
+  }
+
+  const certWidth = (() => {
+    const m = htmlContent.match(/class="certificate"[^>]*width:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 1123;
+  })();
+  const certHeight = (() => {
+    const m = htmlContent.match(/class="certificate"[^>]*height:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 794;
+  })();
 
   const previewHtml = `<!DOCTYPE html>
 <html>
 <head>
-  <style>${cssContent}</style>
+  <meta name="viewport" content="width=${certWidth}">
+  <style>
+    html, body { margin: 0; padding: 0; width: ${certWidth}px; height: ${certHeight}px; overflow: hidden; }
+    ${cssContent}
+  </style>
 </head>
 <body>
   ${htmlContent
@@ -122,34 +167,6 @@ export default function TemplateForm({
       )}
 
       <fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-semibold mb-1.5 text-[var(--color-text)]">
-              Template Name
-            </label>
-            <input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="e.g. Certificate of Completion"
-              className="input"
-            />
-          </div>
-          <div>
-            <label htmlFor="description" className="block text-sm font-semibold mb-1.5 text-[var(--color-text)]">
-              Description
-            </label>
-            <input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description"
-              className="input"
-            />
-          </div>
-        </div>
-
         <div className="flex items-center gap-3">
           <div className="tab-bar flex-1">
             {tabs.map((tab) => (
@@ -177,13 +194,58 @@ export default function TemplateForm({
         </div>
 
         {mode === "preview" ? (
-          <div className="rounded-xl border border-[var(--color-border)] overflow-hidden">
-            <iframe
-              srcDoc={previewHtml}
-              className="w-full bg-white"
-              style={{ height: "600px" }}
-              title="Template Preview"
-            />
+          <div className="space-y-3">
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Preview your certificate with sample data. The ruler guides show the actual dimensions.
+            </p>
+            <div className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3">
+              <div className="inline-block bg-[var(--color-surface)] p-1.5 rounded-lg shadow-sm">
+                <div className="relative bg-gray-100" style={{ width: certWidth, height: 20 }}>
+                  {Array.from({ length: Math.floor(certWidth / 50) + 1 }, (_, i) => i * 50).map(p => (
+                    <>
+                      <div key={p} className="absolute bg-gray-400" style={{ left: p, top: 0, width: 1, height: p % 100 === 0 ? 10 : 6 }} />
+                      {p % 100 === 0 && p > 0 && (
+                        <span key={`l${p}`} className="absolute text-[9px] text-gray-500" style={{ left: p + 2, top: 8 }}>
+                          {p}
+                        </span>
+                      )}
+                    </>
+                  ))}
+                </div>
+                <div className="flex">
+                  <div className="relative bg-gray-100" style={{ width: 20, height: certHeight }}>
+                    {Array.from({ length: Math.floor(certHeight / 50) + 1 }, (_, i) => i * 50).map(p => (
+                      <>
+                        <div key={p} className="absolute bg-gray-400" style={{ top: p, left: 0, height: 1, width: p % 100 === 0 ? 10 : 6 }} />
+                        {p % 100 === 0 && p > 0 && (
+                          <span key={`l${p}`} className="absolute text-[9px] text-gray-500" style={{ top: p + 1, left: 10 }}>
+                            {p}
+                          </span>
+                        )}
+                      </>
+                    ))}
+                  </div>
+                  <div style={{ width: certWidth, height: certHeight }} className="relative shadow bg-white overflow-hidden">
+                    <iframe
+                      srcDoc={previewHtml}
+                      className="w-full h-full bg-white block"
+                      style={{ border: "none" }}
+                      title="Template Preview"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => handlePrintPreview()}
+                className="btn-brand-soft text-xs"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print Sample
+              </button>
+            </div>
           </div>
         ) : mode === "design" ? (
           <div className="space-y-3">
@@ -201,6 +263,10 @@ export default function TemplateForm({
               submitLabel={submitLabel}
               loading={loading}
               disabled={disabled}
+              name={name}
+              description={description}
+              onNameChange={setName}
+              onDescriptionChange={setDescription}
             />
           </div>
         ) : mode === "html" ? (

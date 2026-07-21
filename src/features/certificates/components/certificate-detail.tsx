@@ -33,7 +33,7 @@ import {
   MapPinIcon,
   UserIcon,
   InfoIcon,
-  DownloadIcon,
+  PrinterIcon,
 } from "lucide-react";
 import {
   Breadcrumb,
@@ -44,30 +44,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-async function handleDownloadPdf(certificateId: string, certificateNumber: string) {
-  try {
-    const res = await fetch(`/api/certificates/${certificateId}/download`);
-    if (!res.ok) {
-      const contentType = res.headers.get("Content-Type") ?? "";
-      if (contentType.includes("application/pdf")) {
-        window.location.href = `/api/certificates/${certificateId}/download`;
-      }
-      return;
-    }
-    const contentType = res.headers.get("Content-Type") ?? "";
-    if (!contentType.includes("application/pdf")) {
-      return;
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${certificateNumber}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error("PDF generation failed:", err);
-  }
+function fmtDate(value: string | Date) {
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
 }
 
 interface CertificateDetailProps {
@@ -226,12 +208,12 @@ export default function CertificateDetail({
             </button>
           )}
           <button
-            onClick={() => handleDownloadPdf(certificate.id, certificate.certificate_number)}
+            onClick={() => window.open(`/view/${certificate.id}`, "_blank")}
             className="btn-brand"
           >
-            <DownloadIcon className="size-4" />
-            <span className="hidden sm:inline">Download PDF</span>
-            <span className="sm:hidden">PDF</span>
+            <PrinterIcon className="size-4" />
+            <span className="hidden sm:inline">Print</span>
+            <span className="sm:hidden">Print</span>
           </button>
         </div>
       </div>
@@ -259,23 +241,23 @@ export default function CertificateDetail({
             </span>
           </div>
           <div className="flex items-center justify-between px-4 py-3.5">
-            <span className="text-sm text-[var(--color-text-muted)]">Issued</span>
+            <span className="text-sm text-[var(--color-text-muted)]">Certificate Generated Date</span>
             <span className="text-sm font-medium">
-              {new Date(certificate.issued_at).toLocaleDateString()}
+              {fmtDate(certificate.issued_at)}
             </span>
           </div>
           {certificate.expires_at && (
             <div className="flex items-center justify-between px-4 py-3.5">
-              <span className="text-sm text-[var(--color-text-muted)]">Expires</span>
+              <span className="text-sm text-[var(--color-text-muted)]">Certificate Expiry Date</span>
               <span className="text-sm font-medium">
-                {new Date(certificate.expires_at).toLocaleDateString()}
+                {fmtDate(certificate.expires_at)}
               </span>
             </div>
           )}
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="text-sm text-[var(--color-text-muted)]">Source</span>
             <span className="text-sm font-medium">
-              {template?.name ?? (certificate.file_path ? "Uploaded PDF" : "—")}
+              {certificate.file_path ? "File Upload" : "System Generated"}
             </span>
           </div>
         </div>
@@ -284,7 +266,7 @@ export default function CertificateDetail({
       {certificate.revoked_at && (
         <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4 text-sm text-[var(--color-danger-text)]">
           <p className="font-medium">
-            Revoked on {new Date(certificate.revoked_at).toLocaleDateString()}
+            Revoked on {fmtDate(certificate.revoked_at)}
           </p>
           {certificate.revoke_reason && (
             <p className="mt-1 text-[var(--color-danger-text)]/90">{certificate.revoke_reason}</p>
@@ -309,10 +291,10 @@ export default function CertificateDetail({
               <div className="flex items-center justify-between px-4 py-3.5">
                 <span className="flex items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
                   <CalendarIcon className="size-3.5" />
-                  Date
+                  Certificate Issue Date
                 </span>
                 <span className="text-sm font-medium">
-                  {new Date(event.event_date).toLocaleDateString()}
+                  {fmtDate(event.event_date)}
                 </span>
               </div>
             )}

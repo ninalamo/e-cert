@@ -70,13 +70,14 @@ export default function EditTemplateForm({ id }: { id: string }) {
       {locked && (
         <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4 text-sm">
           <p className="text-[var(--color-danger-text)]">
-            This template is locked because it is used by a draft or active
-            event. Archive the linked event(s) to edit it.
+            This template is locked because it is used by an active or
+            archived event. Archive the linked event(s) to edit it.
           </p>
         </div>
       )}
 
       <TemplateForm
+        key={template.id}
         initialData={{
           name: template.name,
           description: template.description ?? "",
@@ -87,11 +88,7 @@ export default function EditTemplateForm({ id }: { id: string }) {
         submitLabel="Save Changes"
         onSubmit={async (data) => {
           if (locked) return { template: null, error: "Template is locked." };
-          const result = await updateTemplateAction(id, data);
-          if (!result?.error) {
-            window.location.href = "/templates";
-          }
-          return result;
+          return await updateTemplateAction(id, data);
         }}
       />
     </div>

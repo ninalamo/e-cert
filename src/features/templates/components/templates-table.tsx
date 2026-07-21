@@ -235,7 +235,7 @@ export default function TemplatesTable() {
               <div className="flex shrink-0 items-center gap-3">
                 {t.locked ? (
                   <span
-                    title="Locked: used by a draft or active event. Archive the linked event(s) to edit."
+                    title="Locked: used by an active or archived event. Archive the linked event(s) to edit."
                     className="status-pill status-archive"
                   >
                     Locked
@@ -251,7 +251,7 @@ export default function TemplatesTable() {
                 </button>
                 {t.locked ? (
                   <span
-                    title="Locked: used by a draft or active event"
+                    title="Locked: used by an active or archived event"
                     className="btn-icon opacity-50 cursor-not-allowed"
                     aria-disabled="true"
                   >
@@ -272,7 +272,7 @@ export default function TemplatesTable() {
                   </button>
                 ) : (
                   <span
-                    title="Locked: used by a draft or active event"
+                    title="Locked: used by an active or archived event"
                     className="btn-icon"
                     aria-disabled="true"
                   >

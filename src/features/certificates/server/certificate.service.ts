@@ -236,10 +236,22 @@ export async function getCertificatePdfBuffer(certificate: Certificate): Promise
     return storage.readFile(certificate.file_path);
   }
 
-  const renderedPdf = (certificate.metadata as Record<string, unknown> | null)
-    ?.rendered_pdf;
+  const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
+
+  const renderedPdf = meta.rendered_pdf;
   if (typeof renderedPdf === "string") {
     return Buffer.from(renderedPdf, "base64");
+  }
+
+  const renderedHtml = meta.rendered_html;
+  if (typeof renderedHtml === "string") {
+    const { renderHtmlToPdf } = await import("@/lib/pdf");
+    const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
+      format: "A4",
+      landscape: true,
+      margin: { top: "0", right: "0", bottom: "0", left: "0" },
+    });
+    return pdfBuffer;
   }
 
   throw new Error("Certificate PDF not found");
