@@ -33,7 +33,7 @@ export async function getEventWithStats(id: string, client?: SupabaseClient) {
 
   const [event, allCerts] = await Promise.all([
     eventRepo.findById(id),
-    certRepo.findMany({ event_id: id }),
+    certRepo.findMany({ event_id: id }, { columns: "id, revoked_at, expires_at, certificate_number, recipient_name, recipient_email" }),
   ]);
   if (!event) return null;
 

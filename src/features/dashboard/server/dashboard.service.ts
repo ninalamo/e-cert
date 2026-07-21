@@ -13,29 +13,31 @@ export async function getDashboardStats(
   client?: SupabaseClient
 ): Promise<DashboardStats> {
   const supabase = client ?? (await createClient());
-  const [total, revoked, emails] = await Promise.all([
+
+  const [total, revoked, certIds] = await Promise.all([
     supabase
       .from("certificates")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .eq("organization_id", organizationId),
     supabase
       .from("certificates")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .eq("organization_id", organizationId)
       .not("revoked_at", "is", null),
     supabase
-      .from("certificate_emails")
-      .select("*", { count: "exact", head: true })
-      .in(
-        "certificate_id",
-        (
-          await supabase
-            .from("certificates")
-            .select("id")
-            .eq("organization_id", organizationId)
-        ).data?.map((c) => c.id) ?? []
-      ),
+      .from("certificates")
+      .select("id")
+      .eq("organization_id", organizationId),
   ]);
+
+  const ids = certIds.data?.map((c) => c.id) ?? [];
+
+  const emails = ids.length > 0
+    ? await supabase
+        .from("certificate_emails")
+        .select("id", { count: "exact", head: true })
+        .in("certificate_id", ids)
+    : { count: 0 };
 
   const totalCerts = total.count ?? 0;
   const revokedCerts = revoked.count ?? 0;
@@ -61,27 +63,30 @@ export async function getRecentActivity(
   client?: SupabaseClient
 ): Promise<RecentActivity[]> {
   const supabase = client ?? (await createClient());
-  const certs = await supabase
-    .from("certificates")
-    .select("certificate_number, recipient_name, created_at")
-    .eq("organization_id", organizationId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
 
-  const emails = await supabase
-    .from("certificate_emails")
-    .select("sent_to, subject, sent_at, certificate_id")
-    .in(
-      "certificate_id",
-      (
-        await supabase
-          .from("certificates")
-          .select("id")
-          .eq("organization_id", organizationId)
-      ).data?.map((c) => c.id) ?? []
-    )
-    .order("sent_at", { ascending: false })
-    .limit(limit);
+  const [certs, certIds] = await Promise.all([
+    supabase
+      .from("certificates")
+      .select("certificate_number, recipient_name, created_at")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    supabase
+      .from("certificates")
+      .select("id")
+      .eq("organization_id", organizationId),
+  ]);
+
+  const ids = certIds.data?.map((c) => c.id) ?? [];
+
+  const emails = ids.length > 0
+    ? await supabase
+        .from("certificate_emails")
+        .select("sent_to, subject, sent_at, certificate_id")
+        .in("certificate_id", ids)
+        .order("sent_at", { ascending: false })
+        .limit(limit)
+    : { data: [] };
 
   const activities: RecentActivity[] = [];
 

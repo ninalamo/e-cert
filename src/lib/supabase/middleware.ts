@@ -36,6 +36,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (user) {
+    request.headers.set("x-user-id", user.id);
+    request.headers.set("x-user-email", user.email ?? "");
+    request.headers.set("x-user-name", (user.user_metadata?.name as string) ?? "");
+  }
+
   const isProtectedRoute =
     request.nextUrl.pathname.startsWith("/dashboard") ||
     request.nextUrl.pathname.startsWith("/certificates") ||

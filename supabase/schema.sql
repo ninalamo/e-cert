@@ -136,6 +136,7 @@ CREATE INDEX idx_attendees_event ON event_attendees(event_id);
 CREATE INDEX idx_attendees_org ON event_attendees(organization_id);
 CREATE INDEX idx_attendees_completed ON event_attendees(event_id, completed);
 CREATE INDEX idx_certificates_org ON certificates(organization_id);
+CREATE INDEX idx_certificates_org_created ON certificates(organization_id, created_at DESC);
 CREATE INDEX idx_certificates_event ON certificates(event_id);
 CREATE INDEX idx_certificates_number ON certificates(certificate_number);
 CREATE INDEX idx_certificates_email ON certificates(recipient_email);

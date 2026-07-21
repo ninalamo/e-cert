@@ -12,10 +12,10 @@ export abstract class BaseRepository<T> {
     this.client = client;
   }
 
-  async findById(id: string): Promise<T | null> {
+  async findById(id: string, columns?: string): Promise<T | null> {
     const { data, error } = await this.client
       .from(this.table)
-      .select("*")
+      .select(columns ?? "*")
       .eq("id", id)
       .single();
 
@@ -25,9 +25,9 @@ export abstract class BaseRepository<T> {
 
   async findMany(
     filters?: Record<string, unknown>,
-    options?: { orderBy?: string; ascending?: boolean; limit?: number; offset?: number }
+    options?: { orderBy?: string; ascending?: boolean; limit?: number; offset?: number; columns?: string }
   ): Promise<T[]> {
-    let query = this.client.from(this.table).select("*");
+    let query = this.client.from(this.table).select(options?.columns ?? "*");
 
     if (filters) {
       for (const [key, value] of Object.entries(filters)) {
