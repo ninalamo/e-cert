@@ -20,7 +20,7 @@ DROP TABLE IF EXISTS organizations CASCADE;
 -- 2. TABLES
 -- ============================================================
 
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE organizations (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE user_memberships (
+CREATE TABLE IF NOT EXISTS user_memberships (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -38,7 +38,7 @@ CREATE TABLE user_memberships (
   UNIQUE(user_id, organization_id)
 );
 
-CREATE TABLE certificate_templates (
+CREATE TABLE IF NOT EXISTS certificate_templates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE certificate_templates (
   UNIQUE(organization_id, name)
 );
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   template_id UUID REFERENCES certificate_templates(id),
@@ -67,7 +67,7 @@ CREATE TABLE events (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE certificates (
+CREATE TABLE IF NOT EXISTS certificates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   event_id UUID REFERENCES events(id) ON DELETE CASCADE,
@@ -85,7 +85,7 @@ CREATE TABLE certificates (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE event_attendees (
+CREATE TABLE IF NOT EXISTS event_attendees (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -102,7 +102,7 @@ CREATE TABLE event_attendees (
   UNIQUE(event_id, email)
 );
 
-CREATE TABLE certificate_emails (
+CREATE TABLE IF NOT EXISTS certificate_emails (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   certificate_id UUID NOT NULL REFERENCES certificates(id) ON DELETE CASCADE,
   sent_to TEXT NOT NULL,
@@ -113,7 +113,7 @@ CREATE TABLE certificate_emails (
   error_message TEXT
 );
 
-CREATE TABLE certificate_sequences (
+CREATE TABLE IF NOT EXISTS certificate_sequences (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   pattern TEXT NOT NULL,
   next_value INTEGER NOT NULL DEFAULT 1,
