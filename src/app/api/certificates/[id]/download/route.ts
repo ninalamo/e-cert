@@ -5,6 +5,7 @@ import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { ORG_NAME } from "@/lib/org";
 import { supabaseAdmin } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 function renderTemplate(html: string, css: string, variables: Record<string, string>): string {
   let rendered = html;
@@ -28,12 +29,30 @@ export async function GET(
 ) {
   const { id } = await params;
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const certRepo = new CertificateRepository(supabaseAdmin);
   const certificate = await certRepo.findById(id);
 
   if (!certificate) {
     console.error(`[download] Certificate not found: ${id}`);
     return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
+  }
+
+  const { data: membership } = await supabase
+    .from("user_memberships")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("organization_id", certificate.organization_id)
+    .single();
+
+  const role = membership?.role;
+  if (role !== "admin" && role !== "staff" && certificate.recipient_email !== user.email) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   if (certificate.revoked_at) {
