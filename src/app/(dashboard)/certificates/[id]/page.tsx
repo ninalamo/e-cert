@@ -1,7 +1,9 @@
 "use client";
 
 import { use } from "react";
-import CertificateDetail from "@/features/certificates/components/certificate-detail";
+import dynamic from "next/dynamic";
+
+const CertificateDetail = dynamic(() => import("@/features/certificates/components/certificate-detail"), { ssr: false });
 
 export default function CertificateDetailPage({
   params,

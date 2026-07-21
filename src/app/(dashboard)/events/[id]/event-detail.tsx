@@ -33,7 +33,8 @@ import {
   deleteEventAction,
   cloneTemplateForEventAction,
 } from "@/features/events/server/event.actions";
-import AttendeesManager from "@/features/events/components/attendees-manager";
+import dynamic from "next/dynamic";
+const AttendeesManager = dynamic(() => import("@/features/events/components/attendees-manager"), { ssr: false });
 import { getTemplatesAction } from "@/features/templates/server/template.actions";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";

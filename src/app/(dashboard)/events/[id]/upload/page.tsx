@@ -1,6 +1,8 @@
-import UploadCsvForm from "./upload-csv-form";
+import dynamic from "next/dynamic";
 import { getCurrentSession } from "@/lib/permissions";
 import { getEvent } from "@/features/events/server/event.service";
+
+const UploadCsvForm = dynamic(() => import("./upload-csv-form"));
 
 export default async function UploadCsvPage({
   params,

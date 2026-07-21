@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import TemplateForm from "@/features/templates/components/template-form";
+import dynamic from "next/dynamic";
 import {
   getTemplateAction,
   updateTemplateAction,
   isTemplateLockedAction,
 } from "@/features/templates/server/template.actions";
+
+const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
 import {
