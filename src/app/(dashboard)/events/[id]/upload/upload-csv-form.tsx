@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
-import { getEventAction } from "@/features/events/server/event.actions";
-import { getTemplatesAction } from "@/features/templates/server/template.actions";
 import { bulkAddAttendeesAction } from "@/features/events/server/attendee.actions";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
@@ -59,13 +57,15 @@ export default function UploadCsvForm({
   eventId,
   isAdmin = false,
   initialEvent = null,
+  initialTemplate = null,
 }: {
   eventId: string;
   isAdmin?: boolean;
   initialEvent?: Event | null;
+  initialTemplate?: CertificateTemplate | null;
 }) {
-  const [event, setEvent] = useState<Event | null>(initialEvent);
-  const [template, setTemplate] = useState<CertificateTemplate | null>(null);
+  const event = initialEvent;
+  const template = initialTemplate;
 
   const [step, setStep] = useState<"upload" | "preview" | "results">("upload");
   const [rows, setRows] = useState<CsvRow[]>([]);
@@ -81,36 +81,6 @@ export default function UploadCsvForm({
   const csvRef = useRef<HTMLInputElement>(null);
 
   const totalPages = Math.ceil(rows.length / PAGE_SIZE);
-
-  useEffect(() => {
-    if (initialEvent) return;
-    let active = true;
-    getEventAction(eventId).then((e) => {
-      if (!active || !e) return;
-      setEvent(e);
-      if (e.status === "archive") {
-        setError("This event is archived. CSV uploads are no longer available.");
-      }
-      if (e.template_id) {
-        getTemplatesAction(e.organization_id).then((ts) => {
-          if (!active) return;
-          setTemplate(ts.find((t) => t.id === e.template_id) ?? null);
-        });
-      }
-    });
-    return () => { active = false; };
-  }, [eventId, initialEvent]);
-
-  useEffect(() => {
-    if (!initialEvent) return;
-    if (initialEvent.template_id) {
-      let active = true;
-      getTemplatesAction(initialEvent.organization_id).then((ts) => {
-        if (active) setTemplate(ts.find((t) => t.id === initialEvent.template_id) ?? null);
-      });
-      return () => { active = false; };
-    }
-  }, [initialEvent]);
 
   const handleCsvChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
