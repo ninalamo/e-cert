@@ -514,7 +514,7 @@ export default function TemplateCanvas({
     let minYDist = ALIGN_SNAP_THRESHOLD;
 
     for (const t of canvasTargetsX) {
-      for (const [dVal, dLabel] of [[dragLeft, 'left'], [dragCenterX, 'center'], [dragRight, 'right']] as const) {
+      for (const [dVal] of [[dragLeft, 'left'], [dragCenterX, 'center'], [dragRight, 'right']] as const) {
         const dist = Math.abs(dVal - t.value);
         if (dist < minXDist) {
           minXDist = dist;
@@ -525,7 +525,7 @@ export default function TemplateCanvas({
     }
 
     for (const t of canvasTargetsY) {
-      for (const [dVal, dLabel] of [[dragTop, 'top'], [dragCenterY, 'center'], [dragBottom, 'bottom']] as const) {
+      for (const [dVal] of [[dragTop, 'top'], [dragCenterY, 'center'], [dragBottom, 'bottom']] as const) {
         const dist = Math.abs(dVal - t.value);
         if (dist < minYDist) {
           minYDist = dist;

@@ -11,11 +11,9 @@ import {
   getSessionRoleAction,
 } from "@/features/certificates/server/certificate.actions";
 import { getEventAction } from "@/features/events/server/event.actions";
-import { getTemplateAction } from "@/features/templates/server/template.actions";
 import EmailHistory from "@/features/certificates/components/email-history";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
-import type { CertificateTemplate } from "@/types/template";
 import { SkeletonDetail } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -65,7 +63,6 @@ export default function CertificateDetail({
   const eventIdParam = searchParams.get("eventId");
 
   const [certificate, setCertificate] = useState<Certificate | null>(null);
-  const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [event, setEvent] = useState<Event | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,14 +87,6 @@ export default function CertificateDetail({
       setCertificate(cert);
 
       const promises: Promise<void>[] = [];
-
-      if (cert.template_id) {
-        promises.push(
-          getTemplateAction(cert.template_id).then((tpl) => {
-            if (!cancelled && tpl) setTemplate(tpl);
-          })
-        );
-      }
 
       const eventToShow = eventIdParam || cert.event_id;
       if (eventToShow) {

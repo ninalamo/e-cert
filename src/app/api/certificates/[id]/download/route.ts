@@ -102,19 +102,21 @@ export async function GET(
   if (certificate.template_id) {
     try {
       const { getTemplate } = await import("@/features/templates/server/template.service");
-      const template = await getTemplate(certificate.template_id);
-      if (template) {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-        const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
-        const qrBuffer = await generateQrCode(verifyUrl, { width: 128, margin: 1 });
-        const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;
+      const { EventRepository } = await import("@/features/events/server/event.repository");
 
-        let event = null;
-        if (certificate.event_id) {
-          const { EventRepository } = await import("@/features/events/server/event.repository");
-          const eventRepo = new EventRepository(supabaseAdmin);
-          event = await eventRepo.findById(certificate.event_id);
-        }
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+      const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
+
+      const [template, qrBuffer, event] = await Promise.all([
+        getTemplate(certificate.template_id),
+        generateQrCode(verifyUrl, { width: 128, margin: 1 }),
+        certificate.event_id
+          ? new EventRepository(supabaseAdmin).findById(certificate.event_id)
+          : null,
+      ]);
+
+      if (template) {
+        const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;
 
         const renderedHtml = renderTemplate(
           template.html_content,

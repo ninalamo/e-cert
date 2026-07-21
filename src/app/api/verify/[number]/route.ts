@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+};
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ number: string }> }
@@ -35,7 +39,7 @@ export async function GET(
   if (error || !certificate) {
     return NextResponse.json(
       { valid: false, error: "Certificate not found" },
-      { status: 404 }
+      { status: 404, headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } }
     );
   }
 
@@ -71,5 +75,5 @@ export async function GET(
           certificate_title: event.certificate_title,
         }
       : null,
-  });
+  }, { headers: CACHE_HEADERS });
 }

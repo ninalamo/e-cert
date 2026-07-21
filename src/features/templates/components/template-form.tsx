@@ -48,7 +48,6 @@ export default function TemplateForm({
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("design");
   const [advanced, setAdvanced] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -372,14 +371,13 @@ export default function TemplateForm({
   );
 }
 
-const BG_MARKER = "/* __CERT_BACKGROUND__ */";
 const BG_BLOCK_RE = /\/\* __CERT_BACKGROUND__ \*\/[\s\S]*?}/;
 
 function prettifyCss(css: string): string {
   const bgMatch = css.match(BG_BLOCK_RE);
   const stripped = css.replace(BG_BLOCK_RE, "").trim();
 
-  let result = stripped
+  const result = stripped
     .replace(/\s*{\s*/g, " {\n  ")
     .replace(/\s*}\s*/g, "\n}\n")
     .replace(/\s*;\s*/g, ";\n  ")
