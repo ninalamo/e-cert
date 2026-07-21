@@ -46,8 +46,7 @@ export async function sendCertificateEmail(
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const downloadUrl = `${baseUrl}/api/certificates/${certificate.id}/download`;
-  const viewUrl = options?.skip_pdf ? `${baseUrl}/my/certificates/${certificate.id}` : downloadUrl;
+  const viewUrl = `${baseUrl}/view/${certificate.id}`;
   const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
 
   const subject = `Your Certificate ${certificate.certificate_number} is Ready`;
@@ -74,7 +73,7 @@ export async function sendCertificateEmail(
     recipientName: certificate.recipient_name,
     certificateNumber: certificate.certificate_number,
     issuedDate: new Date(certificate.issued_at).toLocaleDateString(),
-    downloadUrl: options?.skip_pdf ? viewUrl : downloadUrl,
+    downloadUrl: viewUrl,
     verifyUrl,
     orgName,
   });
@@ -82,7 +81,7 @@ export async function sendCertificateEmail(
   const emailProvider = getEmailProvider();
 
   console.log(`[EmailService] Sending email to ${certificate.recipient_email}, subject: "${subject}"`);
-  console.log(`[EmailService] viewUrl=${viewUrl}, downloadUrl=${downloadUrl}`);
+  console.log(`[EmailService] viewUrl=${viewUrl}`);
 
   try {
     debug("Calling emailProvider.sendEmail", {
