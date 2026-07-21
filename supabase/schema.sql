@@ -314,6 +314,17 @@ CREATE POLICY "Staff and admins manage certificates" ON certificates
     )
   );
 
+-- Certificate sequences
+ALTER TABLE certificate_sequences ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Staff and admins manage certificate sequences" ON certificate_sequences
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM user_memberships
+      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+    )
+  );
+
 -- Certificate emails (audit trail — admins only)
 ALTER TABLE certificate_emails ENABLE ROW LEVEL SECURITY;
 
