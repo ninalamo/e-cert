@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import TemplateCanvas from "./template-canvas";
 import CodeEditor from "@/components/ui/code-editor";
@@ -202,27 +202,27 @@ export default function TemplateForm({
               <div className="inline-block bg-[var(--color-surface)] p-1.5 rounded-lg shadow-sm">
                 <div className="relative bg-gray-100" style={{ width: certWidth, height: 20 }}>
                   {Array.from({ length: Math.floor(certWidth / 50) + 1 }, (_, i) => i * 50).map(p => (
-                    <>
-                      <div key={p} className="absolute bg-gray-400" style={{ left: p, top: 0, width: 1, height: p % 100 === 0 ? 10 : 6 }} />
+                    <Fragment key={p}>
+                      <div className="absolute bg-gray-400" style={{ left: p, top: 0, width: 1, height: p % 100 === 0 ? 10 : 6 }} />
                       {p % 100 === 0 && p > 0 && (
-                        <span key={`l${p}`} className="absolute text-[9px] text-gray-500" style={{ left: p + 2, top: 8 }}>
+                        <span className="absolute text-[9px] text-gray-500" style={{ left: p + 2, top: 8 }}>
                           {p}
                         </span>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </div>
                 <div className="flex">
                   <div className="relative bg-gray-100" style={{ width: 20, height: certHeight }}>
                     {Array.from({ length: Math.floor(certHeight / 50) + 1 }, (_, i) => i * 50).map(p => (
-                      <>
-                        <div key={p} className="absolute bg-gray-400" style={{ top: p, left: 0, height: 1, width: p % 100 === 0 ? 10 : 6 }} />
+                      <Fragment key={p}>
+                        <div className="absolute bg-gray-400" style={{ top: p, left: 0, height: 1, width: p % 100 === 0 ? 10 : 6 }} />
                         {p % 100 === 0 && p > 0 && (
-                          <span key={`l${p}`} className="absolute text-[9px] text-gray-500" style={{ top: p + 1, left: 10 }}>
+                          <span className="absolute text-[9px] text-gray-500" style={{ top: p + 1, left: 10 }}>
                             {p}
                           </span>
                         )}
-                      </>
+                      </Fragment>
                     ))}
                   </div>
                   <div style={{ width: certWidth, height: certHeight }} className="relative shadow bg-white overflow-hidden">

@@ -5,11 +5,29 @@ let browserInstance: Browser | null = null;
 
 async function getBrowser(): Promise<Browser> {
   if (!browserInstance || !browserInstance.connected) {
-    const executablePath = await chromium.executablePath();
+    const isVercel = process.env.VERCEL === "1";
+
+    let executablePath: string;
+    let args: string[];
+
+    if (isVercel) {
+      executablePath = await chromium.executablePath();
+      args = chromium.args;
+    } else {
+      executablePath = process.env.CHROMIUM_PATH ?? "";
+      if (!executablePath) {
+        throw new Error(
+          "CHROMIUM_PATH is not set. Add it to .env.local, e.g.:\n" +
+            'CHROMIUM_PATH="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"'
+        );
+      }
+      args = [];
+    }
+
     browserInstance = await puppeteer.launch({
-      headless: true,
+      headless: isVercel ? "shell" : true,
       executablePath,
-      args: chromium.args,
+      args,
     });
   }
   return browserInstance;

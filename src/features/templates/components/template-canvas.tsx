@@ -300,11 +300,11 @@ function parseHtmlToElements(html: string): CanvasElement[] {
           type: "qr",
           x, y, w: Math.max(w, h), h: Math.max(w, h), z,
           content: "{{qr_code}}",
-          fontSize: "16px",
-          fontFamily: "Arial, sans-serif",
-          color: "#000000",
-          bold: false,
-          align: "center",
+          fontSize: get(/font-size:([^;]+)/) || "16px",
+          fontFamily: get(/font-family:([^;]+)/) || "Arial, sans-serif",
+          color: get(/color:([^;]+)/) || "#000000",
+          bold: /font-weight:\s*bold/.test(style),
+          align: (get(/text-align:([^;]+)/) as CanvasElement["align"]) || "center",
         });
       } else {
         out.push({
@@ -598,8 +598,9 @@ export default function TemplateCanvas({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && fullscreen) {
-        onFullscreenChange?.(false);
+      if (e.key === "Escape") {
+        if (fullscreen) onFullscreenChange?.(false);
+        setSelectedIds([]);
       }
     }
     window.addEventListener("keydown", onKey);

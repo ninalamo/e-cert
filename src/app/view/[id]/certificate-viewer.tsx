@@ -42,18 +42,28 @@ export default function CertificateViewer({
 
   const certCss = template?.css_content ?? "";
 
+  const certWidth = (() => {
+    const m = template?.html_content.match(/class="certificate"[^>]*width:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 1123;
+  })();
+  const certHeight = (() => {
+    const m = template?.html_content.match(/class="certificate"[^>]*height:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 794;
+  })();
+
   function handlePrint() {
     if (!certHtml) return;
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
+    const orientation = certWidth >= certHeight ? "landscape" : "portrait";
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
   <title>${certificate.certificate_number}</title>
   <style>
-    @page { size: A4 landscape; margin: 0; }
+    @page { size: A4 ${orientation}; margin: 0; }
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
     ${certCss}
   </style>
@@ -93,11 +103,11 @@ export default function CertificateViewer({
           {certHtml ? (
             <div
               ref={printRef}
-              className="app-card mx-auto block bg-white overflow-hidden"
-              style={{ width: "100%", aspectRatio: "297 / 210", maxWidth: "100%" }}
+              className="mx-auto block bg-white overflow-hidden"
+              style={{ width: "100%", aspectRatio: `${certWidth} / ${certHeight}`, maxWidth: "100%", padding: "1.5rem" }}
             >
               <iframe
-                srcDoc={`<!DOCTYPE html><html><head><meta name="viewport" content="width=960"><style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;}${certCss}</style></head><body>${certHtml}</body></html>`}
+                srcDoc={`<!DOCTYPE html><html><head><meta name="viewport" content="width=${certWidth}"><style>html,body{margin:0;padding:0;width:${certWidth}px;height:${certHeight}px;overflow:auto;}${certCss}</style></head><body>${certHtml}</body></html>`}
                 style={{ width: "100%", height: "100%", border: "none" }}
                 title="Certificate"
               />
@@ -127,7 +137,7 @@ export default function CertificateViewer({
       `}</style>
       <div className="print-only" style={{ display: "none" }}>
         <style>{`
-          @page { size: A4 landscape; margin: 0; }
+          @page { size: A4 ${certWidth >= certHeight ? "landscape" : "portrait"}; margin: 0; }
           html, body { margin: 0; padding: 0; }
           ${certCss}
         `}</style>
