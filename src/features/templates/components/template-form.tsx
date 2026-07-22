@@ -159,19 +159,17 @@ export default function TemplateForm({
       )}
 
       <fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
-        <div className="flex items-center gap-3">
-          <div className="tab-bar flex-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setMode(tab.key)}
-                className={`tab-item ${mode === tab.key ? "tab-item--active" : ""}`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        <div className="tab-bar flex-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setMode(tab.key)}
+              className={`tab-item ${mode === tab.key ? "tab-item--active" : ""}`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {mode === "preview" ? (

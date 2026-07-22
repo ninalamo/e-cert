@@ -25,6 +25,15 @@ export default function CertificateViewer({
   const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
   const cachedHtml = typeof meta.rendered_html === "string" ? meta.rendered_html : null;
 
+  const certWidth = template?.template_context?.full_width || (() => {
+    const m = template?.html_content.match(/class=\"certificate\"[^>]*width:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 1123;
+  })();
+  const certHeight = template?.template_context?.full_height || (() => {
+    const m = template?.html_content.match(/class=\"certificate\"[^>]*height:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 794;
+  })();
+
   const certHtml = template
     ? template.html_content
         .replace(/\{\{recipient_name\}\}/g, certificate.recipient_name)
