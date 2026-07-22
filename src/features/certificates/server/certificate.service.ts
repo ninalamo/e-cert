@@ -185,12 +185,13 @@ export async function getCertificateByNumber(
 
 export async function getMyCertificates(
   email: string,
+  columns?: string,
   client?: SupabaseClient
 ): Promise<Certificate[]> {
   const c = client ?? (await createClient());
   const certRepo = repo(c);
   const { ORG_ID } = await import("@/lib/org");
-  return certRepo.findByRecipientEmail(email, ORG_ID);
+  return certRepo.findByRecipientEmail(email, ORG_ID, columns);
 }
 
 export async function getMyCertificate(
