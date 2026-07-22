@@ -25,48 +25,39 @@ export default function CertificateViewer({
   const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
   const cachedHtml = typeof meta.rendered_html === "string" ? meta.rendered_html : null;
 
-  const certWidth = template?.template_context?.full_width || (() => {
-    const m = template?.html_content.match(/class=\"certificate\"[^>]*width:(\d+)px/);
-    return m ? parseInt(m[1], 10) : 1123;
-  })();
-  const certHeight = template?.template_context?.full_height || (() => {
-    const m = template?.html_content.match(/class=\"certificate\"[^>]*height:(\d+)px/);
-    return m ? parseInt(m[1], 10) : 794;
-  })();
+   const certWidth = template?.template_context?.full_width || (() => {
+     const m = template?.html_content?.match(/width:\s*(\d+)px/);
+     return m ? parseInt(m[1], 10) : 1123;
+   })();
+   const certHeight = template?.template_context?.full_height || (() => {
+     const m = template?.html_content?.match(/height:\s*(\d+)px/);
+     return m ? parseInt(m[1], 10) : 794;
+   })();
 
-  const certHtml = template
-    ? template.html_content
-        .replace(/\{\{recipient_name\}\}/g, certificate.recipient_name)
-        .replace(/\{\{certificate_number\}\}/g, certificate.certificate_number)
-        .replace(/\{\{issued_date\}\}/g, new Date(certificate.issued_at).toLocaleDateString())
-        .replace(/\{\{organization_name\}\}/g, orgName)
-        .replace(/\{\{event_name\}\}/g, event?.name ?? "")
-        .replace(/\{\{event_date\}\}/g, event?.event_date ? new Date(event.event_date).toLocaleDateString() : "")
-        .replace(/\{\{event_location\}\}/g, event?.location ?? "")
-        .replace(/\{\{event_organizer\}\}/g, event?.organizer ?? "")
-        .replace(/\{\{certificate_title\}\}/g, event?.certificate_title ?? "")
-        .replace(/\{\{expiry_date\}\}/g, certificate.expires_at ? new Date(certificate.expires_at).toLocaleDateString() : "")
-        .replace(/\{\{qr_code\}\}/g, `<img src="${qrDataUrl}" width="128" height="128" />`)
-    : cachedHtml;
+   const certHtml = template
+     ? template.html_content
+         .replace(/\{\{recipient_name\}\}/g, certificate.recipient_name)
+         .replace(/\{\{certificate_number\}\}/g, certificate.certificate_number)
+         .replace(/\{\{issued_date\}\}/g, new Date(certificate.issued_at).toLocaleDateString())
+         .replace(/\{\{organization_name\}\}/g, orgName)
+         .replace(/\{\{event_name\}\}/g, event?.name ?? "")
+         .replace(/\{\{event_date\}\}/g, event?.event_date ? new Date(event.event_date).toLocaleDateString() : "")
+         .replace(/\{\{event_location\}\}/g, event?.location ?? "")
+         .replace(/\{\{event_organizer\}\}/g, event?.organizer ?? "")
+         .replace(/\{\{certificate_title\}\}/g, event?.certificate_title ?? "")
+         .replace(/\{\{expiry_date\}\}/g, certificate.expires_at ? new Date(certificate.expires_at).toLocaleDateString() : "")
+         .replace(/\{\{qr_code\}\}/g, `<img src="${qrDataUrl}" width="128" height="128" />`)
+     : cachedHtml;
 
-  const certCss = template?.css_content ?? "";
-
-  const certWidth = (() => {
-    const m = template?.html_content?.match(/width:\s*(\d+)px/);
-    return m ? parseInt(m[1], 10) : 1123;
-  })();
-  const certHeight = (() => {
-    const m = template?.html_content?.match(/height:\s*(\d+)px/);
-    return m ? parseInt(m[1], 10) : 794;
-  })();
-
-  function handlePrint() {
-    if (!certHtml) return;
-
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    const orientation = certWidth >= certHeight ? "landscape" : "portrait";
+    const certCss = template?.css_content ?? "";
+ 
+   function handlePrint() {
+     if (!certHtml) return;
+ 
+     const printWindow = window.open("", "_blank");
+     if (!printWindow) return;
+ 
+     const orientation = certWidth >= certHeight ? "landscape" : "portrait";
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
