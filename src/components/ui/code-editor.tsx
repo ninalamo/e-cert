@@ -7,9 +7,10 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   rows?: number;
   id?: string;
+  readOnly?: boolean;
 }
 
-export default function CodeEditor({ value, onChange, rows = 16, id }: CodeEditorProps) {
+export default function CodeEditor({ value, onChange, rows = 16, id, readOnly = false }: CodeEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const lineCount = value.split("\n").length;
@@ -67,6 +68,7 @@ export default function CodeEditor({ value, onChange, rows = 16, id }: CodeEdito
         onScroll={handleScroll}
         onKeyDown={handleKeyDown}
         rows={rows}
+        readOnly={readOnly}
         spellCheck={false}
         className="flex-1 bg-transparent text-[var(--color-text)] leading-[1.5] py-2.5 px-2 resize-none outline-none min-w-0"
       />

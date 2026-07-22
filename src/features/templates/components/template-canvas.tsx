@@ -457,6 +457,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     h: number;
   } | null>(null);
   const marqueeStart = useRef<{ x: number; y: number } | null>(null);
+  const lastCanvasHtml = useRef("");
   const [gridSize, setGridSize] = useState(20);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
@@ -464,6 +465,18 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const [activeAlignGuides, setActiveAlignGuides] = useState<{ orientation: 'horizontal' | 'vertical'; position: number }[]>([]);
   const [history, setHistory] = useState<CanvasElement[][]>(() => [parsed0]);
   const [historyIndex, setHistoryIndex] = useState(0);
+
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    // eslint-disable-next-line react-hooks/refs
+    if (value !== lastCanvasHtml.current) {
+      const newElements = parseHtmlToElements(value);
+      if (newElements.length > 0) {
+        setElements(newElements);
+      }
+    }
+  }
 
   const snapValue = (value: number, orientation: 'horizontal' | 'vertical') => {
     if (!snapEnabled) return value;
@@ -618,7 +631,9 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   }, [fullscreen, onFullscreenChange]);
 
   useEffect(() => {
-    onChange(elementsToHtml(elements, CANVAS_W, CANVAS_H));
+    const html = elementsToHtml(elements, CANVAS_W, CANVAS_H);
+    lastCanvasHtml.current = html;
+    onChange(html);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elements, orientation, sizePreset, customW, customH]);
 

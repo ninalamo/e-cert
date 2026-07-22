@@ -52,6 +52,7 @@ export default function TemplateForm({
   const [advanced, setAdvanced] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [showSource, setShowSource] = useState(false);
   const canvasRef = useRef<TemplateCanvasHandle>(null);
 
   function toggleAdvanced() {
@@ -79,12 +80,19 @@ export default function TemplateForm({
     const html = canvasRef.current?.getHtml() ?? htmlContent;
     const css = canvasRef.current?.getCss() ?? cssContent;
 
+    console.log("[confirmSave] canvasRef.current:", canvasRef.current);
+    console.log("[confirmSave] html length:", html.length, "css length:", css.length);
+    console.log("[confirmSave] html preview:", html.substring(0, 200));
+    console.log("[confirmSave] css preview:", css.substring(0, 200));
+
     const result = await onSubmit({
       name,
       description,
       html_content: html,
       css_content: css,
     });
+
+    console.log("[confirmSave] result:", result);
 
     if (result?.error) {
       setError(result.error);
@@ -256,10 +264,23 @@ export default function TemplateForm({
           </div>
         ) : mode === "design" ? (
           <div className="space-y-3">
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Design your certificate. Use the {"\""}Insert field{"\""} buttons to add
-              placeholders that are filled in when a certificate is issued.
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Design your certificate. Use the {"\""}Insert field{"\""} buttons to add
+                placeholders that are filled in when a certificate is issued.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowSource(!showSource)}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
+                  showSource
+                    ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
+                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                }`}
+              >
+                {showSource ? "Hide Source" : "Show Source"}
+              </button>
+            </div>
             <TemplateCanvas
               ref={canvasRef}
               value={htmlContent}
@@ -276,6 +297,26 @@ export default function TemplateForm({
               onNameChange={setName}
               onDescriptionChange={setDescription}
             />
+            {showSource && (
+              <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">HTML</label>
+                  <CodeEditor
+                    value={htmlContent}
+                    onChange={setHtmlContent}
+                    rows={8}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">CSS</label>
+                  <CodeEditor
+                    value={cssContent}
+                    onChange={setCssContent}
+                    rows={6}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ) : mode === "html" ? (
           <div className="space-y-2">
