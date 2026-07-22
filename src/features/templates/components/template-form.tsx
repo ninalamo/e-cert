@@ -1,8 +1,10 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import TemplateCanvas from "./template-canvas";
+import type { TemplateCanvasHandle } from "./template-canvas";
 import CodeEditor from "@/components/ui/code-editor";
 import {
   Dialog,
@@ -50,6 +52,7 @@ export default function TemplateForm({
   const [advanced, setAdvanced] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const canvasRef = useRef<TemplateCanvasHandle>(null);
 
   function toggleAdvanced() {
     setAdvanced((prev) => {
@@ -73,15 +76,20 @@ export default function TemplateForm({
     setError(null);
     setLoading(true);
 
+    const html = canvasRef.current?.getHtml() ?? htmlContent;
+    const css = canvasRef.current?.getCss() ?? cssContent;
+
     const result = await onSubmit({
       name,
       description,
-      html_content: htmlContent,
-      css_content: cssContent,
+      html_content: html,
+      css_content: css,
     });
 
     if (result?.error) {
       setError(result.error);
+    } else {
+      toast.success("Template saved successfully");
     }
     setLoading(false);
   }
@@ -253,6 +261,7 @@ export default function TemplateForm({
               placeholders that are filled in when a certificate is issued.
             </p>
             <TemplateCanvas
+              ref={canvasRef}
               value={htmlContent}
               onChange={setHtmlContent}
               css={cssContent}
