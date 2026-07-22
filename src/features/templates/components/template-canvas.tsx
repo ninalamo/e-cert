@@ -478,6 +478,17 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     }
   }
 
+  // Sync elements → parent during render (not useEffect) so it fires
+  // before the canvas can unmount on Design→Advanced switch.
+  const currentHtml = elementsToHtml(elements, CANVAS_W, CANVAS_H);
+  // eslint-disable-next-line react-hooks/refs
+  if (currentHtml !== lastCanvasHtml.current) {
+    // eslint-disable-next-line react-hooks/refs
+    lastCanvasHtml.current = currentHtml;
+    // Defer the parent update to after the current render commit
+    queueMicrotask(() => onChange(currentHtml));
+  }
+
   const snapValue = (value: number, orientation: 'horizontal' | 'vertical') => {
     if (!snapEnabled) return value;
     
@@ -630,12 +641,8 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     return () => window.removeEventListener("keydown", onKey);
   }, [fullscreen, onFullscreenChange]);
 
-  useEffect(() => {
-    const html = elementsToHtml(elements, CANVAS_W, CANVAS_H);
-    lastCanvasHtml.current = html;
-    onChange(html);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elements, orientation, sizePreset, customW, customH]);
+  // onChange sync is now during-render (see above) to prevent lost
+  // canvas state when switching Design→Advanced before the effect fires.
 
   const isSelected = (id: string) => selectedIds.includes(id);
   const firstSel =
