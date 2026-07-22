@@ -64,7 +64,7 @@ export class EventRepository extends BaseRepository<Event> {
     }
 
     return {
-      events: (data ?? []) as Event[],
+      events: (data ?? []) as unknown as Event[],
       total: count ?? 0,
     };
   }
