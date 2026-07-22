@@ -97,6 +97,23 @@ Reseed via `PUT http://localhost:3000/api/health` (localhost only).
 
 ---
 
+## Architecture
+
+### Proxy (Next.js 16)
+
+This project uses Next.js 16's `proxy.ts` — **not** the legacy `middleware.ts` pattern. All request-level concerns (CSRF validation, rate limiting, session resolution) are handled in `src/proxy.ts`.
+
+The proxy runs on every non-static request and:
+
+1. Validates CSRF tokens on POST requests.
+2. Enforces rate limits on sensitive API routes.
+3. Authenticates the user via Supabase and resolves their role from `user_memberships`.
+4. Sets `x-user-id`, `x-user-email`, `x-user-name`, and `x-user-role` headers so server components read session data from headers with zero additional DB calls.
+
+`getCurrentSession()` in `src/lib/permissions.ts` reads these headers directly. The fallback path (no proxy headers) exists only for edge cases outside the normal request lifecycle.
+
+---
+
 ## Getting Started
 
 ```bash
