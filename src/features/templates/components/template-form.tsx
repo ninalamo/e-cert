@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useRef, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import TemplateCanvas from "./template-canvas";
 import type { TemplateCanvasHandle } from "./template-canvas";
@@ -82,6 +83,15 @@ export default function TemplateForm({
     setLoading(false);
   }
 
+  const certWidth = (() => {
+    const m = htmlContent.match(/class="certificate"[^>]*width:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 1123;
+  })();
+  const certHeight = (() => {
+    const m = htmlContent.match(/class="certificate"[^>]*height:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 794;
+  })();
+
   function handlePrintPreview() {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -89,20 +99,22 @@ export default function TemplateForm({
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-  <title>${name || "Certificate"} - Print Sample</title>
+  <title>${name || "Certificate"} - Download as PDF</title>
   <style>
-    @page { size: A4 landscape; margin: 0; }
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+    @page { size: ${certWidth}px ${certHeight}px; margin: 0; }
+    html, body { margin: 0; padding: 0; width: ${certWidth}px; height: ${certHeight}px; overflow: hidden; }
     ${cssContent}
   </style>
 </head>
 <body>
-  ${htmlContent
-    .replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz")
-    .replace(/\{\{certificate_number\}\}/g, "CERT-000001")
-    .replace(/\{\{issued_date\}\}/g, new Date().toLocaleDateString())
-    .replace(/\{\{organization_name\}\}/g, "Sample Organization")
-  }
+  <div style="width: ${certWidth}px; height: ${certHeight}px; overflow: hidden; position: relative;">
+    ${htmlContent
+      .replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz")
+      .replace(/\{\{certificate_number\}\}/g, "CERT-000001")
+      .replace(/\{\{issued_date\}\}/g, new Date().toLocaleDateString())
+      .replace(/\{\{organization_name\}\}/g, "Sample Organization")
+    }
+  </div>
   <script>
     window.onload = function() {
       window.print();
@@ -113,15 +125,6 @@ export default function TemplateForm({
 </html>`);
     printWindow.document.close();
   }
-
-  const certWidth = (() => {
-    const m = htmlContent.match(/class="certificate"[^>]*width:(\d+)px/);
-    return m ? parseInt(m[1], 10) : 1123;
-  })();
-  const certHeight = (() => {
-    const m = htmlContent.match(/class="certificate"[^>]*height:(\d+)px/);
-    return m ? parseInt(m[1], 10) : 794;
-  })();
 
   const previewHtml = `<!DOCTYPE html>
 <html>
@@ -197,15 +200,28 @@ export default function TemplateForm({
                   rows={4}
                   className="input text-sm resize-none"
                 />
-                <div className="mt-4">
+                <div className="mt-4 space-y-2">
                   <button
                     type="button"
                     onClick={() => handlePrintPreview()}
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-brand-600)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97]"
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                     Download as PDF
                   </button>
+                  <button
+                    type="submit"
+                    disabled={loading || disabled}
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-brand-600)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97] disabled:opacity-50"
+                  >
+                    {loading ? "Saving..." : submitLabel}
+                  </button>
+                  <Link
+                    href="/templates"
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
+                  >
+                    Close Editor
+                  </Link>
                 </div>
               </div>
             </div>
@@ -259,6 +275,9 @@ export default function TemplateForm({
               <p className="text-xs text-[var(--color-text-muted)]">
                 Design your certificate. Use the {"\""}Insert field{"\""} buttons to add
                 placeholders that are filled in when a certificate is issued.
+              </p>
+              <p className="text-xs text-amber-600">
+                For best results, use a background image with the same dimensions as the canvas size.
               </p>
               <button
                 type="button"

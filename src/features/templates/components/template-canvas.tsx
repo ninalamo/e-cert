@@ -1030,6 +1030,17 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
               className="input text-sm resize-none"
             />
             <div className="mt-4 space-y-2">
+              {!fullscreen && (
+                <button
+                  type="button"
+                  onClick={() => onFullscreenChange?.(true)}
+                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
+                  title="Fullscreen"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                  Fullscreen
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={loading || disabled}
@@ -1243,7 +1254,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
         <div className="flex gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
           <button
             type="button"
-            disabled={selCount === 0 || allSelectedLocked}
+            disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked}
             onClick={() => handleAlign("left")}
             className="inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40"
             title="Align left edge"
@@ -1252,7 +1263,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           </button>
           <button
             type="button"
-            disabled={selCount === 0 || allSelectedLocked}
+            disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked}
             onClick={() => handleAlign("center-horizontal")}
             className="inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40"
             title="Align center horizontally"
@@ -1261,7 +1272,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           </button>
           <button
             type="button"
-            disabled={selCount === 0 || allSelectedLocked}
+            disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked}
             onClick={() => handleAlign("right")}
             className="inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40"
             title="Align right edge"
@@ -1271,7 +1282,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
           <button
             type="button"
-            disabled={selCount === 0 || allSelectedLocked}
+            disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked}
             onClick={() => handleAlign("top")}
             className="inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40"
             title="Align top edge"
@@ -1280,7 +1291,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           </button>
           <button
             type="button"
-            disabled={selCount === 0 || allSelectedLocked}
+            disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked}
             onClick={() => handleAlign("center-vertical")}
             className="inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40"
             title="Align center vertically"
@@ -1289,7 +1300,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           </button>
           <button
             type="button"
-            disabled={selCount === 0 || allSelectedLocked}
+            disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked}
             onClick={() => handleAlign("bottom")}
             className="inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40"
             title="Align bottom edge"
@@ -1381,6 +1392,21 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
             </button>
           ))}
         </div>
+
+        {!fullscreen && (
+          <div className="ml-auto flex items-center gap-1.5">
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+            <button
+              type="button"
+              onClick={() => onFullscreenChange?.(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97]"
+              title="Fullscreen"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+              Fullscreen
+            </button>
+          </div>
+        )}
       </div>
       )}
 
@@ -1537,21 +1563,6 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
               : <LockOpenIcon className="size-3.5" />}
             {elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock" : "Lock"}
           </button>
-
-          {!fullscreen && (
-            <div className="ml-auto flex items-center gap-1.5">
-              <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
-              <button
-                type="button"
-                onClick={() => onFullscreenChange?.(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97]"
-                title="Fullscreen"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-                Fullscreen
-              </button>
-            </div>
-          )}
         </div>
       )}
 
