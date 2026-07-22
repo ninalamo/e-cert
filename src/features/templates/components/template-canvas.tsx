@@ -278,10 +278,10 @@ function parseHtmlToElements(html: string): CanvasElement[] {
       const m = style.match(re);
       return m ? m[1] : "";
     };
-    const x = parseInt(get(/left:(\d+)px/), 10) || 0;
-    const y = parseInt(get(/top:(\d+)px/), 10) || 0;
-    const w = parseInt(get(/width:(\d+)px/), 10) || 200;
-    const h = parseInt(get(/height:(\d+)px/), 10) || 60;
+    const x = parseFloat(get(/left:([\d.]+)px/)) || 0;
+    const y = parseFloat(get(/top:([\d.]+)px/)) || 0;
+    const w = parseFloat(get(/width:([\d.]+)px/)) || 200;
+    const h = parseFloat(get(/height:([\d.]+)px/)) || 60;
     const z = parseInt(get(/z-index:(\d+)/), 10) || 1;
     const img = n.querySelector("img");
     if (img) {
