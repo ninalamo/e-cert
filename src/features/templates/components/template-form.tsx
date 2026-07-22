@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useRef, useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import TemplateCanvas from "./template-canvas";
 import type { TemplateCanvasHandle } from "./template-canvas";
@@ -34,7 +33,7 @@ interface TemplateFormProps {
   disabled?: boolean;
 }
 
-type Mode = "design" | "html" | "css" | "preview";
+type Mode = "design" | "preview";
 
 export default function TemplateForm({
   initialData,
@@ -49,23 +48,11 @@ export default function TemplateForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("design");
-  const [advanced, setAdvanced] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [showSource, setShowSource] = useState(false);
+  const [sourceTab, setSourceTab] = useState<"html" | "css">("html");
   const canvasRef = useRef<TemplateCanvasHandle>(null);
-
-  function toggleAdvanced() {
-    setAdvanced((prev) => {
-      const next = !prev;
-      if (next && mode === "design") {
-        setMode("html");
-      } else if (!next && (mode === "html" || mode === "css")) {
-        setMode("design");
-      }
-      return next;
-    });
-  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -80,19 +67,12 @@ export default function TemplateForm({
     const html = canvasRef.current?.getHtml() ?? htmlContent;
     const css = canvasRef.current?.getCss() ?? cssContent;
 
-    console.log("[confirmSave] canvasRef.current:", canvasRef.current);
-    console.log("[confirmSave] html length:", html.length, "css length:", css.length);
-    console.log("[confirmSave] html preview:", html.substring(0, 200));
-    console.log("[confirmSave] css preview:", css.substring(0, 200));
-
     const result = await onSubmit({
       name,
       description,
       html_content: html,
       css_content: css,
     });
-
-    console.log("[confirmSave] result:", result);
 
     if (result?.error) {
       setError(result.error);
@@ -162,16 +142,10 @@ export default function TemplateForm({
 </body>
 </html>`;
 
-  const tabs = advanced
-    ? [
-        { key: "html" as const, label: "HTML" },
-        { key: "css" as const, label: "CSS" },
-        { key: "preview" as const, label: "Preview" },
-      ]
-    : [
-        { key: "design" as const, label: "Design" },
-        { key: "preview" as const, label: "Preview" },
-      ];
+  const tabs = [
+    { key: "design" as const, label: "Design" },
+    { key: "preview" as const, label: "Preview" },
+  ];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -195,74 +169,91 @@ export default function TemplateForm({
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={toggleAdvanced}
-            className={`rounded-lg px-3 py-2 text-xs font-medium transition-all border ${
-              advanced
-                ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)] border-[var(--color-brand-200)]"
-                : "bg-[var(--color-surface-secondary)] text-[var(--color-text-muted)] border-[var(--color-border)]"
-            }`}
-          >
-            Advanced
-          </button>
         </div>
 
         {mode === "preview" ? (
-          <div className="space-y-3">
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Preview your certificate with sample data. The ruler guides show the actual dimensions.
-            </p>
-            <div className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3">
-              <div className="inline-block bg-[var(--color-surface)] p-1.5 rounded-lg shadow-sm">
-                <div className="relative bg-gray-100" style={{ width: certWidth, height: 20 }}>
-                  {Array.from({ length: Math.floor(certWidth / 50) + 1 }, (_, i) => i * 50).map(p => (
-                    <Fragment key={p}>
-                      <div className="absolute bg-gray-400" style={{ left: p, top: 0, width: 1, height: p % 100 === 0 ? 10 : 6 }} />
-                      {p % 100 === 0 && p > 0 && (
-                        <span className="absolute text-[9px] text-gray-500" style={{ left: p + 2, top: 8 }}>
-                          {p}
-                        </span>
-                      )}
-                    </Fragment>
-                  ))}
+          <div className="flex gap-4">
+            <div className="w-64 flex-shrink-0 space-y-4">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-ios-sm)]">
+                <label htmlFor="preview-name" className="block text-sm font-semibold mb-2 text-[var(--color-text)]">
+                  Template Name
+                </label>
+                <input
+                  id="preview-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  placeholder="e.g. Certificate of Completion"
+                  className="input text-sm"
+                />
+                <label htmlFor="preview-description" className="block text-sm font-semibold mb-2 mt-4 text-[var(--color-text)]">
+                  Description
+                </label>
+                <textarea
+                  id="preview-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Optional description"
+                  rows={4}
+                  className="input text-sm resize-none"
+                />
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => handlePrintPreview()}
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-brand-600)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97]"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    Download as PDF
+                  </button>
                 </div>
-                <div className="flex">
-                  <div className="relative bg-gray-100" style={{ width: 20, height: certHeight }}>
-                    {Array.from({ length: Math.floor(certHeight / 50) + 1 }, (_, i) => i * 50).map(p => (
+              </div>
+            </div>
+            <div className="flex-1 min-w-0 space-y-3">
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Preview your certificate with sample data. The ruler guides show the actual dimensions.
+              </p>
+              <div className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3">
+                <div className="inline-block bg-[var(--color-surface)] p-1.5 rounded-lg shadow-sm">
+                  <div className="relative bg-gray-100" style={{ width: certWidth, height: 20 }}>
+                    {Array.from({ length: Math.floor(certWidth / 50) + 1 }, (_, i) => i * 50).map(p => (
                       <Fragment key={p}>
-                        <div className="absolute bg-gray-400" style={{ top: p, left: 0, height: 1, width: p % 100 === 0 ? 10 : 6 }} />
+                        <div className="absolute bg-gray-400" style={{ left: p, top: 0, width: 1, height: p % 100 === 0 ? 10 : 6 }} />
                         {p % 100 === 0 && p > 0 && (
-                          <span className="absolute text-[9px] text-gray-500" style={{ top: p + 1, left: 10 }}>
+                          <span className="absolute text-[9px] text-gray-500" style={{ left: p + 2, top: 8 }}>
                             {p}
                           </span>
                         )}
                       </Fragment>
                     ))}
                   </div>
-                  <div style={{ width: certWidth, height: certHeight }} className="relative shadow bg-white overflow-hidden">
-                    <iframe
-                      srcDoc={previewHtml}
-                      className="w-full h-full bg-white block"
-                      style={{ border: "none" }}
-                      title="Template Preview"
-                    />
+                  <div className="flex">
+                    <div className="relative bg-gray-100" style={{ width: 20, height: certHeight }}>
+                      {Array.from({ length: Math.floor(certHeight / 50) + 1 }, (_, i) => i * 50).map(p => (
+                        <Fragment key={p}>
+                          <div className="absolute bg-gray-400" style={{ top: p, left: 0, height: 1, width: p % 100 === 0 ? 10 : 6 }} />
+                          {p % 100 === 0 && p > 0 && (
+                            <span className="absolute text-[9px] text-gray-500" style={{ top: p + 1, left: 10 }}>
+                              {p}
+                            </span>
+                          )}
+                        </Fragment>
+                      ))}
+                    </div>
+                    <div style={{ width: certWidth, height: certHeight }} className="relative shadow bg-white overflow-hidden">
+                      <iframe
+                        srcDoc={previewHtml}
+                        className="w-full h-full bg-white block"
+                        style={{ border: "none" }}
+                        title="Template Preview"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => handlePrintPreview()}
-                className="btn-brand-soft text-xs"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                Print Sample
-              </button>
-            </div>
           </div>
-        ) : mode === "design" ? (
+        ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs text-[var(--color-text-muted)]">
@@ -281,108 +272,64 @@ export default function TemplateForm({
                 {showSource ? "Hide Source" : "Show Source"}
               </button>
             </div>
-            <TemplateCanvas
-              ref={canvasRef}
-              value={htmlContent}
-              onChange={setHtmlContent}
-              css={cssContent}
-              onCssChange={setCssContent}
-              fullscreen={fullscreen}
-              onFullscreenChange={setFullscreen}
-              submitLabel={submitLabel}
-              loading={loading}
-              disabled={disabled}
-              name={name}
-              description={description}
-              onNameChange={setName}
-              onDescriptionChange={setDescription}
-            />
-            {showSource && (
-              <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">HTML</label>
-                  <CodeEditor
-                    value={htmlContent}
-                    onChange={setHtmlContent}
-                    rows={8}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1">CSS</label>
-                  <CodeEditor
-                    value={cssContent}
-                    onChange={setCssContent}
-                    rows={6}
-                  />
-                </div>
+            <div className={showSource ? "flex flex-col lg:flex-row gap-3" : ""}>
+              <div className={showSource ? "lg:flex-1 min-w-0" : ""}>
+                <TemplateCanvas
+                  ref={canvasRef}
+                  value={htmlContent}
+                  onChange={setHtmlContent}
+                  css={cssContent}
+                  onCssChange={setCssContent}
+                  fullscreen={fullscreen}
+                  onFullscreenChange={setFullscreen}
+                  submitLabel={submitLabel}
+                  loading={loading}
+                  disabled={disabled}
+                  name={name}
+                  description={description}
+                  onNameChange={setName}
+                  onDescriptionChange={setDescription}
+                />
               </div>
-            )}
-          </div>
-        ) : mode === "html" ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label htmlFor="html" className="block text-sm font-semibold text-[var(--color-text)]">
-                HTML Content
-              </label>
-              <button
-                type="button"
-                onClick={() => setHtmlContent(prettifyHtml(htmlContent))}
-                className="btn btn-view text-xs px-2.5 py-1.5"
-              >
-                Prettify
-              </button>
+              {showSource && (
+                <div className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] lg:w-96 lg:flex-shrink-0 flex flex-col">
+                  <div className="flex border-b border-[var(--color-border)]">
+                    {(["html", "css"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setSourceTab(tab)}
+                        className={`flex-1 px-3 py-2 text-xs font-semibold transition-all ${
+                          sourceTab === tab
+                            ? "text-[var(--color-brand-700)] border-b-2 border-[var(--color-brand-600)]"
+                            : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                        }`}
+                      >
+                        {tab.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="p-4">
+                    {sourceTab === "html" ? (
+                      <CodeEditor
+                        value={htmlContent}
+                        onChange={setHtmlContent}
+                        rows={14}
+                      />
+                    ) : (
+                      <CodeEditor
+                        value={cssContent}
+                        onChange={setCssContent}
+                        rows={14}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Use {"{{recipient_name}}"}, {"{{certificate_number}}"}, {"{{issued_date}}"}, {"{{organization_name}}"}, {"{{qr_code}}"} as placeholders
-            </p>
-            <CodeEditor
-              id="html"
-              value={htmlContent}
-              onChange={setHtmlContent}
-              rows={16}
-            />
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label htmlFor="css" className="block text-sm font-semibold text-[var(--color-text)]">
-                CSS Content
-              </label>
-              <button
-                type="button"
-                onClick={() => setCssContent(prettifyCss(cssContent))}
-                className="btn btn-view text-xs px-2.5 py-1.5"
-              >
-                Prettify
-              </button>
-            </div>
-            <CodeEditor
-              id="css"
-              value={cssContent}
-              onChange={setCssContent}
-              rows={8}
-            />
           </div>
         )}
       </fieldset>
-
-      {!fullscreen && (
-        <div className="flex justify-end gap-3 pt-2">
-          <Link
-            href="/templates"
-            className="btn-cancel"
-          >
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={loading || disabled}
-            className="btn-save disabled:opacity-50"
-          >
-            {loading ? "Saving..." : submitLabel}
-          </button>
-        </div>
-      )}
 
       <Dialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
         <DialogContent>
@@ -419,117 +366,6 @@ export default function TemplateForm({
       )}
     </form>
   );
-}
-
-const BG_BLOCK_RE = /\/\* __CERT_BACKGROUND__ \*\/[\s\S]*?}/;
-
-function prettifyCss(css: string): string {
-  const bgMatch = css.match(BG_BLOCK_RE);
-  const stripped = css.replace(BG_BLOCK_RE, "").trim();
-
-  const result = stripped
-    .replace(/\s*{\s*/g, " {\n  ")
-    .replace(/\s*}\s*/g, "\n}\n")
-    .replace(/\s*;\s*/g, ";\n  ")
-    .replace(/;\n\s*}/g, ";\n}")
-    .replace(/\n\s*\n/g, "\n")
-    .trim();
-
-  let indent = 0;
-  const lines = result.split("\n");
-  const formatted: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    if (trimmed === "}") {
-      indent = Math.max(0, indent - 1);
-      formatted.push("  ".repeat(indent) + trimmed);
-    } else if (trimmed.endsWith("{")) {
-      formatted.push("  ".repeat(indent) + trimmed);
-      indent++;
-    } else {
-      formatted.push("  ".repeat(indent) + trimmed);
-    }
-  }
-
-  let output = formatted.join("\n") + "\n";
-  if (bgMatch) {
-    output = output.trimEnd() + "\n\n" + bgMatch[0] + "\n";
-  }
-  return output;
-}
-
-function prettifyHtml(html: string): string {
-  const SELF_CLOSING = new Set([
-    "area", "base", "br", "col", "embed", "hr", "img", "input",
-    "link", "meta", "param", "source", "track", "wbr",
-  ]);
-  const BLOCK = new Set([
-    "div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li",
-    "table", "thead", "tbody", "tfoot", "tr", "td", "th", "section",
-    "article", "nav", "header", "footer", "main", "aside", "form",
-    "fieldset", "legend", "figure", "figcaption", "blockquote", "pre",
-    "address", "dl", "dt", "dd", "details", "summary", "dialog",
-  ]);
-
-  let result = "";
-  let indent = 0;
-  let i = 0;
-  const s = html;
-
-  while (i < s.length) {
-    if (s[i] === "<") {
-      const closeIdx = s.indexOf(">", i);
-      if (closeIdx === -1) {
-        result += s.slice(i);
-        break;
-      }
-
-      const tag = s.slice(i, closeIdx + 1);
-      const isClosing = tag.startsWith("</");
-      const isSelfClose = tag.endsWith("/>");
-      const tagMatch = tag.match(/<\/?([a-zA-Z][a-zA-Z0-9]*)/);
-      const tagName = tagMatch ? tagMatch[1].toLowerCase() : "";
-      const isBlock = BLOCK.has(tagName);
-      const isSelfClosingTag = SELF_CLOSING.has(tagName);
-
-      if (isClosing) {
-        indent = Math.max(0, indent - 1);
-        if (isBlock) {
-          result += "\n" + "  ".repeat(indent) + tag;
-        } else {
-          result += tag;
-        }
-      } else if (isSelfClose || isSelfClosingTag) {
-        if (isBlock) {
-          result += "\n" + "  ".repeat(indent) + tag;
-        } else {
-          result += tag;
-        }
-      } else {
-        if (isBlock) {
-          result += "\n" + "  ".repeat(indent) + tag;
-        } else {
-          result += tag;
-        }
-        indent++;
-      }
-
-      i = closeIdx + 1;
-    } else {
-      const nextTag = s.indexOf("<", i);
-      const text = nextTag === -1 ? s.slice(i) : s.slice(i, nextTag);
-      const trimmed = text.trim();
-      if (trimmed) {
-        result += trimmed;
-      }
-      i = nextTag === -1 ? s.length : nextTag;
-    }
-  }
-
-  return result.replace(/^\n+/, "").trim() + "\n";
 }
 
 const DEFAULT_HTML = `<div class="certificate">
