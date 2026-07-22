@@ -25,6 +25,15 @@ export default function CertificateViewer({
   const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
   const cachedHtml = typeof meta.rendered_html === "string" ? meta.rendered_html : null;
 
+  const certWidth = (() => {
+    const m = template?.html_content?.match(/width:\s*(\d+)px/);
+    return m ? parseInt(m[1], 10) : 1123;
+  })();
+  const certHeight = (() => {
+    const m = template?.html_content?.match(/height:\s*(\d+)px/);
+    return m ? parseInt(m[1], 10) : 794;
+  })();
+
   const certHtml = template
     ? template.html_content
         .replace(/\{\{recipient_name\}\}/g, certificate.recipient_name)
@@ -41,23 +50,14 @@ export default function CertificateViewer({
     : cachedHtml;
 
   const certCss = template?.css_content ?? "";
-
-  const certWidth = (() => {
-    const m = template?.html_content.match(/class="certificate"[^>]*width:(\d+)px/);
-    return m ? parseInt(m[1], 10) : 1123;
-  })();
-  const certHeight = (() => {
-    const m = template?.html_content.match(/class="certificate"[^>]*height:(\d+)px/);
-    return m ? parseInt(m[1], 10) : 794;
-  })();
-
-  function handlePrint() {
-    if (!certHtml) return;
-
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    const orientation = certWidth >= certHeight ? "landscape" : "portrait";
+ 
+   function handlePrint() {
+     if (!certHtml) return;
+ 
+     const printWindow = window.open("", "_blank");
+     if (!printWindow) return;
+ 
+     const orientation = certWidth >= certHeight ? "landscape" : "portrait";
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
