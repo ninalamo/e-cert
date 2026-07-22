@@ -114,6 +114,23 @@ The proxy runs on every non-static request and:
 
 ---
 
+## Known Issues & Fixes
+
+### Template Editor: CSS/HTML Changes Lost on Mode Switch (Fixed)
+
+**Symptom:** Editing CSS/HTML in Design mode (via the canvas) and switching to Advanced mode caused changes to disappear when switching back.
+
+**Root cause:** The canvas sync (`elementsToHtml → onChange`) ran inside a `useEffect`. When the user switches to Advanced mode, React unmounts the canvas component. If the `useEffect` hadn't fired yet (due to batched state updates), the parent's `htmlContent` state never received the latest canvas output. When switching back to Design mode, the canvas re-parsed stale `htmlContent`, discarding the edits.
+
+**Fix:** Moved the sync from a `useEffect` to a **during-render** block at `template-canvas.tsx:481–490`. The HTML is computed synchronously during render and written to a ref (`lastCanvasHtml`). A `queueMicrotask` defers the `onChange` call to after the current commit but before the browser paints — ensuring the parent receives the update even if the canvas unmounts in the same render cycle.
+
+**Key files:**
+- `src/features/templates/components/template-canvas.tsx` — canvas component, render-time sync block
+- `src/features/templates/components/template-form.tsx` — template form, source panel UI
+- `src/components/ui/code-editor.tsx` — `readOnly` prop for interactive source editors
+
+---
+
 ## Getting Started
 
 ```bash
