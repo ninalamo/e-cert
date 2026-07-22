@@ -38,11 +38,16 @@ export async function getTemplatesWithLockState(
   return templates.map((t) => ({ ...t, locked: lockedIds.has(t.id) }));
 }
 
+const TEMPLATE_LISTING_COLUMNS = "id, name, description, organization_id, created_at, updated_at";
+
 export async function getTemplates(
   organizationId: string,
   client?: SupabaseClient
 ): Promise<CertificateTemplate[]> {
-  return repo(client ?? (await createClient())).findByOrganizationId(organizationId);
+  return repo(client ?? (await createClient())).findByOrganizationId(
+    organizationId,
+    TEMPLATE_LISTING_COLUMNS
+  );
 }
 
 export async function getTemplate(

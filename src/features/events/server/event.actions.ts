@@ -10,6 +10,19 @@ export async function getEventsAction(organizationId: string) {
   return eventService.getEvents(organizationId);
 }
 
+export async function getEventsPaginatedAction(
+  organizationId: string,
+  options: {
+    search?: string;
+    statuses?: string[];
+    limit: number;
+    offset: number;
+  }
+) {
+  await requireRole(["admin", "staff"]);
+  return eventService.getEventsPaginated(organizationId, options);
+}
+
 export async function getEventAction(id: string) {
   await requireRole(["admin", "staff", "participant"]);
   return eventService.getEvent(id);

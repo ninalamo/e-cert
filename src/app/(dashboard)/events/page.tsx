@@ -1,14 +1,36 @@
+import { Suspense } from "react";
 import EventsList from "@/features/events/components/events-list";
 import { getCurrentSession, canDelete } from "@/lib/permissions";
-import { getEvents } from "@/features/events/server/event.service";
+import { getEventsPaginated } from "@/features/events/server/event.service";
 import { ORG_ID } from "@/lib/org";
 
-export default async function EventsPage() {
-  const [session, initialEvents] = await Promise.all([
+const VALID_STATUSES = new Set(["draft", "active", "archive"]);
+const PAGE_SIZE = 20;
+
+export default async function EventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; q?: string; status?: string }>;
+}) {
+  const { page: pageStr, q: search, status: statusParam } = await searchParams;
+
+  const page = Math.max(0, parseInt(pageStr ?? "1", 10) - 1 || 0);
+  const statuses = statusParam
+    ? statusParam.split(",").filter((s) => VALID_STATUSES.has(s))
+    : undefined;
+
+  const [session, { events, total }] = await Promise.all([
     getCurrentSession(),
-    getEvents(ORG_ID),
+    getEventsPaginated(ORG_ID, {
+      search: search || undefined,
+      statuses,
+      limit: PAGE_SIZE,
+      offset: page * PAGE_SIZE,
+    }),
   ]);
+
   const canUserDelete = canDelete(session?.role ?? "participant");
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="space-y-6">
@@ -20,7 +42,18 @@ export default async function EventsPage() {
           Manage your events and issue certificates
         </p>
       </div>
-      <EventsList canDelete={canUserDelete} initialEvents={initialEvents} />
+      <Suspense fallback={<div className="app-card p-12 text-center"><p className="text-sm text-tertiary">Loading events...</p></div>}>
+        <EventsList
+          canDelete={canUserDelete}
+          events={events}
+          total={total}
+          page={page}
+          totalPages={totalPages}
+          pageSize={PAGE_SIZE}
+          search={search ?? ""}
+          statusFilter={statusParam ?? ""}
+        />
+      </Suspense>
     </div>
   );
 }

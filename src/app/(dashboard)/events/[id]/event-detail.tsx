@@ -1,116 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
-function sanitizePrefix(raw: string): string {
-  return raw
-    .toUpperCase()
-    .split("")
-    .filter((ch) => /[A-Z0-9-]/.test(ch))
-    .join("");
-}
-
-function normalizePrefix(raw: string): string {
-  const cleaned = sanitizePrefix(raw);
-  // Only strip a trailing dash when it leaves nothing meaningful
-  // (e.g. user typed only dashes). A prefix like "CERT-" is valid.
-  if (/^-+$/.test(cleaned)) return "";
-  return cleaned;
-}
-
-function trimPatternTrailingDash(pattern: string): string {
-  const prefix = pattern.replace(/#+$/, "");
-  const trimmed = normalizePrefix(prefix);
-  if (!trimmed) return pattern;
-  const sep = trimmed.endsWith("-") ? "" : "-";
-  return `${trimmed}${sep}####`;
-}
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   getEventWithStatsAction,
-  updateEventAction,
-  deleteEventAction,
-  cloneTemplateForEventAction,
 } from "@/features/events/server/event.actions";
-import dynamic from "next/dynamic";
-const AttendeesManager = dynamic(() => import("@/features/events/components/attendees-manager"), { ssr: false });
 import { getTemplatesAction } from "@/features/templates/server/template.actions";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonEventDetail } from "@/components/ui/skeleton";
+import { CalendarIcon, MapPinIcon, InfoIcon, Trash2Icon } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { CalendarIcon, MapPinIcon, ChevronRightIcon, InfoIcon, PlusIcon, UploadIcon, Trash2Icon } from "lucide-react";
-import {
-  issueCertificatesForCompletedAction,
-} from "@/features/events/server/attendee.actions";
-type Status = "draft" | "active" | "archive";
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { statusConfig } from "./components/status-change-dialog";
+import StatusChangeDialog from "./components/status-change-dialog";
+import DeleteDialog from "./components/delete-dialog";
+import EventFieldsCard from "./components/event-fields-card";
+import TemplateCard from "./components/template-card";
+import AttendeesTab from "./components/attendees-tab";
 
 interface EventDetailData {
   event: Event;
   template: CertificateTemplate | null;
 }
-
-const statusConfig: Record<Status, { label: string; badgeClass: string; description: string }> = {
-  draft: { label: "Draft", badgeClass: "status-badge status-badge--draft", description: "Fully editable" },
-  active: { label: "Active", badgeClass: "status-badge status-badge--active", description: "Live event" },
-  archive: { label: "Archived", badgeClass: "status-badge status-badge--archive", description: "Read-only" },
-};
-
-const statusTransitions: Record<Status, { target: Status; label: string; message: string }[]> = {
-  draft: [
-    {
-      target: "active",
-      label: "Activate",
-      message:
-        "This event will go live. Participants will be able to see it. Choose how the template should be handled below.",
-    },
-    {
-      target: "archive",
-      label: "Archive",
-      message:
-        "This event will be archived. All editing, uploads, and certificate issuance will be permanently disabled.",
-    },
-  ],
-  active: [
-    {
-      target: "draft",
-      label: "Revert to Draft",
-      message:
-        "This event will be moved back to Draft. Participants will no longer see it and certificate issuance will be disabled until re-activated.",
-    },
-    {
-      target: "archive",
-      label: "Archive",
-      message:
-        "This event will be archived. All editing, uploads, and certificate issuance will be permanently disabled.",
-    },
-  ],
-  archive: [
-    {
-      target: "draft",
-      label: "Revert to Draft",
-      message:
-        "This event will be unarchived and moved back to Draft. All editing and uploads will be re-enabled.",
-    },
-    {
-      target: "active",
-      label: "Reactivate",
-      message:
-        "This event will go live again. Participants will be able to see it and certificate issuance will be re-enabled.",
-    },
-  ],
-};
-
-type TemplateMode = "lock" | "copy";
 
 function isExpired(dateStr: string | null): boolean {
   if (!dateStr) return false;
@@ -134,58 +52,15 @@ export default function EventDetail({
   initialData?: EventDetailData | null;
   initialTemplates?: CertificateTemplate[];
 }) {
-  const router = useRouter();
   const [data, setData] = useState<EventDetailData | null>(initialData);
   const [loading, setLoading] = useState(!initialData);
   const [templates, setTemplates] = useState<CertificateTemplate[]>(initialTemplates);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>(
-    initialData?.event.template_id ?? ""
-  );
-  const [savingTemplate, setSavingTemplate] = useState(false);
-  const [templateMsg, setTemplateMsg] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"details" | "attendees">(initialTab);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-
-  const [activeTab, setActiveTab] = useState<"details" | "attendees">(
-    initialTab
-  );
-
-  function switchTab(tab: "details" | "attendees") {
-    setActiveTab(tab);
-    const url = new URL(window.location.href);
-    if (tab === "attendees") url.searchParams.set("tab", "attendees");
-    else url.searchParams.delete("tab");
-    window.history.replaceState(null, "", url.toString());
-  }
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editName, setEditName] = useState(false);
   const [nameValue, setNameValue] = useState("");
   const [nameSaving, setNameSaving] = useState(false);
-  const [editFields, setEditFields] = useState(false);
-  const [fieldsSaving, setFieldsSaving] = useState(false);
-  const [fieldsValue, setFieldsValue] = useState({
-    event_date: "",
-    description: "",
-    organizer: "",
-    location: "",
-    certificate_title: "",
-    certificate_number_pattern: "",
-    valid_until: "",
-  });
-  const [statusTarget, setStatusTarget] = useState<{
-    target: Status;
-    label: string;
-    message: string;
-  } | null>(null);
-  const [templateMode, setTemplateMode] = useState<TemplateMode>("lock");
-  const [statusBusy, setStatusBusy] = useState(false);
-  const [statusError, setStatusError] = useState<string | null>(null);
-  const [selectedAttendeeIds, setSelectedAttendeeIds] = useState<string[]>([]);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [issueBusy, setIssueBusy] = useState(false);
-  const [issueMessage, setIssueMessage] = useState<string | null>(null);
-  const [attendeeRefresh, setAttendeeRefresh] = useState(0);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) return;
@@ -193,13 +68,10 @@ export default function EventDetail({
     getEventWithStatsAction(eventId).then((result) => {
       if (active) {
         setData(result);
-        setSelectedTemplate(result?.event.template_id ?? "");
         setLoading(false);
       }
     });
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [eventId, initialData]);
 
   useEffect(() => {
@@ -208,171 +80,29 @@ export default function EventDetail({
     if (!orgId) return;
     let active = true;
     getTemplatesAction(orgId)
-      .then((t) => {
-        if (active) setTemplates(t);
-      })
+      .then((t) => { if (active) setTemplates(t); })
       .catch(() => {});
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [data?.event.organization_id, initialTemplates.length]);
 
-  async function handleStatusChange(newStatus: Status): Promise<boolean> {
-    if (!data) return false;
-    const allowed = (statusTransitions[data.event.status] ?? []).map((t) => t.target);
-    if (!allowed.includes(newStatus)) return false;
-
-    const result = await updateEventAction(eventId, { status: newStatus });
-    if (result?.error || !result?.event) {
-      setStatusError(result?.error ?? "Failed to update event status");
-      return false;
-    }
-    setData((prev) => (prev ? { ...prev, event: result.event! } : prev));
-    return true;
-  }
-
-  async function handleTemplateSave() {
-    setSavingTemplate(true);
-    setTemplateMsg(null);
-    const result = await updateEventAction(eventId, {
-      template_id: selectedTemplate || undefined,
-    });
-    if (result?.error) {
-      setTemplateMsg(result.error ?? "Failed to update template");
-    } else if (result?.event) {
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              event: result.event!,
-              template:
-                templates.find((t) => t.id === (selectedTemplate || undefined)) ?? null,
-            }
-          : prev
-      );
-      setTemplateMsg("Template updated.");
-    }
-    setSavingTemplate(false);
-  }
-
-  function openStatusSheet() {
-    if (!data) return;
-    const transitions = statusTransitions[data.event.status] ?? [];
-    if (transitions.length === 0) return;
-    setStatusTarget(transitions[0]);
-    setTemplateMode("lock");
-    setStatusError(null);
-    setStatusDialogOpen(true);
-  }
-
-  async function confirmStatusChange() {
-    if (!statusTarget) return;
-
-    if (statusTarget.target === "active") {
-      const missing: string[] = [];
-      if (!data?.event.template_id) missing.push("a template");
-      if (!data?.event.event_date) missing.push("a certificate issue date");
-      if (missing.length > 0) {
-        setStatusError(
-          `Set ${missing.join(" and ")} in the Details/Template sections before activating.`
-        );
-        return;
-      }
-    }
-
-    setStatusBusy(true);
-    setStatusError(null);
-    try {
-      if (statusTarget.target === "active" && templateMode === "copy" && data?.event.template_id) {
-        const cloned = await cloneTemplateForEventAction(
-          data.event.template_id,
-          eventId,
-          data.event.name
-        );
-        if (cloned.error || !cloned.templateId) {
-          setStatusError(cloned.error ?? "Failed to clone template");
-          return;
-        }
-        const assign = await updateEventAction(eventId, { template_id: cloned.templateId });
-        if (assign.error || !assign.event) {
-          setStatusError(assign.error ?? "Failed to assign cloned template");
-          return;
-        }
-      }
-      const ok = await handleStatusChange(statusTarget.target);
-      if (ok) {
-        setStatusDialogOpen(false);
-        setStatusTarget(null);
-      }
-    } finally {
-      setStatusBusy(false);
-    }
+  function switchTab(tab: "details" | "attendees") {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    if (tab === "attendees") url.searchParams.set("tab", "attendees");
+    else url.searchParams.delete("tab");
+    window.history.replaceState(null, "", url.toString());
   }
 
   async function handleNameSave() {
     if (!data || !nameValue.trim()) return;
     setNameSaving(true);
+    const { updateEventAction } = await import("@/features/events/server/event.actions");
     const result = await updateEventAction(eventId, { name: nameValue.trim() });
     if (!result?.error && result?.event) {
-      setData((prev) => (prev ? { ...prev, event: result.event! } : prev));
+      setData((prev) => prev ? { ...prev, event: result.event! } : prev);
     }
     setNameSaving(false);
     setEditName(false);
-  }
-
-  async function handleIssueSelected() {
-    if (!data) return;
-    setIssueBusy(true);
-    setIssueMessage(null);
-    try {
-      const result = await issueCertificatesForCompletedAction(eventId, {
-        send_email: true,
-        attendeeIds: selectedAttendeeIds,
-      });
-      const failed = result.results.filter((r) => !r.success).length;
-      setIssueMessage(
-        `${result.issued} issued, ${result.emailed} emailed` +
-          (failed ? `, ${failed} failed` : "")
-      );
-      setSelectedAttendeeIds([]);
-      setAttendeeRefresh((n) => n + 1);
-    } catch (err) {
-      setIssueMessage(err instanceof Error ? err.message : "Failed to issue certificates");
-    } finally {
-      setIssueBusy(false);
-    }
-  }
-
-  async function handleDeleteEvent() {
-    if (!data) return;
-    setDeleting(true);
-    setDeleteError(null);
-    const result = await deleteEventAction(eventId);
-    setDeleting(false);
-    if (result?.error) {
-      setDeleteError(result.error);
-      return;
-    }
-    router.push("/events");
-  }
-
-  async function handleFieldsSave() {
-    if (!data) return;
-    setFieldsSaving(true);
-    const result = await updateEventAction(eventId, {
-      event_date: fieldsValue.event_date || undefined,
-      description: fieldsValue.description || undefined,
-      organizer: fieldsValue.organizer || undefined,
-      location: fieldsValue.location || undefined,
-      certificate_title: fieldsValue.certificate_title || undefined,
-      certificate_number_pattern: trimPatternTrailingDash(fieldsValue.certificate_number_pattern) || undefined,
-      valid_until: fieldsValue.valid_until || undefined,
-    });
-    if (!result?.error && result?.event) {
-      setData((prev) => (prev ? { ...prev, event: result.event! } : prev));
-    }
-    setFieldsSaving(false);
-    setEditFields(false);
   }
 
   if (loading) return <SkeletonEventDetail activeTab={initialTab} />;
@@ -380,8 +110,6 @@ export default function EventDetail({
 
   const { event, template } = data;
   const config = statusConfig[event.status] ?? { label: event.status, badgeClass: "status-badge status-badge--draft", description: "" };
-  const transitions = statusTransitions[event.status] ?? [];
-  const canChangeStatus = transitions.length > 0;
   const showArchiveTip = event.status === "active" && isExpired(event.valid_until);
   const canManageAttendees = event.status === "draft" || event.status === "active";
   const canIssue =
@@ -395,15 +123,34 @@ export default function EventDetail({
   if (!event.event_date) missingFields.push("a Certificate Issue Date");
   const missingFieldsMessage = `Set ${missingFields.join(" and ")} before activating this event.`;
 
+  function handleDataUpdated(event: Event) {
+    setData((prev) => prev ? { ...prev, event } : prev);
+  }
+
+  function handleTemplateUpdated(event: Event, template: CertificateTemplate | null) {
+    setData((prev) => prev ? { ...prev, event, template } : prev);
+  }
+
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/events" />}>
+              Events
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{event.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div>
         {editName ? (
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleNameSave();
-            }}
+            onSubmit={(e) => { e.preventDefault(); handleNameSave(); }}
             className="flex items-center gap-2"
           >
             <input
@@ -415,11 +162,7 @@ export default function EventDetail({
             <button type="submit" className="btn-save" disabled={nameSaving}>
               {nameSaving ? "Saving..." : "Save"}
             </button>
-            <button
-              type="button"
-              onClick={() => setEditName(false)}
-              className="btn-cancel"
-            >
+            <button type="button" onClick={() => setEditName(false)} className="btn-cancel">
               Cancel
             </button>
           </form>
@@ -514,231 +257,16 @@ export default function EventDetail({
 
       {activeTab === "details" && (
         <div className="space-y-6">
-          {event.status === "draft" ? (
-            <div className="app-card p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <p className="section-title">Event Details</p>
-                {editFields ? (
-                  <div className="flex items-center gap-2 ml-auto">
-                    <button type="button" onClick={handleFieldsSave} className="btn-save" disabled={fieldsSaving}>
-                      {fieldsSaving ? "Saving..." : "Save"}
-                    </button>
-                    <button type="button" onClick={() => setEditFields(false)} className="btn-cancel">
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFieldsValue({
-                        event_date: event.event_date ?? "",
-                        description: event.description ?? "",
-                        organizer: event.organizer ?? "",
-                        location: event.location ?? "",
-                        certificate_title: event.certificate_title ?? "",
-                        certificate_number_pattern: event.certificate_number_pattern ?? "",
-                        valid_until: event.valid_until ?? "",
-                      });
-                      setEditFields(true);
-                    }}
-                    title="Edit event details"
-                    className="text-xs text-info font-medium cursor-pointer"
-                  >
-                    (edit)
-                  </button>
-                )}
-              </div>
-              {editFields ? (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs text-tertiary mb-1">Certificate Title</label>
-                    <input
-                      value={fieldsValue.certificate_title}
-                      onChange={(e) => setFieldsValue((p) => ({ ...p, certificate_title: e.target.value }))}
-                      className="input text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-tertiary mb-1">
-                      Certificate Number Prefix (optional)
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        value={fieldsValue.certificate_number_pattern.replace(/#+$/, "")}
-                        onChange={(e) => setFieldsValue((p) => ({ ...p, certificate_number_pattern: `${sanitizePrefix(e.target.value)}####` }))}
-                        placeholder="CERT-"
-                        className="input text-sm"
-                      />
-                      <span className="text-sm text-tertiary font-mono">####</span>
-                    </div>
-                    <p className="mt-1 text-[11px] text-tertiary">
-                      A <code>#</code> counter is appended automatically (shared per prefix). Blank = epoch + random fallback.
-                    </p>
-                    {fieldsValue.certificate_number_pattern && (
-                      <p className="mt-1 text-[11px] text-tertiary">
-                        Next certificate will look like:{" "}
-                        <code className="rounded bg-surface-tertiary px-1 py-0.5 font-mono">
-                          {trimPatternTrailingDash(fieldsValue.certificate_number_pattern).replace(/#+$/, (m) => m.replace(/#/g, "0"))}
-                        </code>
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs text-tertiary mb-1">Description</label>
-                    <textarea
-                      value={fieldsValue.description}
-                      onChange={(e) => setFieldsValue((p) => ({ ...p, description: e.target.value }))}
-                      rows={3}
-                      className="input text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-tertiary mb-1">Organizer</label>
-                    <input
-                      value={fieldsValue.organizer}
-                      onChange={(e) => setFieldsValue((p) => ({ ...p, organizer: e.target.value }))}
-                      className="input text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-tertiary mb-1">Location</label>
-                    <input
-                      value={fieldsValue.location}
-                      onChange={(e) => setFieldsValue((p) => ({ ...p, location: e.target.value }))}
-                      className="input text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-tertiary mb-1">Certificate Issue Date</label>
-                    <input
-                      type="date"
-                      value={fieldsValue.event_date ? fieldsValue.event_date.slice(0, 10) : ""}
-                      onChange={(e) => setFieldsValue((p) => ({ ...p, event_date: e.target.value }))}
-                      className="input text-sm"
-                    />
-                  </div>
-                  <div>
-                    <div className="mb-1 flex items-center justify-between">
-                      <label className="block text-xs text-tertiary">Certificate Expiry Date (Optional)</label>
-                      {fieldsValue.valid_until && (
-                        <button
-                          type="button"
-                          onClick={() => setFieldsValue((p) => ({ ...p, valid_until: "" }))}
-                          className="text-xs font-medium text-tertiary hover:text-[var(--color-danger-text)] cursor-pointer"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="date"
-                      value={fieldsValue.valid_until ? fieldsValue.valid_until.slice(0, 10) : ""}
-                      onChange={(e) => setFieldsValue((p) => ({ ...p, valid_until: e.target.value }))}
-                      className="input text-sm"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="divide-y divide-border">
-                  <div className="flex items-center justify-between px-1 py-2.5">
-                    <span className="text-sm text-tertiary">Certificate Title</span>
-                    <span className="text-sm font-medium">{event.certificate_title || "\u2014"}</span>
-                  </div>
-                  <div className="flex items-center justify-between px-1 py-2.5">
-                    <span className="text-sm text-tertiary">Number Pattern</span>
-                    <span className="text-sm font-medium">{event.certificate_number_pattern || "\u2014"}</span>
-                  </div>
-                  {event.description && (
-                    <div className="flex items-center justify-between px-1 py-2.5">
-                      <span className="text-sm text-tertiary">Description</span>
-                      <span className="text-sm font-medium text-right max-w-[60%] truncate">{event.description}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between px-1 py-2.5">
-                    <span className="text-sm text-tertiary">Organizer</span>
-                    <span className="text-sm font-medium">{event.organizer || "\u2014"}</span>
-                  </div>
-                  <div className="flex items-center justify-between px-1 py-2.5">
-                    <span className="text-sm text-tertiary">Location</span>
-                    <span className="text-sm font-medium">{event.location || "\u2014"}</span>
-                  </div>
-                  {event.event_date && (
-                    <div className="flex items-center justify-between px-1 py-2.5">
-                      <span className="text-sm text-tertiary">Certificate Issue Date</span>
-                      <span className="text-sm font-medium">{new Date(event.event_date).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                  {event.valid_until && (
-                    <div className="flex items-center justify-between px-1 py-2.5">
-                      <span className="text-sm text-tertiary">Certificate Expiry Date</span>
-                      <span className="text-sm font-medium">
-                        {new Date(event.valid_until).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="app-card divide-y divide-border">
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-tertiary">Certificate Title</span>
-                  <span className="text-sm font-medium">{event.certificate_title || "\u2014"}</span>
-                </div>
-                {event.description && (
-                  <div className="px-4 py-3">
-                    <p className="text-xs text-tertiary mb-1">Description</p>
-                    <p className="text-sm text-secondary">{event.description}</p>
-                  </div>
-                )}
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-tertiary">Organizer</span>
-                  <span className="text-sm font-medium">{event.organizer || "\u2014"}</span>
-                </div>
-                <div className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-tertiary">Location</span>
-                  <span className="text-sm font-medium">{event.location || "\u2014"}</span>
-                </div>
-                {event.event_date && (
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-sm text-tertiary">Certificate Issue Date</span>
-                    <span className="text-sm font-medium">{new Date(event.event_date).toLocaleDateString()}</span>
-                  </div>
-                )}
-                {event.valid_until && (
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-sm text-tertiary">Certificate Expiry Date</span>
-                    <span className="text-sm font-medium">{new Date(event.valid_until).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </div>
-              <p className="mt-2 text-xs text-tertiary">
-                The fields above are mapped (if configured) onto the selected
-                certificate template when a certificate is generated.
-              </p>
-            </>
-          )}
+          <EventFieldsCard event={event} onUpdated={handleDataUpdated} />
 
           <div className="app-card p-4">
             <p className="section-title mb-3">Status</p>
-            <button
-              type="button"
-              onClick={openStatusSheet}
-              disabled={!canChangeStatus}
-              className={`flex w-full items-center justify-between rounded-xl border border-border bg-surface-secondary px-4 py-3 text-left transition-all ${
-                canChangeStatus
-                  ? "hover:border-border-strong hover:shadow-[var(--shadow-ios-sm)] active:scale-[0.99]"
-                  : "cursor-default opacity-70"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className={config.badgeClass}>{config.label}</span>
-                <span className="text-xs text-tertiary">{config.description}</span>
-              </div>
-              {canChangeStatus && <ChevronRightIcon className="size-4 text-tertiary" />}
-            </button>
+            <StatusChangeDialog
+              event={event}
+              open={statusDialogOpen}
+              onOpenChange={setStatusDialogOpen}
+              onStatusChanged={handleDataUpdated}
+            />
           </div>
 
           {showArchiveTip && (
@@ -756,261 +284,28 @@ export default function EventDetail({
             </div>
           )}
 
-          <div className="app-card p-4">
-            <p className="section-title mb-3">Template</p>
-            <div className="mb-2 text-sm">
-              <span className="text-tertiary">Current: </span>
-              <span className="font-medium">{template?.name ?? "No template"}</span>
-              {event.status !== "draft" && (
-                <span
-                  title="Locked: this template cannot be edited while the event is active or archived"
-                  className="status-badge status-badge--archive ml-2"
-                >
-                  Locked
-                </span>
-              )}
-            </div>
-            <select
-              value={selectedTemplate}
-              onChange={(e) => setSelectedTemplate(e.target.value)}
-              disabled={event.status !== "draft"}
-              className="input mb-3 disabled:opacity-50"
-            >
-              <option value="">No template</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleTemplateSave}
-                disabled={
-                  savingTemplate ||
-                  selectedTemplate === (event.template_id ?? "") ||
-                  event.status !== "draft"
-                }
-                className="btn-brand-soft disabled:opacity-50"
-              >
-                {savingTemplate ? "Saving..." : "Assign Template"}
-              </button>
-              {(selectedTemplate || event.template_id) && (
-                <Link
-                  href={`/templates/${selectedTemplate || event.template_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-brand-soft"
-                >
-                  Edit in Page
-                </Link>
-              )}
-              {templateMsg && (
-                <span className="text-xs text-tertiary">{templateMsg}</span>
-              )}
-            </div>
-          </div>
-
-        </div>
-      )}
-
-      {activeTab === "attendees" && (
-        <div className="space-y-4">
-          {issueMessage && (
-            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)] p-3 text-sm">
-              <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-success-text)]" />
-              <p className="text-[var(--color-success-text)]">{issueMessage}</p>
-            </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => canManageAttendees && setShowAddDialog(true)}
-              disabled={!canManageAttendees}
-              title={canManageAttendees ? undefined : "Attendees can only be added while the event is in Draft or Active"}
-              className="btn-brand"
-            >
-              <PlusIcon className="size-4" />
-              Add Attendee
-            </button>
-            <Link
-              href={`/events/${eventId}/upload`}
-              aria-disabled={!canManageAttendees}
-              onClick={(e) => { if (!canManageAttendees) e.preventDefault(); }}
-              title={canManageAttendees ? undefined : "Attendees can only be imported while the event is in Draft or Active"}
-              className={`btn ${!canManageAttendees ? "opacity-50 pointer-events-none cursor-not-allowed" : ""}`}
-            >
-              <UploadIcon className="size-4" />
-              Bulk Import
-            </Link>
-            {selectedAttendeeIds.length > 0 && (
-              <button
-                type="button"
-                onClick={handleIssueSelected}
-                disabled={issueBusy || !canIssue}
-                title={
-                  canIssue
-                    ? undefined
-                    : event.status !== "active"
-                      ? "Certificates can only be issued while the event is Active"
-                      : "Certificate issuance is available on or after the event date"
-                }
-                className="btn-brand"
-              >
-                {issueBusy
-                  ? "Issuing..."
-                  : `Issue Certificate (${selectedAttendeeIds.length})`}
-              </button>
-            )}
-          </div>
-          <AttendeesManager
-            eventId={eventId}
-            organizationId={event.organization_id}
-            readOnly={!canManageAttendees}
-            onSelectionChange={setSelectedAttendeeIds}
-            showAddDialog={showAddDialog}
-            onAddDialogHandled={() => setShowAddDialog(false)}
-            refreshTrigger={attendeeRefresh}
+          <TemplateCard
+            event={event}
+            templates={templates}
+            currentTemplate={template}
+            onUpdated={handleTemplateUpdated}
           />
         </div>
       )}
 
-      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Status</DialogTitle>
-            <DialogDescription>
-              Select a new status for this event.
-            </DialogDescription>
-          </DialogHeader>
+      {activeTab === "attendees" && (
+        <AttendeesTab
+          event={event}
+          canManageAttendees={canManageAttendees}
+          canIssue={canIssue}
+        />
+      )}
 
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3">
-              <span className="text-xs text-tertiary">Current</span>
-              <span className={`ml-auto ${statusConfig[event.status].badgeClass}`}>
-                {statusConfig[event.status].label}
-              </span>
-            </div>
-
-            {(statusTransitions[event.status] ?? []).map((t) => {
-              const selected = statusTarget?.target === t.target;
-              const missingTemplate = !event.template_id;
-              const missingIssueDate = !event.event_date;
-              const needsWarning =
-                t.target === "active" && selected && (missingTemplate || missingIssueDate);
-              return (
-                <button
-                  key={t.target}
-                  type="button"
-                  onClick={() => setStatusTarget(t)}
-                  className={`w-full rounded-xl border px-4 py-3 text-left transition-all ${
-                    selected
-                      ? "border-brand-600 bg-brand-500/15"
-                      : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold">{t.label}</span>
-                    <span className={statusConfig[t.target].badgeClass}>
-                      {statusConfig[t.target].label}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-tertiary">
-                    {needsWarning
-                      ? missingFieldsMessage
-                      : t.message}
-                  </p>
-                </button>
-              );
-            })}
-
-            {statusTarget?.target === "active" && event.template_id && (
-              <div className="rounded-xl border border-border bg-surface-secondary p-4 text-black">
-                <p className="text-sm font-semibold mb-2">Template handling</p>
-                <div className="space-y-2">
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="templateMode"
-                      checked={templateMode === "lock"}
-                      onChange={() => setTemplateMode("lock")}
-                      className="mt-0.5"
-                    />
-                    <span className="text-xs">
-                      <span className="font-medium">Lock original</span> &mdash; keep using the current template. It becomes locked (uneditable) while this event is active or archived.
-                    </span>
-                  </label>
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="templateMode"
-                      checked={templateMode === "copy"}
-                      onChange={() => setTemplateMode("copy")}
-                      className="mt-0.5"
-                    />
-                    <span className="text-xs">
-                      <span className="font-medium">Make a copy</span> &mdash; clone the template into a new locked copy mapped only to this event.
-                    </span>
-                  </label>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {statusError && (
-            <p className="text-xs text-[var(--color-danger-text)]">{statusError}</p>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant={statusTarget?.target === "archive" ? "destructive" : "default"}
-              onClick={confirmStatusChange}
-              disabled={statusBusy}
-            >
-              {statusBusy
-                ? "Working..."
-                : statusTarget?.label ?? "Confirm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Event</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete <strong>{event.name}</strong>?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
-            <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
-            <p className="text-[var(--color-danger-text)]">
-              This will permanently delete the event along with all associated
-              attendees and their issued certificates. This action cannot be undone.
-            </p>
-          </div>
-          {deleteError && (
-            <p className="text-xs text-[var(--color-danger-text)]">{deleteError}</p>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteEvent}
-              disabled={deleting}
-            >
-              {deleting ? "Deleting..." : "Delete Event"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteDialog
+        event={event}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      />
     </div>
   );
 }
