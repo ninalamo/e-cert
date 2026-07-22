@@ -2,6 +2,9 @@ import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CertificatesList from "@/features/certificates/components/certificates-list";
 import { SkeletonTable } from "@/components/ui/skeleton";
+import { getCertificates } from "@/features/certificates/server/certificate.service";
+import { requireRole } from "@/lib/permissions";
+import { ORG_ID } from "@/lib/org";
 
 export default async function CertificatesPage({
   searchParams,
@@ -9,6 +12,8 @@ export default async function CertificatesPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
+  await requireRole(["admin", "staff"]);
+  const certificates = await getCertificates(ORG_ID);
 
   return (
     <Card>
@@ -16,9 +21,7 @@ export default async function CertificatesPage({
         <CardTitle className="text-brand-700">Certificates</CardTitle>
       </CardHeader>
       <CardContent>
-        <Suspense fallback={<SkeletonTable rows={6} />}>
-          <CertificatesList initialQuery={q ?? ""} />
-        </Suspense>
+        <CertificatesList initialCertificates={certificates} initialQuery={q ?? ""} />
       </CardContent>
     </Card>
   );

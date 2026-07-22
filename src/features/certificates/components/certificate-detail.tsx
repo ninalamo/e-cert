@@ -1,20 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import {
-  getCertificateAction,
-  revokeCertificateAction,
-  getCertificateQrCodeAction,
-  getSessionRoleAction,
-} from "@/features/certificates/server/certificate.actions";
-import { getEventAction } from "@/features/events/server/event.actions";
+import { revokeCertificateAction } from "@/features/certificates/server/certificate.actions";
 import EmailHistory from "@/features/certificates/components/email-history";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
-import { SkeletonDetail } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -51,76 +43,30 @@ function fmtDate(value: string | Date) {
 }
 
 interface CertificateDetailProps {
-  certificateId: string;
-  showAdminFeatures?: boolean;
+  certificate: Certificate;
+  event: Event | null;
+  qrDataUrl: string | null;
+  isAdmin: boolean;
+  eventIdParam: string | null;
 }
 
 export default function CertificateDetail({
-  certificateId,
-  showAdminFeatures = true,
+  certificate: initialCertificate,
+  event: initialEvent,
+  qrDataUrl,
+  isAdmin,
+  eventIdParam,
 }: CertificateDetailProps) {
-  const searchParams = useSearchParams();
-  const eventIdParam = searchParams.get("eventId");
-
-  const [certificate, setCertificate] = useState<Certificate | null>(null);
-  const [event, setEvent] = useState<Event | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [certificate, setCertificate] = useState<Certificate>(initialCertificate);
+  const [event] = useState<Event | null>(initialEvent);
 
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [revokeReason, setRevokeReason] = useState("");
   const [revoking, setRevoking] = useState(false);
   const [revokeError, setRevokeError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const cert = await getCertificateAction(certificateId);
-      if (cancelled) return;
-      if (!cert) {
-        setError("Certificate not found");
-        setLoading(false);
-        return;
-      }
-      setCertificate(cert);
-
-      const promises: Promise<void>[] = [];
-
-      const eventToShow = eventIdParam || cert.event_id;
-      if (eventToShow) {
-        promises.push(
-          getEventAction(eventToShow).then((evt) => {
-            if (!cancelled) setEvent(evt);
-          })
-        );
-      }
-
-      promises.push(
-        getCertificateQrCodeAction(cert.certificate_number).then((url) => {
-          if (!cancelled) setQrDataUrl(url);
-        })
-      );
-
-      await Promise.all(promises);
-
-      if (showAdminFeatures) {
-        getSessionRoleAction().then((role) => {
-          if (!cancelled) setIsAdmin(role === "admin" || role === "staff");
-        });
-      }
-
-      setLoading(false);
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [certificateId, eventIdParam, showAdminFeatures]);
-
   async function handleRevoke() {
-    if (!certificate || !revokeReason.trim()) return;
+    if (!revokeReason.trim()) return;
     setRevoking(true);
     setRevokeError(null);
     const result = await revokeCertificateAction(
@@ -137,18 +83,6 @@ export default function CertificateDetail({
       setRevokeDialogOpen(false);
       setRevokeReason("");
     }
-  }
-
-  if (loading) {
-    return <SkeletonDetail />;
-  }
-
-  if (error || !certificate) {
-    return (
-      <p className="text-center text-sm text-[var(--color-danger-text)] py-8">
-        {error || "Not found"}
-      </p>
-    );
   }
 
   return (
@@ -187,7 +121,7 @@ export default function CertificateDetail({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {showAdminFeatures && isAdmin && !certificate.revoked_at && (
+          {isAdmin && !certificate.revoked_at && (
             <button
               onClick={() => setRevokeDialogOpen(true)}
               className="btn-danger"
@@ -330,13 +264,13 @@ export default function CertificateDetail({
         </div>
       )}
 
-      {showAdminFeatures && isAdmin && !certificate.revoked_at && (
+      {isAdmin && !certificate.revoked_at && (
         <div className="app-card p-4">
           <EmailHistory certificateId={certificate.id} />
         </div>
       )}
 
-      {showAdminFeatures && isAdmin && (
+      {isAdmin && (
         <Dialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
           <DialogContent>
             <DialogHeader>

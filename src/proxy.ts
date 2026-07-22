@@ -108,8 +108,10 @@ export async function proxy(request: NextRequest) {
   );
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const user = session?.user ?? null;
 
   if (user) {
     request.headers.set("x-user-id", user.id);

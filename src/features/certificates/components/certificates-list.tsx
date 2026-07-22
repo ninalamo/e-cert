@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
 import {
@@ -8,22 +8,19 @@ import {
   revokeCertificateAction,
 } from "../server/certificate.actions";
 import type { Certificate } from "@/types/certificate";
-import { SkeletonTable } from "@/components/ui/skeleton";
 
-export default function CertificatesList({ initialQuery = "" }: { initialQuery?: string }) {
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [ready, setReady] = useState(false);
+interface CertificatesListProps {
+  initialCertificates: Certificate[];
+  initialQuery?: string;
+}
+
+export default function CertificatesList({ initialCertificates, initialQuery = "" }: CertificatesListProps) {
+  const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
   const [search, setSearch] = useState(initialQuery);
 
-  useEffect(() => {
-    let active = true;
-    getCertificatesAction(ORG_ID).then((data) => {
-      if (active) {
-        setCertificates(data);
-        setReady(true);
-      }
-    });
-    return () => { active = false; };
+  const loadCertificates = useCallback(async () => {
+    const data = await getCertificatesAction(ORG_ID);
+    setCertificates(data);
   }, []);
 
   async function handleRevoke(id: string, number: string) {
@@ -33,8 +30,7 @@ export default function CertificatesList({ initialQuery = "" }: { initialQuery?:
     if (result?.error) {
       alert(result.error);
     } else {
-      const data = await getCertificatesAction(ORG_ID);
-      setCertificates(data);
+      loadCertificates();
     }
   }
 
@@ -57,15 +53,13 @@ export default function CertificatesList({ initialQuery = "" }: { initialQuery?:
         />
       </div>
 
-      {!ready && <SkeletonTable rows={6} />}
-
-      {ready && filtered.length === 0 && (
+      {filtered.length === 0 && (
         <div className="border rounded-md p-8 text-center">
           <p className="text-muted-foreground">No certificates found.</p>
         </div>
       )}
 
-      {ready && filtered.length > 0 && (
+      {filtered.length > 0 && (
         <div className="tbl-container">
           <table className="tbl">
             <thead>

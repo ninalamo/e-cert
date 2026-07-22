@@ -52,11 +52,11 @@ export default function CertificateViewer({
   const certCss = template?.css_content ?? "";
 
   const certWidth = (() => {
-    const m = template?.html_content.match(/class="certificate"[^>]*width:(\d+)px/);
+    const m = template?.html_content?.match(/width:\s*(\d+)px/);
     return m ? parseInt(m[1], 10) : 1123;
   })();
   const certHeight = (() => {
-    const m = template?.html_content.match(/class="certificate"[^>]*height:(\d+)px/);
+    const m = template?.html_content?.match(/height:\s*(\d+)px/);
     return m ? parseInt(m[1], 10) : 794;
   })();
 

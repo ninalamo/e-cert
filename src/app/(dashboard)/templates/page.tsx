@@ -1,6 +1,10 @@
 import TemplatesTable from "@/features/templates/components/templates-table";
+import { getTemplatesWithLockState } from "@/features/templates/server/template.service";
+import { ORG_ID } from "@/lib/org";
 
-export default function TemplatesPage() {
+export default async function TemplatesPage() {
+  const templates = await getTemplatesWithLockState(ORG_ID);
+
   return (
     <div className="space-y-6">
       <div>
@@ -11,7 +15,7 @@ export default function TemplatesPage() {
           Manage your certificate templates
         </p>
       </div>
-      <TemplatesTable />
+      <TemplatesTable initialTemplates={templates} />
     </div>
   );
 }
