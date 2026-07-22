@@ -50,9 +50,21 @@ export default function NewEventForm({ templates }: { templates: CertificateTemp
   const certPattern = buildPattern(certNumberPrefix.trim());
   const sampleNumber = certPattern.replace(/#+$/, (m) => m.replace(/#/g, "0"));
 
+  const certWidth = useMemo(() => {
+    if (!previewTemplate) return 1123;
+    const m = previewTemplate.html_content.match(/class="certificate"[^>]*width:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 1123;
+  }, [previewTemplate]);
+
+  const certHeight = useMemo(() => {
+    if (!previewTemplate) return 794;
+    const m = previewTemplate.html_content.match(/class="certificate"[^>]*height:(\d+)px/);
+    return m ? parseInt(m[1], 10) : 794;
+  }, [previewTemplate]);
+
   const previewSrcDoc = useMemo(() => {
     if (!previewTemplate) return "";
-    return `<!DOCTYPE html><html><head><meta name="viewport" content="width=960"><style>body{margin:0;overflow:hidden;}${previewTemplate.css_content ?? ""}</style></head><body>${previewTemplate.html_content
+    return `<!DOCTYPE html><html><head><meta name="viewport" content="width=${certWidth}"><style>html,body{margin:0;padding:0;width:${certWidth}px;height:${certHeight}px;overflow:hidden;}${previewTemplate.css_content ?? ""}</style></head><body>${previewTemplate.html_content
       .replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz")
       .replace(/\{\{certificate_number\}\}/g, sampleNumber)
       .replace(/\{\{issued_date\}\}/g, eventDate ? new Date(eventDate).toLocaleDateString() : "—")
@@ -63,8 +75,8 @@ export default function NewEventForm({ templates }: { templates: CertificateTemp
       .replace(/\{\{event_organizer\}\}/g, organizer || "—")
       .replace(/\{\{certificate_title\}\}/g, certTitle || "Certificate of Participation")
       .replace(/\{\{expiry_date\}\}/g, validUntil ? new Date(validUntil).toLocaleDateString() : "—")
-      .replace(/\{\{qr_code\}\}/g, "")}</body></html>`;
-  }, [previewTemplate, eventDate, name, location, organizer, certTitle, validUntil, sampleNumber]);
+      .replace(/\{\{qr_code\}\}/g, '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><g fill="#000"><rect x="5" y="5" width="25" height="25"/><rect x="10" y="10" width="15" height="15" fill="#fff"/><rect x="13" y="13" width="9" height="9"/><rect x="70" y="5" width="25" height="25"/><rect x="75" y="10" width="15" height="15" fill="#fff"/><rect x="78" y="13" width="9" height="9"/><rect x="5" y="70" width="25" height="25"/><rect x="10" y="75" width="15" height="15" fill="#fff"/><rect x="13" y="78" width="9" height="9"/><rect x="35" y="5" width="5" height="5"/><rect x="45" y="5" width="5" height="5"/><rect x="55" y="5" width="5" height="5"/><rect x="35" y="15" width="5" height="5"/><rect x="50" y="15" width="5" height="5"/><rect x="60" y="15" width="5" height="5"/><rect x="35" y="25" width="5" height="5"/><rect x="45" y="25" width="5" height="5"/><rect x="55" y="35" width="5" height="5"/><rect x="40" y="40" width="5" height="5"/><rect x="50" y="40" width="5" height="5"/><rect x="60" y="40" width="5" height="5"/><rect x="35" y="50" width="5" height="5"/><rect x="45" y="50" width="5" height="5"/><rect x="55" y="50" width="5" height="5"/><rect x="5" y="35" width="5" height="5"/><rect x="5" y="45" width="5" height="5"/><rect x="15" y="40" width="5" height="5"/><rect x="25" y="35" width="5" height="5"/><rect x="25" y="45" width="5" height="5"/><rect x="5" y="55" width="5" height="5"/><rect x="15" y="60" width="5" height="5"/><rect x="25" y="55" width="5" height="5"/><rect x="35" y="60" width="5" height="5"/><rect x="45" y="55" width="5" height="5"/><rect x="55" y="55" width="5" height="5"/><rect x="65" y="35" width="5" height="5"/><rect x="75" y="35" width="5" height="5"/><rect x="85" y="35" width="5" height="5"/><rect x="70" y="45" width="5" height="5"/><rect x="80" y="45" width="5" height="5"/><rect x="90" y="45" width="5" height="5"/><rect x="65" y="55" width="5" height="5"/><rect x="75" y="60" width="5" height="5"/><rect x="85" y="55" width="5" height="5"/><rect x="35" y="70" width="5" height="5"/><rect x="45" y="75" width="5" height="5"/><rect x="55" y="70" width="5" height="5"/><rect x="40" y="85" width="5" height="5"/><rect x="50" y="80" width="5" height="5"/><rect x="60" y="85" width="5" height="5"/><rect x="70" y="70" width="5" height="5"/><rect x="80" y="75" width="5" height="5"/><rect x="90" y="80" width="5" height="5"/><rect x="75" y="85" width="5" height="5"/><rect x="85" y="90" width="5" height="5"/></g></svg>')}</body></html>`;
+  }, [previewTemplate, eventDate, name, location, organizer, certTitle, validUntil, sampleNumber, certWidth, certHeight]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -318,19 +330,27 @@ export default function NewEventForm({ templates }: { templates: CertificateTemp
             className="fixed inset-0 z-50 bg-black/5 backdrop-blur-sm"
             onClick={() => setPreviewOpen(false)}
           />
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-            <div className="relative pointer-events-auto h-[70vh] max-h-[85vh] w-[92vw] max-w-[90vw] sm:h-auto sm:w-auto" style={{ aspectRatio: "297 / 210" }}>
-              <iframe
-                srcDoc={previewSrcDoc}
-                className="w-full h-full bg-white block rounded-2xl shadow-2xl"
-                title="Template Preview"
-              />
-              <button
-                onClick={() => setPreviewOpen(false)}
-                className="absolute top-3 right-3 bg-white/80 text-black rounded-full w-8 h-8 flex items-center justify-center shadow-lg backdrop-blur-md border border-black/5 hover:bg-white/90 transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              </button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div className="pointer-events-auto max-h-[95vh] max-w-[95vw] rounded-2xl bg-[var(--color-surface)] shadow-2xl overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+                <h3 className="text-sm font-semibold text-[var(--color-text)]">Certificate Preview</h3>
+                <button
+                  onClick={() => setPreviewOpen(false)}
+                  className="rounded-full w-7 h-7 flex items-center justify-center text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <div className="p-3 overflow-auto cert-canvas">
+                <div style={{ width: certWidth, height: certHeight }} className="relative shadow bg-white overflow-hidden">
+                  <iframe
+                    srcDoc={previewSrcDoc}
+                    className="w-full h-full bg-white block"
+                    style={{ border: "none" }}
+                    title="Template Preview"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </>
