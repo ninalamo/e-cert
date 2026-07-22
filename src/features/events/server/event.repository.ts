@@ -39,35 +39,26 @@ export class EventRepository extends BaseRepository<Event> {
   ): Promise<{ events: Event[]; total: number }> {
     const statusFilters = options.statuses?.length ? options.statuses : undefined;
 
-    const buildQuery = (withData: boolean) => {
-      let q = this.client
-        .from(this.table)
-        .select(withData ? "*" : "*", { count: "exact", head: !withData });
+    let q = this.client
+      .from(this.table)
+      .select("*", { count: "exact" });
 
-      q = q.eq("organization_id", organizationId);
+    q = q.eq("organization_id", organizationId);
 
-      if (statusFilters && statusFilters.length > 0) {
-        q = q.in("status", statusFilters);
-      }
+    if (statusFilters && statusFilters.length > 0) {
+      q = q.in("status", statusFilters);
+    }
 
-      if (options.search?.trim()) {
-        const term = options.search.trim();
-        q = q.or(`name.ilike.%${term}%,location.ilike.%${term}%`);
-      }
+    if (options.search?.trim()) {
+      const term = options.search.trim();
+      q = q.or(`name.ilike.%${term}%,location.ilike.%${term}%`);
+    }
 
-      if (withData) {
-        q = q
-          .order("created_at", { ascending: false })
-          .range(options.offset, options.offset + options.limit - 1);
-      }
+    const { data, count, error } = await q
+      .order("created_at", { ascending: false })
+      .range(options.offset, options.offset + options.limit - 1);
 
-      return q;
-    };
-
-    const { data, error } = await buildQuery(true);
-    const { count, error: countError } = await buildQuery(false);
-
-    if (error || countError) {
+    if (error) {
       return { events: [], total: 0 };
     }
 
