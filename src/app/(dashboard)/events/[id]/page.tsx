@@ -4,6 +4,7 @@ import { getCurrentSession, canDelete } from "@/lib/permissions";
 import { getEventWithStats } from "@/features/events/server/event.service";
 import { getTemplates } from "@/features/templates/server/template.service";
 import { SkeletonEventDetail } from "@/components/ui/skeleton";
+import { ORG_ID } from "@/lib/org";
 
 export default async function EventDetailPage({
   params,
@@ -14,13 +15,14 @@ export default async function EventDetailPage({
 }) {
   const { id } = await params;
   const { tab } = await searchParams;
-  const session = await getCurrentSession();
-  const canUserDelete = canDelete(session?.role ?? "participant");
 
-  const initialData = await getEventWithStats(id);
-  const initialTemplates = initialData?.event.organization_id
-    ? await getTemplates(initialData.event.organization_id)
-    : [];
+  const [session, initialData, initialTemplates] = await Promise.all([
+    getCurrentSession(),
+    getEventWithStats(id),
+    getTemplates(ORG_ID),
+  ]);
+
+  const canUserDelete = canDelete(session?.role ?? "participant");
 
   return (
     <Suspense fallback={<SkeletonEventDetail activeTab={tab === "attendees" ? "attendees" : "details"} />}>

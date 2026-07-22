@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
-import { ORG_ID } from "@/lib/org";
-import { getEventsAction, deleteEventAction } from "@/features/events/server/event.actions";
+import { useRouter, useSearchParams } from "next/navigation";
+import { deleteEventAction } from "@/features/events/server/event.actions";
 import type { Event } from "@/types/event";
-import { SkeletonTable } from "@/components/ui/skeleton";
 import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon } from "lucide-react";
 import {
   Dialog,
@@ -16,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Paginator } from "@/components/ui/paginator";
 
 const statusColors: Record<string, string> = {
   draft: "status-pill status-draft",
@@ -31,55 +31,66 @@ const STATUS_OPTIONS: { value: Event["status"]; label: string }[] = [
 
 export default function EventsList({
   canDelete = true,
-  initialEvents = [],
+  events,
+  total,
+  page,
+  totalPages,
+  pageSize,
+  search,
+  statusFilter,
 }: {
   canDelete?: boolean;
-  initialEvents?: Event[];
+  events: Event[];
+  total: number;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  search: string;
+  statusFilter: string;
 }) {
-  const [events, setEvents] = useState<Event[]>(initialEvents);
-  const [ready, setReady] = useState(initialEvents.length > 0);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<Set<Event["status"]>>(new Set());
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(search);
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (initialEvents.length > 0) return;
-    let active = true;
-    getEventsAction(ORG_ID).then((data) => {
-      if (active) {
-        setEvents(data);
-        setReady(true);
+  const activeStatuses = statusFilter
+    ? statusFilter.split(",").filter(Boolean)
+    : [];
+
+  function buildUrl(updates: Record<string, string | undefined>) {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === undefined || value === "") {
+        params.delete(key);
+      } else {
+        params.set(key, value);
       }
-    });
-    return () => { active = false; };
-  }, [initialEvents]);
+    }
+    return `/events?${params.toString()}`;
+  }
 
-  const filtered = useMemo(() => {
-    let list = events;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (e) =>
-          e.name.toLowerCase().includes(q) ||
-          (e.location ?? "").toLowerCase().includes(q)
-      );
-    }
-    if (statusFilter.size > 0) {
-      list = list.filter((e) => statusFilter.has(e.status));
-    }
-    return list;
-  }, [events, search, statusFilter]);
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    router.push(buildUrl({ q: query || undefined, page: undefined }));
+  }
 
   function toggleStatus(value: Event["status"]) {
-    setStatusFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(value)) next.delete(value);
-      else next.add(value);
-      return next;
-    });
+    const next = activeStatuses.includes(value)
+      ? activeStatuses.filter((s) => s !== value)
+      : [...activeStatuses, value];
+    router.push(
+      buildUrl({ status: next.length ? next.join(",") : undefined, page: undefined })
+    );
   }
+
+  function goToPage(p: number) {
+    router.push(buildUrl({ page: p > 0 ? String(p + 1) : undefined }));
+  }
+
+  const handleRefresh = useCallback(() => {
+    router.refresh();
+  }, [router]);
 
   async function confirmDelete() {
     if (!deleteTarget) return;
@@ -89,40 +100,34 @@ export default function EventsList({
     if (result?.error) {
       alert(result.error);
     } else {
-      setRefreshing(true);
-      const refreshed = await getEventsAction(ORG_ID);
-      setEvents(refreshed);
-      setRefreshing(false);
       setDeleteTarget(null);
+      handleRefresh();
     }
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
-        <Link
-          href="/events/new"
-          className="btn-brand"
-        >
+        <Link href="/events/new" className="btn-brand">
           <PlusIcon className="size-4" />
           New Event
         </Link>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-xs">
+        <form onSubmit={handleSearch} className="relative w-full sm:max-w-xs">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-tertiary" />
           <input
             type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search events..."
             className="input pl-8 py-1.5 text-xs"
           />
-        </div>
+        </form>
         <div className="flex flex-wrap items-center gap-2">
           {STATUS_OPTIONS.map((opt) => {
-            const active = statusFilter.has(opt.value);
+            const active = activeStatuses.includes(opt.value);
             return (
               <button
                 key={opt.value}
@@ -138,10 +143,12 @@ export default function EventsList({
               </button>
             );
           })}
-          {statusFilter.size > 0 && (
+          {activeStatuses.length > 0 && (
             <button
               type="button"
-              onClick={() => setStatusFilter(new Set())}
+              onClick={() =>
+                router.push(buildUrl({ status: undefined, page: undefined }))
+              }
               className="text-xs text-tertiary hover:text-secondary cursor-pointer"
             >
               Clear
@@ -150,23 +157,19 @@ export default function EventsList({
         </div>
       </div>
 
-      {(!ready || refreshing) && <SkeletonTable rows={5} />}
-
-      {ready && !refreshing && events.length === 0 && (
+      {events.length === 0 && (
         <div className="app-card p-12 text-center">
-          <p className="text-sm text-tertiary">No events yet. Create your first one.</p>
+          <p className="text-sm text-tertiary">
+            {search || activeStatuses.length
+              ? "No events match your filters."
+              : "No events yet. Create your first one."}
+          </p>
         </div>
       )}
 
-      {ready && !refreshing && events.length > 0 && filtered.length === 0 && (
-        <div className="app-card p-12 text-center">
-          <p className="text-sm text-tertiary">No events match your filters.</p>
-        </div>
-      )}
-
-      {ready && !refreshing && filtered.length > 0 && (
+      {events.length > 0 && (
         <div className="app-card divide-y divide-border overflow-hidden">
-          {filtered.map((event) => (
+          {events.map((event) => (
             <div
               key={event.id}
               className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
@@ -189,10 +192,7 @@ export default function EventsList({
                 <span className={statusColors[event.status] ?? "status-pill status-draft"}>
                   {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                 </span>
-                <Link
-                  href={`/events/${event.id}`}
-                  className="btn-disclosure"
-                >
+                <Link href={`/events/${event.id}`} className="btn-disclosure">
                   View
                 </Link>
                 {canDelete && event.status !== "active" ? (
@@ -221,6 +221,14 @@ export default function EventsList({
           ))}
         </div>
       )}
+
+      <Paginator
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={total}
+        setPage={goToPage}
+      />
 
       <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <DialogContent>

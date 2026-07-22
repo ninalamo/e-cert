@@ -21,6 +21,19 @@ export async function getEvents(
   return repos(client ?? (await createClient())).eventRepo.findByOrganizationId(organizationId);
 }
 
+export async function getEventsPaginated(
+  organizationId: string,
+  options: {
+    search?: string;
+    statuses?: string[];
+    limit: number;
+    offset: number;
+  },
+  client?: SupabaseClient
+): Promise<{ events: Event[]; total: number }> {
+  return repos(client ?? (await createClient())).eventRepo.findPaginated(organizationId, options);
+}
+
 export async function getEvent(
   id: string,
   client?: SupabaseClient

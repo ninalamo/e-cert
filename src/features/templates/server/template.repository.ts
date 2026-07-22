@@ -7,10 +7,17 @@ export class CertificateTemplateRepository extends BaseRepository<CertificateTem
     super("certificate_templates", client);
   }
 
-  async findByOrganizationId(organizationId: string): Promise<CertificateTemplate[]> {
+  async findByOrganizationId(
+    organizationId: string,
+    columns?: string
+  ): Promise<CertificateTemplate[]> {
     return this.findMany(
       { organization_id: organizationId },
-      { orderBy: "created_at", ascending: false }
+      {
+        orderBy: "created_at",
+        ascending: false,
+        columns,
+      }
     );
   }
 
