@@ -4,9 +4,11 @@ import { getEvents } from "@/features/events/server/event.service";
 import { ORG_ID } from "@/lib/org";
 
 export default async function EventsPage() {
-  const session = await getCurrentSession();
+  const [session, initialEvents] = await Promise.all([
+    getCurrentSession(),
+    getEvents(ORG_ID),
+  ]);
   const canUserDelete = canDelete(session?.role ?? "participant");
-  const initialEvents = await getEvents(ORG_ID);
 
   return (
     <div className="space-y-6">

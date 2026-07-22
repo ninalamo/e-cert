@@ -28,33 +28,14 @@ export async function getCurrentSession(): Promise<SessionUser | null> {
   const proxyUserId = hdrs.get("x-user-id");
   const proxyUserEmail = hdrs.get("x-user-email");
   const proxyUserName = hdrs.get("x-user-name");
+  const proxyUserRole = hdrs.get("x-user-role");
 
   if (proxyUserId) {
-    const supabase = await createClient();
-    const { data: membership } = await supabase
-      .from("user_memberships")
-      .select("role")
-      .eq("user_id", proxyUserId)
-      .eq("organization_id", ORG_ID)
-      .single();
-
-    const role = (membership?.role as UserRole) ?? DEFAULT_ROLE;
-
-    if (!membership) {
-      console.warn("[permissions] no membership found for user", proxyUserId, { ORG_ID });
-    } else if (!["admin", "staff", "participant"].includes(membership.role)) {
-      console.warn("[permissions] unexpected role value for user", proxyUserId, {
-        rawRole: membership.role,
-        ORG_ID,
-        resolvedRole: role,
-      });
-    }
-
     return {
       id: proxyUserId,
       email: proxyUserEmail || null,
       name: proxyUserName || null,
-      role,
+      role: (proxyUserRole as UserRole) ?? DEFAULT_ROLE,
     };
   }
 
