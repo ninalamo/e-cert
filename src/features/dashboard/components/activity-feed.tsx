@@ -1,39 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ORG_ID } from "@/lib/org";
-import { getRecentActivityAction } from "../server/dashboard.actions";
-import { SkeletonList } from "@/components/ui/skeleton";
+import type { RecentActivity } from "../server/dashboard.service";
 
-interface Activity {
-  type: "certificate_issued" | "email_sent";
-  certificate_number: string;
-  recipient_name: string;
-  timestamp: string;
+interface ActivityFeedProps {
+  initialActivities: RecentActivity[];
 }
 
-export default function ActivityFeed() {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const data = await getRecentActivityAction(ORG_ID);
-      if (!cancelled) {
-        setActivities(data);
-        setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  if (loading) {
-    return <SkeletonList rows={4} />;
-  }
-
-  if (activities.length === 0) {
+export default function ActivityFeed({ initialActivities }: ActivityFeedProps) {
+  if (initialActivities.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground text-sm">No recent activity.</p>
@@ -43,7 +17,7 @@ export default function ActivityFeed() {
 
   return (
     <div className="space-y-3">
-      {activities.map((activity, i) => (
+      {initialActivities.map((activity, i) => (
         <div key={i} className="flex items-start gap-3">
           <div
             className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${

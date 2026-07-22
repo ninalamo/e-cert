@@ -1,8 +1,14 @@
 import { requireRole } from "@/lib/permissions";
 import UsersList from "@/features/users/components/users-list";
+import { listUsers } from "@/features/users/server/user.service";
+import { getCurrentUser } from "@/features/auth/server/auth.actions";
 
 export default async function UsersPage() {
-  await requireRole(["admin"]);
+  const session = await requireRole(["admin"]);
+  const [users, currentUser] = await Promise.all([
+    listUsers(),
+    getCurrentUser(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -12,7 +18,7 @@ export default async function UsersPage() {
           Manage user accounts and access
         </p>
       </div>
-      <UsersList />
+      <UsersList initialUsers={users} currentUserId={currentUser?.id ?? null} />
     </div>
   );
 }

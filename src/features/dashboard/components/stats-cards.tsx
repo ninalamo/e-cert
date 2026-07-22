@@ -1,22 +1,17 @@
 "use client";
 
-import { SkeletonCards } from "@/components/ui/skeleton";
-import { useDashboardStats } from "./use-dashboard-stats";
+import type { DashboardStats } from "../server/dashboard.service";
 
-export default function StatsCards() {
-  const { stats, loading } = useDashboardStats();
+interface StatsCardsProps {
+  initialStats: DashboardStats;
+}
 
-  if (loading) {
-    return <SkeletonCards count={4} />;
-  }
-
-  if (!stats) return null;
-
+export default function StatsCards({ initialStats }: StatsCardsProps) {
   const cards = [
-    { label: "Total Certificates", value: stats.totalCertificates, color: "text-brand-700" },
-    { label: "Active", value: stats.activeCertificates, color: "text-green-600" },
-    { label: "Revoked", value: stats.revokedCertificates, color: "text-red-600" },
-    { label: "Emails Sent", value: stats.totalEmails, color: "text-blue-600" },
+    { label: "Total Certificates", value: initialStats.totalCertificates, color: "text-brand-700" },
+    { label: "Active", value: initialStats.activeCertificates, color: "text-green-600" },
+    { label: "Revoked", value: initialStats.revokedCertificates, color: "text-red-600" },
+    { label: "Emails Sent", value: initialStats.totalEmails, color: "text-blue-600" },
   ];
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, startTransition } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   listUsersAction,
   banUserAction,
@@ -9,9 +9,7 @@ import {
   setUserRoleAction,
 } from "../server/user.actions";
 import type { UserRole } from "@/types/organization";
-import { getCurrentUser } from "@/features/auth/server/auth.actions";
 import { usePagination, Paginator } from "@/components/ui/paginator";
-import { SkeletonTable } from "@/components/ui/skeleton";
 
 interface ManagedUser {
   id: string;
@@ -24,30 +22,19 @@ interface ManagedUser {
   is_attendee: boolean;
 }
 
-export default function UsersList() {
-  const [users, setUsers] = useState<ManagedUser[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [loading, setLoading] = useState(true);
+interface UsersListProps {
+  initialUsers: ManagedUser[];
+  currentUserId: string | null;
+}
+
+export default function UsersList({ initialUsers, currentUserId }: UsersListProps) {
+  const [users, setUsers] = useState<ManagedUser[]>(initialUsers);
   const [search, setSearch] = useState("");
 
   const loadUsers = useCallback(async () => {
-    setLoading(true);
-    const [usersData, user] = await Promise.all([
-      listUsersAction(),
-      getCurrentUser(),
-    ]);
-    setUsers(usersData as ManagedUser[]);
-    setCurrentUserId(user?.id ?? null);
-    setLoaded(true);
-    setLoading(false);
+    const data = await listUsersAction();
+    setUsers(data as ManagedUser[]);
   }, []);
-
-  useEffect(() => {
-    startTransition(() => {
-      loadUsers();
-    });
-  }, [loadUsers]);
 
   async function handleBan(userId: string) {
     if (!confirm("Ban this user? They will not be able to log in.")) return;
@@ -99,13 +86,11 @@ export default function UsersList() {
 
   return (
     <div className="space-y-4">
-      {loading && <SkeletonTable rows={5} />}
-
-      {!loading && loaded && users.length === 0 && (
+      {users.length === 0 && (
         <p className="text-muted-foreground text-sm">No users found.</p>
       )}
 
-      {!loading && loaded && users.length > 0 && (
+      {users.length > 0 && (
         <>
           <input
             type="text"
