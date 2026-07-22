@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
-import Link from "next/link";
 import { Rnd } from "react-rnd";
 import { PLACEHOLDER_FIELDS } from "./placeholder-field";
 import {
@@ -1048,12 +1047,17 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
               >
                 {loading ? "Saving..." : submitLabel}
               </button>
-              <Link
-                href="/templates"
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
+                    window.location.href = "/templates";
+                  }
+                }}
                 className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
               >
                 Close Editor
-              </Link>
+              </button>
             </div>
           </div>
         </div>
