@@ -26,6 +26,7 @@ export default async function EventsPage({
       statuses,
       limit: PAGE_SIZE,
       offset: page * PAGE_SIZE,
+      columns: "id, name, event_date, location, status",
     }),
   ]);
 

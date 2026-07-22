@@ -35,13 +35,14 @@ export class EventRepository extends BaseRepository<Event> {
       statuses?: string[];
       limit: number;
       offset: number;
+      columns?: string;
     }
   ): Promise<{ events: Event[]; total: number }> {
     const statusFilters = options.statuses?.length ? options.statuses : undefined;
 
     let q = this.client
       .from(this.table)
-      .select("*", { count: "exact" });
+      .select(options.columns ?? "*", { count: "exact" });
 
     q = q.eq("organization_id", organizationId);
 

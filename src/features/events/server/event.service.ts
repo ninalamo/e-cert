@@ -28,6 +28,7 @@ export async function getEventsPaginated(
     statuses?: string[];
     limit: number;
     offset: number;
+    columns?: string;
   },
   client?: SupabaseClient
 ): Promise<{ events: Event[]; total: number }> {
