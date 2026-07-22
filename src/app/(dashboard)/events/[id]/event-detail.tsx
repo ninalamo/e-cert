@@ -803,7 +803,7 @@ export default function EventDetail({
                   rel="noopener noreferrer"
                   className="btn-brand-soft"
                 >
-                  Preview Certificate
+                  Edit in Page
                 </Link>
               )}
               {templateMsg && (
