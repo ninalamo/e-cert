@@ -42,8 +42,6 @@ export default function TemplatesTable() {
   const [sort] = useState<SortKey>("created-desc");
   const [previewTemplate, setPreviewTemplate] = useState<CertificateTemplate | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
-  const [previewCertW, setPreviewCertW] = useState(1123);
-  const [previewCertH, setPreviewCertH] = useState(794);
   const [deleteTarget, setDeleteTarget] = useState<TemplateRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -117,30 +115,32 @@ export default function TemplatesTable() {
   function closePreview() {
     setPreviewTemplate(null);
     setPreviewScale(1);
-    setPreviewCertW(1123);
-    setPreviewCertH(794);
   }
 
-  useEffect(() => {
-    if (!previewTemplate) return;
+  const { certW, certH } = useMemo(() => {
+    if (!previewTemplate) return { certW: 1123, certH: 794 };
     const html = previewTemplate.html_content ?? "";
     const wMatch = html.match(/width:\s*([\d.]+)px/);
     const hMatch = html.match(/height:\s*([\d.]+)px/);
-    const cw = wMatch ? parseFloat(wMatch[1]) : 1123;
-    const ch = hMatch ? parseFloat(hMatch[1]) : 794;
-    setPreviewCertW(cw);
-    setPreviewCertH(ch);
+    return {
+      certW: wMatch ? parseFloat(wMatch[1]) : 1123,
+      certH: hMatch ? parseFloat(hMatch[1]) : 794,
+    };
+  }, [previewTemplate]);
+
+  useEffect(() => {
+    if (!previewTemplate) return;
     function calc() {
       const padX = 32;
       const padY = 120;
       const maxW = window.innerWidth - padX * 2;
       const maxH = window.innerHeight - padY;
-      setPreviewScale(Math.min(1, maxW / cw, maxH / ch));
+      setPreviewScale(Math.min(1, maxW / certW, maxH / certH));
     }
     calc();
     window.addEventListener("resize", calc);
     return () => window.removeEventListener("resize", calc);
-  }, [previewTemplate]);
+  }, [previewTemplate, certW, certH]);
 
   const previewSrcDoc = previewTemplate ? buildPreviewSrcDoc(previewTemplate) : "";
 
@@ -320,15 +320,15 @@ export default function TemplatesTable() {
               </div>
               <div
                 className="relative bg-white overflow-hidden"
-                style={{ width: `${previewCertW * previewScale}px`, height: `${previewCertH * previewScale}px` }}
+                style={{ width: `${certW * previewScale}px`, height: `${certH * previewScale}px` }}
               >
                 <iframe
                   srcDoc={previewSrcDoc}
                   className="border-0 block"
                   title="Template Preview"
                   style={{
-                    width: `${previewCertW}px`,
-                    height: `${previewCertH}px`,
+                    width: `${certW}px`,
+                    height: `${certH}px`,
                     transformOrigin: "top left",
                     transform: `scale(${previewScale})`,
                   }}
