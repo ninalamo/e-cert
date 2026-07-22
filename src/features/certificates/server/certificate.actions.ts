@@ -67,7 +67,10 @@ export async function getEmailLogsAction(certificateId: string) {
 
 export async function getMyCertificatesAction() {
   const session = await requireSession();
-  return certService.getMyCertificates(session.email!);
+  return certService.getMyCertificates(
+    session.email!,
+    "id, certificate_number, issued_at, expires_at, revoked_at"
+  );
 }
 
 export async function getMyCertificateAction(id: string) {

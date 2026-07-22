@@ -37,11 +37,12 @@ export class CertificateRepository extends BaseRepository<Certificate> {
 
   async findByRecipientEmail(
     email: string,
-    organizationId: string
+    organizationId: string,
+    columns?: string
   ): Promise<Certificate[]> {
     return this.findMany(
       { recipient_email: email, organization_id: organizationId },
-      { orderBy: "created_at", ascending: false }
+      { orderBy: "created_at", ascending: false, columns }
     );
   }
 
