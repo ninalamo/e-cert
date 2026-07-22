@@ -3,9 +3,16 @@ import StatsCards from "@/features/dashboard/components/stats-cards";
 import ActivityFeed from "@/features/dashboard/components/activity-feed";
 import DashboardSearch from "@/features/dashboard/components/dashboard-search";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getDashboardStats, getRecentActivity } from "@/features/dashboard/server/dashboard.service";
+import { requireSession } from "@/lib/permissions";
+import { ORG_ID } from "@/lib/org";
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser();
+  const [user, stats, activities] = await Promise.all([
+    getCurrentUser(),
+    getDashboardStats(ORG_ID),
+    getRecentActivity(ORG_ID),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -18,14 +25,14 @@ export default async function DashboardPage() {
 
       <DashboardSearch />
 
-      <StatsCards />
+      <StatsCards initialStats={stats} />
 
       <Card>
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          <ActivityFeed />
+          <ActivityFeed initialActivities={activities} />
         </CardContent>
       </Card>
     </div>

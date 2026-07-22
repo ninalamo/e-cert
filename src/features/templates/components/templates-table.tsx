@@ -1,17 +1,13 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect, startTransition } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
-import {
-  getTemplatesAction,
-  deleteTemplateAction,
-} from "@/features/templates/server/template.actions";
+import { ORG_ID } from "@/lib/org";
+import { getTemplatesAction, deleteTemplateAction } from "@/features/templates/server/template.actions";
 import type { CertificateTemplate } from "@/types/template";
 
 type TemplateRow = CertificateTemplate & { locked: boolean };
-import { ORG_ID } from "@/lib/org";
 import { usePagination, Paginator } from "@/components/ui/paginator";
-import { SkeletonTable } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -32,10 +28,12 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "without-description", label: "No description" },
 ];
 
-export default function TemplatesTable() {
-  const [templates, setTemplates] = useState<TemplateRow[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [loading, setLoading] = useState(false);
+interface TemplatesTableProps {
+  initialTemplates: TemplateRow[];
+}
+
+export default function TemplatesTable({ initialTemplates }: TemplatesTableProps) {
+  const [templates, setTemplates] = useState<TemplateRow[]>(initialTemplates);
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -46,18 +44,9 @@ export default function TemplatesTable() {
   const [deleting, setDeleting] = useState(false);
 
   const loadTemplates = useCallback(async () => {
-    setLoading(true);
     const data = await getTemplatesAction(ORG_ID);
     setTemplates(data);
-    setLoaded(true);
-    setLoading(false);
   }, []);
-
-  useEffect(() => {
-    startTransition(() => {
-      loadTemplates();
-    });
-  }, [loadTemplates]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -203,9 +192,7 @@ export default function TemplatesTable() {
         </div>
       </div>
 
-      {loading && <SkeletonTable rows={5} />}
-
-      {!loading && loaded && filtered.length === 0 && (
+      {filtered.length === 0 && (
         <div className="app-card p-12 text-center">
           <p className="text-sm text-tertiary">
             {templates.length === 0
@@ -215,7 +202,7 @@ export default function TemplatesTable() {
         </div>
       )}
 
-      {!loading && loaded && filtered.length > 0 && (
+      {filtered.length > 0 && (
         <div className="app-card divide-y divide-border overflow-hidden">
           {paginatedItems.map((t) => (
             <div

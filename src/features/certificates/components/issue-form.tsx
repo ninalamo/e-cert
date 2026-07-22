@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ORG_ID } from "@/lib/org";
-import { getTemplatesAction } from "@/features/templates/server/template.actions";
 import {
   issueCertificateAction,
   uploadCertificateFileAction,
@@ -11,21 +10,17 @@ import type { CertificateTemplate } from "@/types/template";
 
 type IssueMode = "template" | "file";
 
-export default function IssueForm() {
-  const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
+interface IssueFormProps {
+  initialTemplates: CertificateTemplate[];
+}
+
+export default function IssueForm({ initialTemplates }: IssueFormProps) {
+  const [templates] = useState<CertificateTemplate[]>(initialTemplates);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [mode, setMode] = useState<IssueMode>("template");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    getTemplatesAction(ORG_ID).then((data) => {
-      if (active) setTemplates(data);
-    });
-    return () => { active = false; };
-  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
