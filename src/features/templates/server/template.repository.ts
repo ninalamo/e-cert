@@ -13,4 +13,16 @@ export class CertificateTemplateRepository extends BaseRepository<CertificateTem
       { orderBy: "created_at", ascending: false }
     );
   }
+
+  async findByOrganizationIdAndName(organizationId: string, name: string): Promise<CertificateTemplate | null> {
+    const { data, error } = await this.client
+      .from(this.table)
+      .select("*")
+      .eq("organization_id", organizationId)
+      .eq("name", name)
+      .single();
+
+    if (error) return null;
+    return data as CertificateTemplate;
+  }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import Link from "next/link";
 import { Rnd } from "react-rnd";
 import { PLACEHOLDER_FIELDS } from "./placeholder-field";
@@ -117,6 +117,11 @@ interface TemplateCanvasProps {
   description?: string;
   onNameChange?: (name: string) => void;
   onDescriptionChange?: (description: string) => void;
+}
+
+export interface TemplateCanvasHandle {
+  getHtml: () => string;
+  getCss: () => string;
 }
 
 const FONT_FAMILIES = [
@@ -395,7 +400,7 @@ function buildStarterElements(): CanvasElement[] {
   ];
 }
 
-export default function TemplateCanvas({
+const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(function TemplateCanvas({
   value,
   onChange,
   css,
@@ -410,7 +415,7 @@ export default function TemplateCanvas({
   description = "",
   onNameChange,
   onDescriptionChange,
-}: TemplateCanvasProps) {
+}, ref) {
   const parsed0 = parseHtmlToElements(value);
   const containerSize = extractContainerSize(value);
   const matched = containerSize ? matchPreset(containerSize.width, containerSize.height) : null;
@@ -432,6 +437,11 @@ export default function TemplateCanvas({
   const baseH = preset ? preset.h : customH;
   const CANVAS_W = orientation === "landscape" ? baseW : baseH;
   const CANVAS_H = orientation === "landscape" ? baseH : baseW;
+
+  useImperativeHandle(ref, () => ({
+    getHtml: () => elementsToHtml(elements, CANVAS_W, CANVAS_H),
+    getCss: () => css,
+  }));
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -1780,7 +1790,9 @@ export default function TemplateCanvas({
       {content}
     </div>
   );
-}
+});
+
+export default TemplateCanvas;
 
 function Ruler({
   orientation,

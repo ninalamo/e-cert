@@ -56,7 +56,13 @@ export async function createTemplate(
   data: Pick<CertificateTemplate, "organization_id" | "name" | "description" | "html_content" | "css_content">,
   client?: SupabaseClient
 ): Promise<{ template: CertificateTemplate | null; error?: string }> {
-  const { data: template, error } = await repo(client ?? (await createClient())).create(data as Partial<CertificateTemplate>);
+  const r = repo(client ?? (await createClient()));
+  const duplicate = await r.findByOrganizationIdAndName(data.organization_id, data.name);
+  if (duplicate) {
+    return { template: null, error: `A template named "${data.name}" already exists. Please choose a different name.` };
+  }
+
+  const { data: template, error } = await r.create(data as Partial<CertificateTemplate>);
   if (!template) {
     return { template: null, error: error ?? "Failed to create template" };
   }
@@ -72,6 +78,13 @@ export async function updateTemplate(
   const existing = await r.findById(id);
   if (!existing) {
     return { template: null, error: "Template not found" };
+  }
+
+  if (data.name && data.name !== existing.name) {
+    const duplicate = await r.findByOrganizationIdAndName(existing.organization_id, data.name);
+    if (duplicate && duplicate.id !== id) {
+      return { template: null, error: `A template named "${data.name}" already exists. Please choose a different name.` };
+    }
   }
 
   const template = await r.update(id, data as Partial<CertificateTemplate>);
