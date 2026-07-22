@@ -23,8 +23,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon } from "lucide-react";
 
-const CERT_WIDTH = 960;
-
 type FilterKey = "all" | "with-description" | "without-description";
 type SortKey = "name-asc" | "name-desc" | "created-desc" | "created-asc";
 
@@ -44,20 +42,10 @@ export default function TemplatesTable() {
   const [sort] = useState<SortKey>("created-desc");
   const [previewTemplate, setPreviewTemplate] = useState<CertificateTemplate | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
-  const [, setCertHeight] = useState(680);
+  const [previewCertW, setPreviewCertW] = useState(1123);
+  const [previewCertH, setPreviewCertH] = useState(794);
   const [deleteTarget, setDeleteTarget] = useState<TemplateRow | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    function handleMessage(e: MessageEvent) {
-      if (typeof e.data === "object" && e.data?.type === "cert-height") {
-        setCertHeight(e.data.height);
-        setPreviewScale(e.data.scale);
-      }
-    }
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -128,9 +116,31 @@ export default function TemplatesTable() {
 
   function closePreview() {
     setPreviewTemplate(null);
-    setCertHeight(680);
     setPreviewScale(1);
+    setPreviewCertW(1123);
+    setPreviewCertH(794);
   }
+
+  useEffect(() => {
+    if (!previewTemplate) return;
+    const html = previewTemplate.html_content ?? "";
+    const wMatch = html.match(/width:\s*([\d.]+)px/);
+    const hMatch = html.match(/height:\s*([\d.]+)px/);
+    const cw = wMatch ? parseFloat(wMatch[1]) : 1123;
+    const ch = hMatch ? parseFloat(hMatch[1]) : 794;
+    setPreviewCertW(cw);
+    setPreviewCertH(ch);
+    function calc() {
+      const padX = 32;
+      const padY = 120;
+      const maxW = window.innerWidth - padX * 2;
+      const maxH = window.innerHeight - padY;
+      setPreviewScale(Math.min(1, maxW / cw, maxH / ch));
+    }
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, [previewTemplate]);
 
   const previewSrcDoc = previewTemplate ? buildPreviewSrcDoc(previewTemplate) : "";
 
@@ -236,12 +246,12 @@ export default function TemplatesTable() {
                 ) : (
                   <span className="status-pill status-active">Editable</span>
                 )}
-                <button
+                {/* <button
                   onClick={() => setPreviewTemplate(t)}
                   className="btn-disclosure"
                 >
                   Preview
-                </button>
+                </button> */}
                 {t.locked ? (
                   <span
                     title="Locked: used by an active or archived event"
@@ -298,8 +308,8 @@ export default function TemplatesTable() {
             onClick={closePreview}
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-            <div className="relative pointer-events-auto bg-white rounded-2xl shadow-ios-xl overflow-hidden ios-blur" style={{ width: "min(90vw, 680px)" }}>
-              <div className="p-3 border-b border-default flex items-center justify-between bg-white/80">
+            <div className="relative pointer-events-auto bg-white rounded-2xl shadow-ios-xl overflow-hidden ios-blur flex flex-col">
+              <div className="p-3 border-b border-default flex items-center justify-between bg-white/80 shrink-0">
                 <span className="text-sm font-semibold text-[var(--color-text)]">{previewTemplate.name}</span>
                 <button
                   onClick={closePreview}
@@ -308,15 +318,23 @@ export default function TemplatesTable() {
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
-              <div className="relative bg-[var(--color-surface-secondary)]" style={{ height: "calc(85vh - 120px)", overflow: "hidden" }}>
+              <div
+                className="relative bg-white overflow-hidden"
+                style={{ width: `${previewCertW * previewScale}px`, height: `${previewCertH * previewScale}px` }}
+              >
                 <iframe
                   srcDoc={previewSrcDoc}
-                  className="w-full h-full border-0"
+                  className="border-0 block"
                   title="Template Preview"
-                  style={{ transformOrigin: "top left", transform: `scale(${previewScale})`, width: `${100 / previewScale}%`, height: `${100 / previewScale}%` }}
+                  style={{
+                    width: `${previewCertW}px`,
+                    height: `${previewCertH}px`,
+                    transformOrigin: "top left",
+                    transform: `scale(${previewScale})`,
+                  }}
                 />
               </div>
-              <div className="p-3 border-t border-default flex items-center justify-between bg-white/80">
+              <div className="p-3 border-t border-default flex items-center justify-between bg-white/80 shrink-0">
                 <span className="text-xs text-tertiary">
                   {previewTemplate.description || "No description"}
                 </span>
@@ -371,6 +389,16 @@ function buildPreviewSrcDoc(template: CertificateTemplate): string {
   for (const [placeholder, value] of Object.entries(replacements)) {
     content = content.replace(new RegExp(placeholder.replace(/[{}]/g, "\\$&"), "g"), value);
   }
+  content = content.replace(/\{\{qr_code\}\}/g, '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><g fill="#000"><rect x="5" y="5" width="25" height="25"/><rect x="10" y="10" width="15" height="15" fill="#fff"/><rect x="13" y="13" width="9" height="9"/><rect x="70" y="5" width="25" height="25"/><rect x="75" y="10" width="15" height="15" fill="#fff"/><rect x="78" y="13" width="9" height="9"/><rect x="5" y="70" width="25" height="25"/><rect x="10" y="75" width="15" height="15" fill="#fff"/><rect x="13" y="78" width="9" height="9"/><rect x="35" y="5" width="5" height="5"/><rect x="45" y="5" width="5" height="5"/><rect x="55" y="5" width="5" height="5"/><rect x="35" y="15" width="5" height="5"/><rect x="50" y="15" width="5" height="5"/><rect x="60" y="15" width="5" height="5"/><rect x="35" y="25" width="5" height="5"/><rect x="45" y="25" width="5" height="5"/><rect x="55" y="35" width="5" height="5"/><rect x="40" y="40" width="5" height="5"/><rect x="50" y="40" width="5" height="5"/><rect x="60" y="40" width="5" height="5"/><rect x="35" y="50" width="5" height="5"/><rect x="45" y="50" width="5" height="5"/><rect x="55" y="50" width="5" height="5"/><rect x="5" y="35" width="5" height="5"/><rect x="5" y="45" width="5" height="5"/><rect x="15" y="40" width="5" height="5"/><rect x="25" y="35" width="5" height="5"/><rect x="25" y="45" width="5" height="5"/><rect x="5" y="55" width="5" height="5"/><rect x="15" y="60" width="5" height="5"/><rect x="25" y="55" width="5" height="5"/><rect x="35" y="60" width="5" height="5"/><rect x="45" y="55" width="5" height="5"/><rect x="55" y="55" width="5" height="5"/><rect x="65" y="35" width="5" height="5"/><rect x="75" y="35" width="5" height="5"/><rect x="85" y="35" width="5" height="5"/><rect x="70" y="45" width="5" height="5"/><rect x="80" y="45" width="5" height="5"/><rect x="90" y="45" width="5" height="5"/><rect x="65" y="55" width="5" height="5"/><rect x="75" y="60" width="5" height="5"/><rect x="85" y="55" width="5" height="5"/><rect x="35" y="70" width="5" height="5"/><rect x="45" y="75" width="5" height="5"/><rect x="55" y="70" width="5" height="5"/><rect x="40" y="85" width="5" height="5"/><rect x="50" y="80" width="5" height="5"/><rect x="60" y="85" width="5" height="5"/><rect x="70" y="70" width="5" height="5"/><rect x="80" y="75" width="5" height="5"/><rect x="90" y="80" width="5" height="5"/><rect x="75" y="85" width="5" height="5"/><rect x="85" y="90" width="5" height="5"/></g></svg>');
+
+  const wMatch = content.match(/width:\s*([\d.]+)px/);
+  const hMatch = content.match(/height:\s*([\d.]+)px/);
+  const certW = wMatch ? parseFloat(wMatch[1]) : 1123;
+  const certH = hMatch ? parseFloat(hMatch[1]) : 794;
+
+  const bgUrlMatch = (template.css_content ?? "").match(/background-image:\s*url\(["']?([^"')]+)["']?\)/);
+  const bgUrl = bgUrlMatch ? bgUrlMatch[1] : null;
+  const cleanCss = (template.css_content ?? "").replace(/\/\* __CERT_BACKGROUND__ \*\/[\s\S]*?\n}\n?/, "");
 
   return `<!DOCTYPE html>
 <html>
@@ -380,34 +408,19 @@ function buildPreviewSrcDoc(template: CertificateTemplate): string {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
-      width: ${CERT_WIDTH}px;
-      min-height: 100%;
+      width: ${certW}px;
+      height: ${certH}px;
+      overflow: hidden;
       font-family: system-ui, -apple-system, sans-serif;
+      background: none;
     }
-    body {
-      overflow: visible;
-    }
-    ${template.css_content ?? ""}
-    .cert-content {
-      width: ${CERT_WIDTH}px;
-      min-height: 680px;
-      position: relative;
-    }
+    ${cleanCss}
   </style>
 </head>
 <body>
-  <div class="cert-content">${content}</div>
-  <script>
-    function sendSize() {
-      const body = document.body;
-      const html = document.documentElement;
-      const height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
-      const scale = window.innerWidth / ${CERT_WIDTH};
-      parent.postMessage({ type: 'cert-height', height: height, scale: scale }, '*');
-    }
-    sendSize();
-    new ResizeObserver(sendSize).observe(document.body);
-  </script>
+  <div id="cert-frame" style="width: ${certW}px; height: ${certH}px; overflow: hidden; position: relative;${bgUrl ? ` background: url("${bgUrl}") center / cover no-repeat;` : ""}">
+    ${content}
+  </div>
 </body>
 </html>`;
 }

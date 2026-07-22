@@ -1,6 +1,7 @@
 import { ORG_NAME } from "@/lib/org";
 import Sidebar from "@/components/sidebar";
 import MobileNav from "@/components/mobile-nav";
+import Breadcrumbs from "@/components/breadcrumbs";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import LogoutButton from "@/components/logout-button";
@@ -31,6 +32,7 @@ export default function DashboardShell({
           </div>
         </header>
         <main className="p-4 pb-safe lg:p-6">
+          <Breadcrumbs />
           {children}
         </main>
       </div>
