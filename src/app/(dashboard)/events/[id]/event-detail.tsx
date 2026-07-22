@@ -24,7 +24,6 @@ import DeleteDialog from "./components/delete-dialog";
 import EventFieldsCard from "./components/event-fields-card";
 import TemplateCard from "./components/template-card";
 import AttendeesTab from "./components/attendees-tab";
-import TemplatePreview from "./components/template-preview";
 
 interface EventDetailData {
   event: Event;
@@ -57,7 +56,6 @@ export default function EventDetail({
   const [loading, setLoading] = useState(!initialData);
   const [templates, setTemplates] = useState<CertificateTemplate[]>(initialTemplates);
   const [activeTab, setActiveTab] = useState<"details" | "attendees">(initialTab);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editName, setEditName] = useState(false);
@@ -149,7 +147,6 @@ export default function EventDetail({
         </BreadcrumbList>
       </Breadcrumb>
 
-      {/* Header: name + status badge + delete */}
       <div>
         {editName ? (
           <form
@@ -292,7 +289,6 @@ export default function EventDetail({
             templates={templates}
             currentTemplate={template}
             onUpdated={handleTemplateUpdated}
-            onPreview={() => setPreviewOpen(true)}
           />
         </div>
       )}
@@ -310,19 +306,6 @@ export default function EventDetail({
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
       />
-
-      {previewOpen && (() => {
-        const tid = event.template_id;
-        const t = templates.find((x) => x.id === tid) ?? template;
-        if (!t) return null;
-        return (
-          <TemplatePreview
-            template={t}
-            eventDate={event.event_date}
-            onClose={() => setPreviewOpen(false)}
-          />
-        );
-      })()}
     </div>
   );
 }

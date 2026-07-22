@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
   getTemplateAction,
@@ -12,15 +11,6 @@ import {
 const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-
 export default function EditTemplateForm({ id }: { id: string }) {
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [locked, setLocked] = useState(false);
@@ -50,20 +40,6 @@ export default function EditTemplateForm({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/templates" />}>
-              Templates
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{template.name}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-text)]">Edit Template</h1>
         <p className="text-tertiary text-sm mt-1">

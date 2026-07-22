@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { updateEventAction } from "@/features/events/server/event.actions";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
@@ -10,13 +11,11 @@ export default function TemplateCard({
   templates,
   currentTemplate,
   onUpdated,
-  onPreview,
 }: {
   event: Event;
   templates: CertificateTemplate[];
   currentTemplate: CertificateTemplate | null;
   onUpdated: (event: Event, template: CertificateTemplate | null) => void;
-  onPreview: () => void;
 }) {
   const [selected, setSelected] = useState(event.template_id ?? "");
   const [saving, setSaving] = useState(false);
@@ -81,13 +80,14 @@ export default function TemplateCard({
           {saving ? "Saving..." : "Assign Template"}
         </button>
         {(selected || event.template_id) && (
-          <button
-            type="button"
-            onClick={onPreview}
+          <Link
+            href={`/templates/${selected || event.template_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn-brand-soft"
           >
-            Preview Certificate
-          </button>
+            Edit in Page
+          </Link>
         )}
         {message && (
           <span className="text-xs text-tertiary">{message}</span>
