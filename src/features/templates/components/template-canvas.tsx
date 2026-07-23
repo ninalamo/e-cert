@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { Rnd } from "react-rnd";
+import QRCode from "qrcode";
 import { PLACEHOLDER_FIELDS } from "./placeholder-field";
 import {
   PlusIcon,
+  MinusIcon,
+  HelpCircleIcon,
   ImageIcon,
   PaletteIcon,
   CopyIcon,
@@ -20,6 +23,7 @@ import {
   AlignRightIcon,
   AlignHorizontalJustifyCenterIcon,
   AlignVerticalJustifyCenterIcon,
+  AlignJustifyIcon,
   Undo2Icon,
   Redo2Icon,
   TypeIcon,
@@ -115,7 +119,7 @@ export interface CanvasElement {
   fontFamily: string;
   color: string;
   bold: boolean;
-  align: "left" | "center" | "right";
+  align: "left" | "center" | "right" | "justify";
   locked?: boolean;
   hidden?: boolean;
 }
@@ -301,7 +305,7 @@ export function elementsToHtml(
       return `<div${lockAttr} style="${style}">${el.content}</div>`;
     })
     .join("\n");
-  return `<div class="certificate" style="position:relative;width:${width}px;height:${height}px;">\n${blocks}\n</div>`;
+  return `<div class="certificate" style="position:relative;width:${width}px;height:${height}px;overflow:hidden;">\n${blocks}\n</div>`;
 }
 
 function parseHtmlToElements(html: string): CanvasElement[] {
@@ -510,9 +514,16 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const [editSrc, setEditSrc] = useState("");
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  const [panning, setPanning] = useState(false);
+  const isPanning = useRef(false);
+  const panStart = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
+  const [zoom, setZoom] = useState(1);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [dropSide, setDropSide] = useState<"before" | "after">("before");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
@@ -681,13 +692,14 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
+        if (showPreview) { setShowPreview(false); return; }
         if (fullscreen) onFullscreenChange?.(false);
         setSelectedIds([]);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [fullscreen, onFullscreenChange]);
+  }, [fullscreen, onFullscreenChange, showPreview]);
 
   // onChange sync is now during-render (see above) to prevent lost
   // canvas state when switching Design→Advanced before the effect fires.
@@ -1118,8 +1130,8 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: (e.clientX - rect.left) / zoom,
+      y: (e.clientY - rect.top) / zoom,
     };
   }
 
@@ -1222,14 +1234,36 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                 </div>
                 <div className="space-y-2">
                   {!fullscreen && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowPreview(true)}
+                        className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
+                        title="Preview certificate with sample data"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onFullscreenChange?.(true)}
+                        className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
+                        title="Enter fullscreen mode"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+                        Fullscreen
+                      </button>
+                    </>
+                  )}
+                  {fullscreen && (
                     <button
                       type="button"
-                      onClick={() => onFullscreenChange?.(true)}
+                      onClick={() => onFullscreenChange?.(false)}
                       className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
-                      title="Fullscreen"
+                      title="Exit fullscreen (Esc)"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
-                      Fullscreen
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
+                      Exit Fullscreen
                     </button>
                   )}
                   <button
@@ -1488,6 +1522,10 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                 <>
                   <div className="ml-auto" />
                   <div className="w-px h-4 bg-[var(--color-border)]" />
+                  <button type="button" onClick={() => setShowHelp(true)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-secondary)] active:scale-[0.97]" title="How to use — keyboard shortcuts & tools">
+                    <HelpCircleIcon className="size-3.5" />
+                  </button>
+                  <div className="w-px h-4 bg-[var(--color-border)]" />
                   <button type="button" onClick={() => onFullscreenChange?.(true)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-secondary)] active:scale-[0.97]" title="Toggle fullscreen mode (Esc to exit)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
                   </button>
@@ -1578,6 +1616,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                 { key: "left", icon: AlignLeftIcon, label: "Align text left" },
                 { key: "center", icon: AlignCenterIcon, label: "Align text center" },
                 { key: "right", icon: AlignRightIcon, label: "Align text right" },
+                { key: "justify", icon: AlignJustifyIcon, label: "Justify text" },
               ] as const).map(({ key, icon: Icon, label }) => (
                 <button
                   key={key}
@@ -1689,12 +1728,13 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
         )}
 
         <div
-          className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3"
+          className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3 relative"
           onKeyDown={handleKeyDown}
           tabIndex={0}
-          style={{ maxHeight: fullscreen ? "calc(100vh - 80px)" : "calc(100vh - 320px)" }}
+          style={{ maxHeight: fullscreen ? "calc(100vh - 80px)" : "calc(100vh - 320px)", cursor: panning ? "grabbing" : spaceHeld ? "grab" : undefined, userSelect: panning ? "none" : undefined }}
         >
-          <div className="inline-block bg-[var(--color-surface)] p-1.5 rounded-lg shadow-sm">
+          <div className="inline-flex items-center justify-center min-w-full min-h-full p-8">
+            <div className="inline-block bg-[var(--color-surface)] p-4 rounded-lg shadow-sm" style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}>
             <Ruler
               orientation="horizontal"
               length={CANVAS_W}
@@ -1708,7 +1748,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
               />
               <div
                 ref={canvasRef}
-                className="relative shadow bg-white overflow-hidden"
+                className="relative shadow bg-white border border-[var(--color-border)]"
                 style={{
                   width: CANVAS_W,
                   height: CANVAS_H,
@@ -1760,7 +1800,6 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                     key={el.id}
                     size={{ width: el.w, height: el.h }}
                     position={{ x: el.x, y: el.y }}
-                    bounds="parent"
                     dragHandleClassName="cert-drag"
                     disableDragging={!!el.locked}
                     onDragStart={() => handleDragStart(el.id)}
@@ -1941,6 +1980,36 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
               </div>
             </div>
           </div>
+          </div>
+
+          <div className="absolute top-2 right-2 z-50 flex flex-col items-center rounded-lg bg-[var(--color-surface)] shadow-lg border border-[var(--color-border)]">
+            <button
+              type="button"
+              onClick={() => setZoom((z) => Math.min(5, z + 0.1))}
+              className="rounded-t-lg px-3 py-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] transition-colors"
+              title="Zoom in (Ctrl++)"
+            >
+              <PlusIcon className="size-4" />
+            </button>
+            <div className="h-px w-full bg-[var(--color-border)]" />
+            <button
+              type="button"
+              onClick={() => setZoom((z) => Math.max(0.1, z - 0.1))}
+              className="rounded-b-lg px-3 py-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] transition-colors"
+              title="Zoom out (Ctrl+-)"
+            >
+              <MinusIcon className="size-4" />
+            </button>
+            <div className="h-px w-full bg-[var(--color-border)]" />
+            <button
+              type="button"
+              onClick={() => setZoom(1)}
+              className="rounded-b-lg px-3 py-1.5 text-[10px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] transition-colors tabular-nums"
+              title="Reset zoom (Ctrl+0)"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2067,21 +2136,220 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     </Dialog>
   );
 
+  const [qrDataUrl, setQrDataUrl] = useState("");
+
+  useEffect(() => {
+    if (showPreview) {
+      QRCode.toDataURL("https://e-cert.example.com/verify/CERT-000001", {
+        width: 200,
+        margin: 1,
+        color: { dark: "#000000", light: "#ffffff" },
+      }).then((url) => setQrDataUrl(url));
+    }
+  }, [showPreview]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.code === "Space" && !e.repeat && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        setSpaceHeld(true);
+      }
+    }
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.code === "Space") {
+        setSpaceHeld(false);
+        setPanning(false);
+        isPanning.current = false;
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!spaceHeld) return;
+    const el = canvasRef.current;
+    if (!el) return;
+    const container = el.closest(".cert-canvas") as HTMLElement | null;
+    if (!container) return;
+
+    function onMouseDown(e: MouseEvent) {
+      if (!spaceHeld) return;
+      isPanning.current = true;
+      setPanning(true);
+      panStart.current = {
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: container!.scrollLeft,
+        scrollTop: container!.scrollTop,
+      };
+    }
+    function onMouseMove(e: MouseEvent) {
+      if (!isPanning.current) return;
+      const dx = e.clientX - panStart.current.x;
+      const dy = e.clientY - panStart.current.y;
+      container!.scrollLeft = panStart.current.scrollLeft - dx;
+      container!.scrollTop = panStart.current.scrollTop - dy;
+    }
+    function onMouseUp() {
+      isPanning.current = false;
+      setPanning(false);
+    }
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [spaceHeld]);
+
+  useEffect(() => {
+    const container = canvasRef.current?.closest(".cert-canvas") as HTMLElement | null;
+    if (!container) return;
+
+    function onWheel(e: WheelEvent) {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        setZoom((z) => Math.min(5, Math.max(0.1, z + delta)));
+      }
+    }
+    container.addEventListener("wheel", onWheel, { passive: false });
+    return () => container.removeEventListener("wheel", onWheel);
+  }, []);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const key = e.key.toLowerCase();
+      if (key === "=" || key === "+") {
+        e.preventDefault();
+        setZoom((z) => Math.min(5, z + 0.1));
+      } else if (key === "-") {
+        e.preventDefault();
+        setZoom((z) => Math.max(0.1, z - 0.1));
+      } else if (key === "0") {
+        e.preventDefault();
+        setZoom(1);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const previewModal = showPreview ? (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center"
+      style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+      onClick={() => setShowPreview(false)}
+    >
+      <button
+        type="button"
+        onClick={() => setShowPreview(false)}
+        className="fixed top-4 right-4 z-[201] flex items-center justify-center w-10 h-10 rounded-full bg-white/90 border border-gray-200 text-gray-500 shadow-lg transition-all hover:bg-white hover:text-gray-700 hover:shadow-xl active:scale-[0.95]"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <div
+        className="bg-white shadow-2xl rounded-lg overflow-hidden"
+        style={{ width: CANVAS_W, height: CANVAS_H, maxWidth: "90vw", maxHeight: "85vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          dangerouslySetInnerHTML={{
+            __html: elementsToHtml(elements, CANVAS_W, CANVAS_H)
+              .replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz")
+              .replace(/\{\{certificate_number\}\}/g, "CERT-000001")
+              .replace(/\{\{issued_date\}\}/g, new Date().toLocaleDateString())
+              .replace(/\{\{organization_name\}\}/g, "Sample Organization")
+              .replace(/\{\{event_name\}\}/g, "Sample Event")
+              .replace(/\{\{event_date\}\}/g, new Date().toLocaleDateString())
+              .replace(/\{\{event_location\}\}/g, "Sample Location")
+              .replace(/\{\{event_organizer\}\}/g, "Sample Organizer")
+              .replace(/\{\{certificate_title\}\}/g, "Certificate of Achievement")
+              .replace(/\{\{expiry_date\}\}/g, new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString())
+              .replace(/\{\{qr_code\}\}/g, qrDataUrl ? `<img src="${qrDataUrl}" style="width:100%;height:100%;object-fit:contain;" />` : '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#fff"/></svg>'),
+          }}
+          style={{
+            width: CANVAS_W,
+            height: CANVAS_H,
+            background: canvasBg
+              ? `url("${canvasBg}") center / cover no-repeat`
+              : "transparent",
+          }}
+        />
+      </div>
+    </div>
+  ) : null;
+
+  const helpModal = showHelp ? (
+    <Dialog open onOpenChange={() => setShowHelp(false)}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>How to Use</DialogTitle>
+          <DialogDescription>Keyboard shortcuts and tools reference</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 text-sm">
+          <Section title="Navigation">
+            <Row keys={["Space + Drag"]} desc="Pan / move the canvas around" />
+            <Row keys={["Ctrl + Scroll"]} desc="Zoom in / out" />
+            <Row keys={["Ctrl + +"]} desc="Zoom in" />
+            <Row keys={["Ctrl + -"]} desc="Zoom out" />
+            <Row keys={["Ctrl + 0"]} desc="Reset zoom to 100%" />
+          </Section>
+          <Section title="Selection">
+            <Row keys={["Click"]} desc="Select element" />
+            <Row keys={["Shift + Click"]} desc="Toggle add/remove from selection" />
+            <Row keys={["Ctrl + A"]} desc="Select all elements" />
+            <Row keys={["Esc"]} desc="Deselect all / close modal / exit fullscreen" />
+            <Row keys={["Drag on canvas"]} desc="Marquee select multiple elements" />
+          </Section>
+          <Section title="Editing">
+            <Row keys={["Double-click"]} desc="Edit text / image / QR content" />
+            <Row keys={["Del / Backspace"]} desc="Delete selected elements" />
+            <Row keys={["Ctrl + C"]} desc="Copy selected elements" />
+            <Row keys={["Ctrl + V"]} desc="Paste from clipboard" />
+            <Row keys={["Ctrl + D"]} desc="Duplicate selected elements" />
+            <Row keys={["Ctrl + Z"]} desc="Undo" />
+            <Row keys={["Ctrl + Shift+Z"]} desc="Redo" />
+          </Section>
+          <Section title="Canvas">
+            <Row keys={["Drag handles"]} desc="Resize selected element" />
+            <Row keys={["Drag ⠿ label"]} desc="Move selected element" />
+            <Row keys={["Rulers"]} desc="Click ruler to add guide line" />
+            <Row keys={["Grid + Snap"]} desc="Toggle in toolbar for alignment" />
+          </Section>
+          <Section title="Canvas Bleed">
+            <Row keys={["Drag beyond edge"]} desc="Elements can be placed outside the canvas (bleed area)" />
+            <Row keys={["Final output"]} desc="HTML output is clipped to canvas size" />
+          </Section>
+          <Section title="Toolbar Tools">
+            <Row keys={["Insert"]} desc="Add text, image, or QR code (centered on canvas)" />
+            <Row keys={["Fields"]} desc="Add placeholder fields ({{name}}, {{date}}, etc.)" />
+            <Row keys={["Arrange"]} desc="Reorder layers (front, forward, backward, back)" />
+            <Row keys={["Lock"]} desc="Lock/unlock selected elements" />
+            <Row keys={["Hide"]} desc="Show/hide elements (hidden excluded from output)" />
+          </Section>
+        </div>
+      </DialogContent>
+    </Dialog>
+  ) : null;
+
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-surface)] p-2 gap-2">
         {content}
         {editModal}
         {deleteConfirmDialog}
-        <button
-          type="button"
-          onClick={() => onFullscreenChange?.(false)}
-          className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-text)] shadow-lg transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97]"
-          title="Exit fullscreen (Esc)"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
-          Exit Fullscreen
-        </button>
+        {previewModal}
+        {helpModal}
       </div>
     );
   }
@@ -2091,6 +2359,8 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
       {content}
       {editModal}
       {deleteConfirmDialog}
+      {previewModal}
+      {helpModal}
     </div>
   );
 });
@@ -2157,6 +2427,28 @@ function Ruler({
       }
     >
       {ticks}
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">{title}</h3>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+function Row({ keys, desc }: { keys: string[]; desc: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex gap-1 flex-shrink-0 min-w-[140px] justify-end">
+        {keys.map((k) => (
+          <kbd key={k} className="inline-block rounded border border-[var(--color-border)] bg-[var(--color-surface-secondary)] px-1.5 py-0.5 text-[10px] font-mono font-semibold text-[var(--color-text)]">{k}</kbd>
+        ))}
+      </div>
+      <span className="text-[var(--color-text-secondary)]">{desc}</span>
     </div>
   );
 }
