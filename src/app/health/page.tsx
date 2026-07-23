@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 export default function HealthPage() {
-  const [data, setData] = useState<unknown>(null);
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
