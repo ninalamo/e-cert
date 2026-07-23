@@ -16,16 +16,12 @@ export default function NewTemplatePage() {
         </p>
       </div>
       <TemplateForm
-        submitLabel="Create Template"
+        submitLabel="Save Changes"
         onSubmit={async (data) => {
-          const result = await createTemplateAction({
+          return await createTemplateAction({
             organization_id: ORG_ID,
             ...data,
           });
-          if (!result?.error) {
-            window.location.href = "/templates";
-          }
-          return result;
         }}
       />
     </div>
