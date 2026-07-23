@@ -77,6 +77,7 @@ export default function AttendeesManager({
 
   const load = useCallback(async () => {
     const data = await getAttendeesAction(eventId);
+    console.log(`[AttendeesManager] Loaded ${data.length} attendees for event ${eventId}`);
     setAttendees(data);
     setLoading(false);
   }, [eventId]);

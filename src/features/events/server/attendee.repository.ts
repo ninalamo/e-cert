@@ -14,7 +14,10 @@ export class EventAttendeeRepository extends BaseRepository<EventAttendee> {
       .eq("event_id", eventId)
       .order("created_at", { ascending: true });
 
-    if (error) return [];
+    if (error) {
+      console.error(`[AttendeeRepository] Error fetching attendees for event ${eventId}:`, error);
+      return [];
+    }
     return (data ?? []) as EventAttendee[];
   }
 
