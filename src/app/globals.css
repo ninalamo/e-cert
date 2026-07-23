@@ -4,45 +4,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @keyframes shimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .shimmer-smooth {
-    animation: shimmer 1.5s ease-in-out infinite;
-    background: linear-gradient(
-      90deg,
-      hsl(var(--color-surface-muted)) 25%,
-      hsl(var(--color-surface)) 50%,
-      hsl(var(--color-surface-muted)) 75%
-    );
-    background-size: 200% 100%;
-  }
-}
-
-@keyframes slideRight {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.slide-in-right::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255,255,255,0.05),
-    transparent
-  );
-  animation: slideRight 3s linear infinite;
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @theme inline {
+  --animate-shimmer: shimmer 1.5s ease-in-out infinite;
+
   --font-sans: var(--font-inter), 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-display);
@@ -331,26 +299,10 @@
 
 /* ── Legacy gray utility mapping (mirrors design-system tokens) ───────── */
 @layer base {
-  .bg-gray-50 { background-color: var(--color-surface); }
   .bg-gray-100 { background-color: var(--color-surface-secondary); }
-  .bg-gray-200 { background-color: var(--color-border); }
-  .bg-gray-300 { background-color: var(--color-border-strong); }
   .bg-gray-400 { background-color: var(--color-border-strong); }
-  .bg-gray-800 { background-color: var(--color-text-secondary); }
-  .bg-gray-900 { background-color: var(--color-text); }
 
   .text-gray-500 { color: var(--color-text-muted); }
-  .text-gray-600 { color: var(--color-text-secondary); }
-  .text-gray-700 { color: var(--color-text); }
-  .text-gray-800 { color: var(--color-text); }
-
-  .border-gray-200 { border-color: var(--color-border); }
-  .border-gray-300 { border-color: var(--color-border-strong); }
-
-  .hover\:bg-gray-50:hover { background-color: var(--color-surface-hover); }
-  .hover\:bg-gray-100:hover { background-color: var(--color-surface-hover); }
-  .hover\:bg-gray-200:hover { background-color: var(--color-surface-hover); }
-  .hover\:bg-gray-800:hover { background-color: var(--color-text); }
 
   /* Raw table headers (legacy) — iOS-style, readable in dark mode */
   table:not(.tbl) thead th {
@@ -432,30 +384,15 @@
   .text-danger { color: var(--color-danger-text); }
   .text-info { color: var(--color-info-text); }
   .hover\:text-secondary:hover { color: var(--color-text-secondary); }
-  .hover\:text-tertiary:hover { color: var(--color-text-muted); }
   .border-default { border-color: var(--color-border); }
   .border-strong { border-color: var(--color-border-strong); }
-  .dvh-screen { height: 100dvh; }
 
   .pb-safe { padding-bottom: var(--safe-bottom); }
   .pt-safe { padding-top: var(--safe-top); }
-  .pl-safe { padding-left: var(--safe-left); }
-  .pr-safe { padding-right: var(--safe-right); }
-
-  .mobile-only { display: none; }
-  @media screen and (max-width: 1023px) { .mobile-only { display: revert; } }
-  .desktop-only { display: revert; }
-  @media screen and (max-width: 1023px) { .desktop-only { display: none; } }
-  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
 
   /* iOS frosted glass */
   .ios-blur { backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
   .ios-blur-heavy { backdrop-filter: saturate(180%) blur(40px); -webkit-backdrop-filter: saturate(180%) blur(40px); }
-  .ios-blur-light { backdrop-filter: saturate(150%) blur(12px); -webkit-backdrop-filter: saturate(150%) blur(12px); }
-
-  .ios-separator { border-bottom: 1px solid var(--color-border); }
-  .ios-separator:last-child { border-bottom: none; }
 }
 
 /* ── Brand component classes (iOS-style, from design guide) ───────────────
@@ -527,14 +464,6 @@
   .btn-disclosure:hover { opacity: 0.7; }
   .btn-disclosure:active { opacity: 0.5; }
   .btn-disclosure svg { width: 0.875rem; height: 0.875rem; }
-
-  /* "Edit" — brand-tinted */
-  .btn-edit {
-    padding: 0.375rem 0.75rem; font-size: 0.8125rem;
-    background-color: var(--color-brand-100);
-    color: var(--color-brand-700); border: 1px solid transparent;
-  }
-  .btn-edit:not(:disabled):hover { background-color: var(--color-brand-200); }
 
   /* "Delete" / destructive — red */
   .btn-danger {
@@ -661,51 +590,17 @@
   .status-badge--archive {
     background-color: var(--color-warning-bg); color: var(--color-warning-text);
   }
-  .status-badge--info {
-    background-color: var(--color-info-bg); color: var(--color-info-text);
-  }
   .status-badge--danger {
     background-color: var(--color-danger-bg); color: var(--color-danger-text);
   }
-  .status-badge--brand {
-    background-color: var(--color-brand-100); color: var(--color-brand-700);
-  }
 
-  /* Legacy aliases kept for backwards compatibility (regular CSS, no composes) */
+  /* Legacy alias kept for backwards compatibility */
   .badge-brand {
     display: inline-flex; align-items: center;
     padding: 0.3125rem 0.75rem; border-radius: 9999px;
     font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
     white-space: nowrap;
     background-color: var(--color-brand-100); color: var(--color-brand-700);
-  }
-  .badge-emerald {
-    display: inline-flex; align-items: center;
-    padding: 0.3125rem 0.75rem; border-radius: 9999px;
-    font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
-    white-space: nowrap;
-    background-color: var(--color-success-bg); color: var(--color-success-text);
-  }
-  .badge-amber {
-    display: inline-flex; align-items: center;
-    padding: 0.3125rem 0.75rem; border-radius: 9999px;
-    font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
-    white-space: nowrap;
-    background-color: var(--color-warning-bg); color: var(--color-warning-text);
-  }
-  .badge-red {
-    display: inline-flex; align-items: center;
-    padding: 0.3125rem 0.75rem; border-radius: 9999px;
-    font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
-    white-space: nowrap;
-    background-color: var(--color-danger-bg); color: var(--color-danger-text);
-  }
-  .badge-blue {
-    display: inline-flex; align-items: center;
-    padding: 0.3125rem 0.75rem; border-radius: 9999px;
-    font-size: 0.8125rem; font-weight: 600; line-height: 1; letter-spacing: 0.01em;
-    white-space: nowrap;
-    background-color: var(--color-info-bg); color: var(--color-info-text);
   }
 
   .section-title {
@@ -782,9 +677,6 @@
   }
   .status-draft {
     background-color: var(--color-surface-tertiary); color: var(--color-text-secondary);
-  }
-  .status-info {
-    background-color: var(--color-info-bg); color: var(--color-info-text);
   }
   .status-archive {
     background-color: var(--color-warning-bg); color: var(--color-warning-text);
