@@ -25,7 +25,9 @@ export default function DashboardShell({
             <span className="text-sm font-medium text-secondary">{ORG_NAME}</span>
           </div>
           <div className="flex items-center gap-2">
-            <WhatsNew userKey={session.email ?? session.id} />
+            {session.role !== "participant" && (
+              <WhatsNew userKey={session.email ?? session.id} />
+            )}
             <ThemeToggle />
             <span className="hidden text-xs text-tertiary sm:inline">{session.name ?? session.email}</span>
             <LogoutButton />
