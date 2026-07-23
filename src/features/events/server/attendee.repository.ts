@@ -15,9 +15,25 @@ export class EventAttendeeRepository extends BaseRepository<EventAttendee> {
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error(`[AttendeeRepository] Error fetching attendees for event ${eventId}:`, error);
-      return [];
+      console.error(`[AttendeeRepository] Error with FK join for event ${eventId}:`, error);
+
+      const { data: fallback, error: fallbackError } = await this.client
+        .from(this.table)
+        .select("*")
+        .eq("event_id", eventId)
+        .order("created_at", { ascending: true });
+
+      if (fallbackError) {
+        console.error(`[AttendeeRepository] Fallback (no join) also failed for event ${eventId}:`, fallbackError);
+        return [];
+      }
+
+      console.log(`[AttendeeRepository] Fallback (no join) returned ${fallback?.length ?? 0} rows for event ${eventId} — FK join name is mismatched`);
+      return (fallback ?? []) as EventAttendee[];
     }
+
+    console.log(`[AttendeeRepository] Raw response for event ${eventId}: rows=${data?.length ?? 0}`);
+
     return (data ?? []) as EventAttendee[];
   }
 
