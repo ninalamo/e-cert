@@ -28,28 +28,31 @@ ${rendered}
 </html>`;
 }
 
-export async function issueCertificate(data: {
-  organization_id: string;
-  event_id?: string;
-  template_id?: string;
-  recipient_name: string;
-  recipient_email: string;
-  expires_at?: string;
-  metadata?: Record<string, unknown>;
-  send_email?: boolean;
-  user_id?: string;
-  skip_pdf?: boolean;
-  existing_pdf_base64?: string;
-  event?: {
-    name?: string | null;
-    event_date?: string | null;
-    location?: string | null;
-    organizer?: string | null;
-    certificate_title?: string | null;
-    certificate_number_pattern?: string | null;
-  };
-}): Promise<{ certificate: Certificate | null; error?: string; emailSent?: boolean }> {
-  const client = await createClient();
+export async function issueCertificate(
+  data: {
+    organization_id: string;
+    event_id?: string;
+    template_id?: string;
+    recipient_name: string;
+    recipient_email: string;
+    expires_at?: string;
+    metadata?: Record<string, unknown>;
+    send_email?: boolean;
+    user_id?: string;
+    skip_pdf?: boolean;
+    existing_pdf_base64?: string;
+    event?: {
+      name?: string | null;
+      event_date?: string | null;
+      location?: string | null;
+      organizer?: string | null;
+      certificate_title?: string | null;
+      certificate_number_pattern?: string | null;
+    };
+  },
+  clientOverride?: SupabaseClient
+): Promise<{ certificate: Certificate | null; error?: string; emailSent?: boolean }> {
+  const client = clientOverride ?? (await createClient());
   const certRepo = repo(client);
   const number = await generateCertificateNumber({
     organizationId: data.organization_id,
