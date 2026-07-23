@@ -50,6 +50,7 @@ export async function register(data: RegisterInput) {
       data: {
         name: data.name,
       },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/auth/callback`,
     },
   });
 

@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reseed, SEED_USERS, SEED_PASSWORD, getSeedAdmin } from "@/lib/seed";
 
-function isLocalhost(request: NextRequest): boolean {
-  const host =
-    request.headers.get("x-forwarded-host") ??
-    request.headers.get("host") ??
-    "";
-  return host.startsWith("localhost") || host.startsWith("127.0.0.1") || host.startsWith("[::1]");
+const HEALTH_PASSWORD = "admin@lyceumalabang.edu.ph";
+
+function isAuthorized(request: NextRequest): boolean {
+  return request.headers.get("x-health-password") === HEALTH_PASSWORD;
 }
 
 async function getSeededUsersDetail(admin: ReturnType<typeof getSeedAdmin>) {
@@ -39,8 +37,10 @@ async function getSeededUsersDetail(admin: ReturnType<typeof getSeedAdmin>) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!isLocalhost(request)) {
-    return NextResponse.json({ status: "ok", auth: "up" });
+
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   }
 
   try {
@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  if (!isLocalhost(request)) {
-    return NextResponse.json({ status: "ok", auth: "up" });
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {

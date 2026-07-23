@@ -53,13 +53,12 @@ export async function issueCertificatesWorkflow(
 async function fetchEvent(eventId: string) {
   "use step";
 
-  const { createClient } = await import("@/lib/supabase/server");
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
   const { EventRepository } = await import(
     "@/features/events/server/event.repository"
   );
 
-  const client = await createClient();
-  const repo = new EventRepository(client);
+  const repo = new EventRepository(supabaseAdmin);
   const event = await repo.findById(eventId);
 
   if (!event) {
@@ -94,7 +93,7 @@ async function issueForAttendee(
 ): Promise<AttendeeResult & { emailed?: boolean }> {
   "use step";
 
-  const { createClient } = await import("@/lib/supabase/server");
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
   const { EventAttendeeRepository } = await import(
     "@/features/events/server/attendee.repository"
   );
@@ -102,8 +101,7 @@ async function issueForAttendee(
     "@/features/certificates/server/certificate.service"
   );
 
-  const client = await createClient();
-  const attendeeRepo = new EventAttendeeRepository(client);
+  const attendeeRepo = new EventAttendeeRepository(supabaseAdmin);
   const attendee = await attendeeRepo.findById(attendeeId);
 
   if (!attendee) {
@@ -118,27 +116,30 @@ async function issueForAttendee(
         attendee.metadata?.generation_mode === "file" &&
         attendee.metadata?.file_data;
 
-      const result = await certService.issueCertificate({
-        organization_id: attendee.organization_id,
-        event_id: eventId,
-        template_id: templateId ?? undefined,
-        recipient_name: attendee.name,
-        recipient_email: attendee.email,
-        expires_at: validUntil ?? undefined,
-        metadata: { attendee_id: attendee.id },
-        skip_pdf: true,
-        ...(hasUpload
-          ? { existing_pdf_base64: attendee.metadata!.file_data as string }
-          : {}),
-        event: {
-          name: eventName,
-          event_date: eventDate,
-          location,
-          organizer,
-          certificate_title: certificateTitle,
-          certificate_number_pattern: certificateNumberPattern,
+      const result = await certService.issueCertificate(
+        {
+          organization_id: attendee.organization_id,
+          event_id: eventId,
+          template_id: templateId ?? undefined,
+          recipient_name: attendee.name,
+          recipient_email: attendee.email,
+          expires_at: validUntil ?? undefined,
+          metadata: { attendee_id: attendee.id },
+          skip_pdf: true,
+          ...(hasUpload
+            ? { existing_pdf_base64: attendee.metadata!.file_data as string }
+            : {}),
+          event: {
+            name: eventName,
+            event_date: eventDate,
+            location,
+            organizer,
+            certificate_title: certificateTitle,
+            certificate_number_pattern: certificateNumberPattern,
+          },
         },
-      });
+        supabaseAdmin
+      );
 
       if (result.error || !result.certificate) {
         return {
@@ -160,7 +161,7 @@ async function issueForAttendee(
       const { sendCertificateEmail } = await import(
         "@/features/certificates/server/certificate-email.service"
       );
-      const emailResult = await sendCertificateEmail(certId, userId, client, {
+      const emailResult = await sendCertificateEmail(certId, userId, supabaseAdmin, {
         skip_pdf: true,
       });
       emailed = emailResult.success;
