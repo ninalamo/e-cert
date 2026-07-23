@@ -30,6 +30,7 @@ import {
   EyeOffIcon,
   ChevronDownIcon,
   GripVerticalIcon,
+  QrCodeIcon,
 } from "lucide-react";
 import {
   Dialog,
@@ -430,7 +431,7 @@ function buildStarterElements(): CanvasElement[] {
       bold: true, align: "center",
     },
     {
-      id: uid(), type: "text", x: 440, y: 470, w: 200, h: 200, z: 8,
+      id: uid(), type: "qr", x: 440, y: 470, w: 160, h: 160, z: 8,
       content: "{{qr_code}}",
       fontSize: "14px", fontFamily: "Arial, sans-serif", color: "#000000",
       bold: false, align: "center",
@@ -511,6 +512,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [dropSide, setDropSide] = useState<"before" | "after">("before");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
@@ -794,13 +796,15 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
 
   function addText() {
     const z = elements.length ? Math.max(...elements.map((e) => e.z)) + 1 : 1;
+    const w = 400;
+    const h = 60;
     const el: CanvasElement = {
       id: uid(),
       type: "text",
-      x: 80,
-      y: 80,
-      w: 400,
-      h: 60,
+      x: Math.round((CANVAS_W - w) / 2),
+      y: Math.round((CANVAS_H - h) / 2),
+      w,
+      h,
       z,
       content: "Double-click to edit text",
       fontSize: "24px",
@@ -815,18 +819,70 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     setSelectedIds([el.id]);
   }
 
+  function addQr() {
+    const z = elements.length ? Math.max(...elements.map((e) => e.z)) + 1 : 1;
+    const size = 160;
+    const el: CanvasElement = {
+      id: uid(),
+      type: "qr",
+      x: Math.round((CANVAS_W - size) / 2),
+      y: Math.round((CANVAS_H - size) / 2),
+      w: size,
+      h: size,
+      z,
+      content: "{{qr_code}}",
+      fontSize: "14px",
+      fontFamily: "Arial, sans-serif",
+      color: "#000000",
+      bold: false,
+      align: "center",
+    };
+    const newElements = [...elements, el];
+    saveToHistory(newElements);
+    setElements(newElements);
+    setSelectedIds([el.id]);
+  }
+
+  function addFieldText(fieldKey: string) {
+    const z = elements.length ? Math.max(...elements.map((e) => e.z)) + 1 : 1;
+    const content = `{{${fieldKey}}}`;
+    const w = 300;
+    const h = 48;
+    const el: CanvasElement = {
+      id: uid(),
+      type: "text",
+      x: Math.round((CANVAS_W - w) / 2),
+      y: Math.round((CANVAS_H - h) / 2),
+      w,
+      h,
+      z,
+      content,
+      fontSize: "20px",
+      fontFamily: "Georgia, serif",
+      color: "#1a1a1a",
+      bold: false,
+      align: "center",
+    };
+    const newElements = [...elements, el];
+    saveToHistory(newElements);
+    setElements(newElements);
+    setSelectedIds([el.id]);
+  }
+
   async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = await fileToDataUrl(file);
     const z = elements.length ? Math.max(...elements.map((e) => e.z)) + 1 : 1;
+    const w = 200;
+    const h = 200;
     const el: CanvasElement = {
       id: uid(),
       type: "image",
-      x: 80,
-      y: 80,
-      w: 200,
-      h: 200,
+      x: Math.round((CANVAS_W - w) / 2),
+      y: Math.round((CANVAS_H - h) / 2),
+      w,
+      h,
       z,
       src: url,
       content: "",
@@ -1257,19 +1313,29 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                       type="button"
                       onClick={(e) => { e.stopPropagation(); toggleElementVisibility(el.id); }}
                       className="flex-shrink-0 p-0.5 rounded hover:bg-[var(--color-surface-hover)] transition-colors"
-                      title={el.hidden ? "Show" : "Hide"}
+                      title={el.hidden ? "Show element" : "Hide element"}
                     >
                       {el.hidden
                         ? <EyeOffIcon className="size-3 text-[var(--color-text-muted)]" />
                         : <EyeIcon className="size-3 text-[var(--color-text-muted)]" />
                       }
                     </button>
-                    {el.locked && <LockIcon className="size-3 flex-shrink-0 opacity-50" />}
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); removeElement(el.id); }}
+                      onClick={(e) => { e.stopPropagation(); update(el.id, { locked: !el.locked }); }}
+                      className="flex-shrink-0 p-0.5 rounded hover:bg-[var(--color-surface-hover)] transition-colors"
+                      title={el.locked ? "Unlock element" : "Lock element"}
+                    >
+                      {el.locked
+                        ? <LockIcon className="size-3 text-amber-500" />
+                        : <LockOpenIcon className="size-3 text-[var(--color-text-muted)]" />
+                      }
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setDeletingId(el.id); }}
                       className="flex-shrink-0 p-0.5 rounded hover:bg-[var(--color-danger-bg)] transition-colors"
-                      title="Delete"
+                      title="Delete element"
                     >
                       <Trash2Icon className="size-3 text-[var(--color-text-muted)] hover:text-[var(--color-danger-text)]" />
                     </button>
@@ -1282,167 +1348,173 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
       )}
       <div className="flex-1 min-w-0">
         {!preview && (
-          <div className="flex items-center gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 shadow-[var(--shadow-ios-sm)]">
-            <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
-              <button type="button" onClick={addText} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-100)] active:scale-[0.97]" title="Insert text">
-                <PlusIcon className="size-3" /> Text
-              </button>
-              <button type="button" onClick={() => imageInputRef.current?.click()} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-50 active:scale-[0.97]" title="Insert image">
-                <ImageIcon className="size-3" /> Image
-              </button>
-              <button type="button" onClick={() => bgInputRef.current?.click()} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-purple-700 transition-all hover:bg-purple-50 active:scale-[0.97]" title="Set background">
-                <PaletteIcon className="size-3" /> BG
-              </button>
-            </div>
-
-            <div className="w-px h-4 bg-[var(--color-border)]" />
-
-            <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
-              <button type="button" onClick={undo} disabled={historyIndex <= 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Undo (Ctrl+Z)">
-                <Undo2Icon className="size-3.5" />
-              </button>
-              <button type="button" onClick={redo} disabled={historyIndex >= history.length - 1} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Redo (Ctrl+Shift+Z)">
-                <Redo2Icon className="size-3.5" />
-              </button>
-            </div>
-
-            <div className="w-px h-4 bg-[var(--color-border)]" />
-
-            <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
-              <button type="button" onClick={copySelection} disabled={selCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Copy (Ctrl+C)">
-                <CopyIcon className="size-3.5" />
-              </button>
-              <button type="button" onClick={paste} disabled={clipboardCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Paste (Ctrl+V)">
-                <ClipboardIcon className="size-3.5" />
-              </button>
-              <button type="button" onClick={selectEverything} disabled={elements.length === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Select all (Ctrl+A)">
-                <MousePointerIcon className="size-3.5" />
-              </button>
-              <button type="button" onClick={clearSelection} disabled={selCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Deselect (Esc)">
-                <XCircleIcon className="size-3.5" />
-              </button>
-              <button type="button" onClick={removeSelected} disabled={selCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97] disabled:opacity-40" title="Delete (Del)">
-                <Trash2Icon className="size-3.5" />
-              </button>
-            </div>
-
-            {elements.length === 0 && (
-              <>
-                <div className="w-px h-4 bg-[var(--color-border)]" />
-                <button type="button" onClick={() => seedStarter()} className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 transition-all hover:bg-amber-100 active:scale-[0.97]">
-                  Starter Layout
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] overflow-hidden">
+            <div className="flex items-center gap-1 px-1.5 py-1 flex-wrap">
+              <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
+                <button type="button" onClick={addText} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-100)] active:scale-[0.97]" title="Add text element">
+                  <PlusIcon className="size-3" /> Text
                 </button>
-              </>
-            )}
-
-            {hasBackground && (
-              <>
-                <div className="w-px h-4 bg-[var(--color-border)]" />
-                <button type="button" onClick={clearBackground} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97]">
-                  Clear BG
+                <button type="button" onClick={() => imageInputRef.current?.click()} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-50 active:scale-[0.97]" title="Add image element">
+                  <ImageIcon className="size-3" /> Image
                 </button>
-              </>
-            )}
-
-            <div className="w-px h-4 bg-[var(--color-border)]" />
-
-            <div className="flex items-center gap-1">
-              <select
-                value={sizePreset}
-                onChange={(e) => { const val = e.target.value; setSizePreset(val === "Custom" ? "Custom" : val); }}
-                className="rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-1.5 py-1 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none"
-                title="Canvas size"
-              >
-                {SIZE_PRESETS.map((p) => (
-                  <option key={p.label} value={p.label}>{p.label}</option>
-                ))}
-                <option value="Custom">Custom</option>
-              </select>
-              {sizePreset === "Custom" && (
-                <div className="flex items-center gap-0.5">
-                  <input type="number" value={customW} onChange={(e) => setCustomW(Math.max(100, parseInt(e.target.value) || 100))} className="w-14 rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-1.5 py-1 text-xs font-medium text-[var(--color-text)] focus:border-[var(--color-brand-500)] focus:outline-none" min={100} title="Width" />
-                  <span className="text-[10px] text-[var(--color-text-muted)]">×</span>
-                  <input type="number" value={customH} onChange={(e) => setCustomH(Math.max(100, parseInt(e.target.value) || 100))} className="w-14 rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-1.5 py-1 text-xs font-medium text-[var(--color-text)] focus:border-[var(--color-brand-500)] focus:outline-none" min={100} title="Height" />
-                </div>
-              )}
-              <div className="flex rounded-md bg-[var(--color-surface-secondary)] p-0.5">
-                <button type="button" onClick={() => setOrientation("landscape")} className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-all ${orientation === "landscape" ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`}>L</button>
-                <button type="button" onClick={() => setOrientation("portrait")} className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-all ${orientation === "portrait" ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`}>P</button>
+                <button type="button" onClick={addQr} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-violet-700 transition-all hover:bg-violet-50 active:scale-[0.97]" title="Add QR code element">
+                  <QrCodeIcon className="size-3" /> QR
+                </button>
+                <button type="button" onClick={() => bgInputRef.current?.click()} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-purple-700 transition-all hover:bg-purple-50 active:scale-[0.97]" title="Set background image">
+                  <PaletteIcon className="size-3" /> BG
+                </button>
               </div>
-            </div>
 
-            <div className="w-px h-4 bg-[var(--color-border)]" />
+              <div className="w-px h-4 bg-[var(--color-border)]" />
 
-            <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
-              <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("left")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align left">
-                <AlignLeftIcon className="size-3.5" />
-              </button>
-              <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("center-horizontal")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align center">
-                <AlignHorizontalJustifyCenterIcon className="size-3.5" />
-              </button>
-              <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("right")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align right">
-                <AlignRightIcon className="size-3.5" />
-              </button>
-              <div className="w-px h-3.5 bg-[var(--color-border)]" />
-              <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("top")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align top">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="6" height="16" x="4" y="6" rx="2"/><rect width="6" height="9" x="14" y="6" rx="2"/><path d="M22 2H2"/></svg>
-              </button>
-              <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("center-vertical")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align middle">
-                <AlignVerticalJustifyCenterIcon className="size-3.5" />
-              </button>
-              <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("bottom")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align bottom">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="6" height="16" x="4" y="2" rx="2"/><rect width="6" height="9" x="14" y="9" rx="2"/><path d="M22 22H2"/></svg>
-              </button>
-            </div>
-
-            <div className="w-px h-4 bg-[var(--color-border)]" />
-
-            <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
-              <button type="button" onClick={() => setSnapEnabled(!snapEnabled)} className={`rounded-md px-1.5 py-1 transition-all ${snapEnabled ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`} title={snapEnabled ? "Snap: ON" : "Snap: OFF"}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
-              </button>
-              <button type="button" onClick={() => setShowGrid(!showGrid)} className={`rounded-md px-1.5 py-1 transition-all ${showGrid ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`} title={showGrid ? "Grid: ON" : "Grid: OFF"}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-              </button>
-              {(snapEnabled || showGrid) && (
-                <select value={gridSize} onChange={(e) => setGridSize(Number(e.target.value))} className="rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-1 py-0.5 text-[10px] font-medium text-[var(--color-text)] focus:border-[var(--color-brand-500)] focus:outline-none" title="Grid size">
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
-              )}
-              {guides.length > 0 && (
-                <button type="button" onClick={() => setGuides([])} className="rounded-md px-1 py-1 text-[var(--color-text-secondary)] hover:text-[var(--color-danger-text)] transition-all" title="Clear guides">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
+                <button type="button" onClick={undo} disabled={historyIndex <= 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Undo (Ctrl+Z)">
+                  <Undo2Icon className="size-3.5" />
                 </button>
+                <button type="button" onClick={redo} disabled={historyIndex >= history.length - 1} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Redo (Ctrl+Shift+Z)">
+                  <Redo2Icon className="size-3.5" />
+                </button>
+              </div>
+
+              <div className="w-px h-4 bg-[var(--color-border)]" />
+
+              <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
+                <button type="button" onClick={copySelection} disabled={selCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Copy selected (Ctrl+C)">
+                  <CopyIcon className="size-3.5" />
+                </button>
+                <button type="button" onClick={paste} disabled={clipboardCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Paste from clipboard (Ctrl+V)">
+                  <ClipboardIcon className="size-3.5" />
+                </button>
+                <button type="button" onClick={selectEverything} disabled={elements.length === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Select all elements (Ctrl+A)">
+                  <MousePointerIcon className="size-3.5" />
+                </button>
+                <button type="button" onClick={clearSelection} disabled={selCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Deselect all (Esc)">
+                  <XCircleIcon className="size-3.5" />
+                </button>
+                <button type="button" onClick={removeSelected} disabled={selCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97] disabled:opacity-40" title="Delete selected (Del)">
+                  <Trash2Icon className="size-3.5" />
+                </button>
+              </div>
+
+              {elements.length === 0 && (
+                <>
+                  <div className="w-px h-4 bg-[var(--color-border)]" />
+                  <button type="button" onClick={() => seedStarter()} className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 transition-all hover:bg-amber-100 active:scale-[0.97]" title="Load starter template layout">
+                    Starter Layout
+                  </button>
+                </>
               )}
-            </div>
 
-            <div className="w-px h-4 bg-[var(--color-border)]" />
+              {hasBackground && (
+                <>
+                  <div className="w-px h-4 bg-[var(--color-border)]" />
+                  <button type="button" onClick={clearBackground} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97]" title="Remove background image">
+                    Clear BG
+                  </button>
+                </>
+              )}
 
-            <div className="flex items-center gap-0.5">
-              {PLACEHOLDER_FIELDS.map((f) => (
-                <button
-                  key={f.key}
-                  type="button"
-                  disabled={selCount !== 1 || !firstSel || firstSel.type !== "text"}
-                  onClick={() => { if (!firstSel) return; update(firstSel.id, { content: `${firstSel.content}{{${f.key}}}` }); }}
-                  className="rounded-md bg-[var(--color-brand-50)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-100)] active:scale-[0.97] disabled:opacity-40"
+              <div className="w-px h-4 bg-[var(--color-border)]" />
+
+              <div className="flex items-center gap-1">
+                <select
+                  value={sizePreset}
+                  onChange={(e) => { const val = e.target.value; setSizePreset(val === "Custom" ? "Custom" : val); }}
+                  className="rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-1.5 py-1 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none"
+                  title="Canvas size preset"
                 >
-                  {f.label}
+                  {SIZE_PRESETS.map((p) => (
+                    <option key={p.label} value={p.label}>{p.label}</option>
+                  ))}
+                  <option value="Custom">Custom</option>
+                </select>
+                {sizePreset === "Custom" && (
+                  <div className="flex items-center gap-0.5">
+                    <input type="number" value={customW} onChange={(e) => setCustomW(Math.max(100, parseInt(e.target.value) || 100))} className="w-14 rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-1.5 py-1 text-xs font-medium text-[var(--color-text)] focus:border-[var(--color-brand-500)] focus:outline-none" min={100} title="Custom width (px)" />
+                    <span className="text-[10px] text-[var(--color-text-muted)]">×</span>
+                    <input type="number" value={customH} onChange={(e) => setCustomH(Math.max(100, parseInt(e.target.value) || 100))} className="w-14 rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-1.5 py-1 text-xs font-medium text-[var(--color-text)] focus:border-[var(--color-brand-500)] focus:outline-none" min={100} title="Custom height (px)" />
+                  </div>
+                )}
+                <div className="flex rounded-md bg-[var(--color-surface-secondary)] p-0.5">
+                  <button type="button" onClick={() => setOrientation("landscape")} className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-all ${orientation === "landscape" ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`} title="Landscape orientation">L</button>
+                  <button type="button" onClick={() => setOrientation("portrait")} className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-all ${orientation === "portrait" ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`} title="Portrait orientation">P</button>
+                </div>
+              </div>
+
+              <div className="w-px h-4 bg-[var(--color-border)]" />
+
+              <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
+                <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("left")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align left">
+                  <AlignLeftIcon className="size-3.5" />
                 </button>
-              ))}
+                <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("center-horizontal")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align center horizontal">
+                  <AlignHorizontalJustifyCenterIcon className="size-3.5" />
+                </button>
+                <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("right")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align right">
+                  <AlignRightIcon className="size-3.5" />
+                </button>
+                <div className="w-px h-3.5 bg-[var(--color-border)]" />
+                <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("top")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align top">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="6" height="16" x="4" y="6" rx="2"/><rect width="6" height="9" x="14" y="6" rx="2"/><path d="M22 2H2"/></svg>
+                </button>
+                <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("center-vertical")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align center vertical">
+                  <AlignVerticalJustifyCenterIcon className="size-3.5" />
+                </button>
+                <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("bottom")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align bottom">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="6" height="16" x="4" y="2" rx="2"/><rect width="6" height="9" x="14" y="9" rx="2"/><path d="M22 22H2"/></svg>
+                </button>
+              </div>
+
+              <div className="w-px h-4 bg-[var(--color-border)]" />
+
+              <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
+                <button type="button" onClick={() => setSnapEnabled(!snapEnabled)} className={`rounded-md px-1.5 py-1 transition-all ${snapEnabled ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`} title={snapEnabled ? "Snap to grid: ON — click to disable" : "Snap to grid: OFF — click to enable"}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+                </button>
+                <button type="button" onClick={() => setShowGrid(!showGrid)} className={`rounded-md px-1.5 py-1 transition-all ${showGrid ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`} title={showGrid ? "Show grid: ON — click to hide" : "Show grid: OFF — click to show"}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                </button>
+                {(snapEnabled || showGrid) && (
+                  <select value={gridSize} onChange={(e) => setGridSize(Number(e.target.value))} className="rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-1 py-0.5 text-[10px] font-medium text-[var(--color-text)] focus:border-[var(--color-brand-500)] focus:outline-none" title="Grid spacing size (px)">
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                )}
+                {guides.length > 0 && (
+                  <button type="button" onClick={() => setGuides([])} className="rounded-md px-1 py-1 text-[var(--color-text-secondary)] hover:text-[var(--color-danger-text)] transition-all" title="Clear all guide lines">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                )}
+              </div>
+
+              {!fullscreen && (
+                <>
+                  <div className="ml-auto" />
+                  <div className="w-px h-4 bg-[var(--color-border)]" />
+                  <button type="button" onClick={() => onFullscreenChange?.(true)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-secondary)] active:scale-[0.97]" title="Toggle fullscreen mode (Esc to exit)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                  </button>
+                </>
+              )}
             </div>
 
-            {!fullscreen && (
-              <>
-                <div className="ml-auto" />
-                <div className="w-px h-4 bg-[var(--color-border)]" />
-                <button type="button" onClick={() => onFullscreenChange?.(true)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-secondary)] active:scale-[0.97]" title="Fullscreen">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-                </button>
-              </>
+            {PLACEHOLDER_FIELDS.length > 0 && (
+              <div className="flex items-center gap-1 border-t border-[var(--color-border)] px-1.5 py-1">
+                <span className="px-1 text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Fields</span>
+                {PLACEHOLDER_FIELDS.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => addFieldText(f.key)}
+                    title={`Add {{${f.key}}} as a new text element`}
+                    className="rounded-md bg-[var(--color-brand-50)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-100)] active:scale-[0.97]"
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -1495,6 +1567,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
             type="button"
             disabled={allSelectedLocked}
             onClick={() => updateSelected({ bold: !firstSel?.bold })}
+            title={firstSel?.bold ? "Bold: ON — click to disable" : "Bold: OFF — click to enable"}
             className={`inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-xs font-bold transition-all active:scale-[0.97] disabled:opacity-40 ${
               firstSel?.bold
                 ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
@@ -1508,15 +1581,16 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
 
           <div className="flex gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
             {([
-              { key: "left", icon: AlignLeftIcon },
-              { key: "center", icon: AlignCenterIcon },
-              { key: "right", icon: AlignRightIcon },
-            ] as const).map(({ key, icon: Icon }) => (
+              { key: "left", icon: AlignLeftIcon, label: "Align text left" },
+              { key: "center", icon: AlignCenterIcon, label: "Align text center" },
+              { key: "right", icon: AlignRightIcon, label: "Align text right" },
+            ] as const).map(({ key, icon: Icon, label }) => (
               <button
                 key={key}
                 type="button"
                 disabled={allSelectedLocked}
                 onClick={() => updateSelected({ align: key })}
+                title={label}
                 className={`rounded-md px-2 py-1 text-xs font-semibold transition-all disabled:opacity-40 ${
                   firstSel?.align === key
                     ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
@@ -1535,7 +1609,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
             disabled={selCount === 0 || allSelectedLocked || !elements.some((el) => isSelected(el.id) && el.type === "text")}
             onClick={fitSelectedToText}
             className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-brand-100)] px-2 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-200)] active:scale-[0.97] disabled:opacity-40"
-            title="Fit bounding box to text width"
+            title="Fit bounding box to text content"
           >
             <TypeIcon className="size-3.5" />
             Fit
@@ -1549,7 +1623,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
               disabled={allSelectedLocked}
               onClick={bringSelectedToFront}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
-              title="Move to front"
+              title="Bring to front (highest layer)"
             >
               <LayersIcon className="size-3.5" />
               Front
@@ -1568,7 +1642,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
               disabled={allSelectedLocked}
               onClick={moveSelectedBackward}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
-              title="Move back one layer"
+              title="Move backward one layer"
             >
               <ArrowDownIcon className="size-3.5" />
             </button>
@@ -1577,7 +1651,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
               disabled={allSelectedLocked}
               onClick={sendSelectedToBack}
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
-              title="Move to back"
+              title="Send to back (lowest layer)"
             >
               Back
             </button>
@@ -1593,7 +1667,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                 ? "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]"
                 : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
             }`}
-            title={elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock selected" : "Lock selected"}
+            title={elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock selected elements" : "Lock selected elements (prevent move/edit)"}
           >
             {elements.filter((e) => isSelected(e.id)).every((e) => e.locked)
               ? <LockIcon className="size-3.5" />
@@ -1975,11 +2049,39 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     </Dialog>
   );
 
+  const deleteConfirmDialog = (
+    <Dialog open={!!deletingId} onOpenChange={(open) => { if (!open) setDeletingId(null); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Delete Component</DialogTitle>
+          <DialogDescription>
+            {deletingId && (() => {
+              const el = elements.find((e) => e.id === deletingId);
+              return el ? <>Are you sure you want to delete <strong>{getElementLabel(el)}</strong>?</> : null;
+            })()}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDeletingId(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => { if (deletingId) { removeElement(deletingId); setDeletingId(null); } }}
+          >
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-surface)] p-2 gap-2">
         {content}
         {editModal}
+        {deleteConfirmDialog}
         <button
           type="button"
           onClick={() => onFullscreenChange?.(false)}
@@ -1997,6 +2099,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     <div className="space-y-2">
       {content}
       {editModal}
+      {deleteConfirmDialog}
     </div>
   );
 });
