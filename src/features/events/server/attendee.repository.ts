@@ -18,6 +18,9 @@ export class EventAttendeeRepository extends BaseRepository<EventAttendee> {
       console.error(`[AttendeeRepository] Error fetching attendees for event ${eventId}:`, error);
       return [];
     }
+
+    console.log(`[AttendeeRepository] Raw response for event ${eventId}: rows=${data?.length ?? 0}`, JSON.stringify(data ?? []));
+
     return (data ?? []) as EventAttendee[];
   }
 
