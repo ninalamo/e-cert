@@ -12,6 +12,25 @@ const AttendeesManager = dynamic(
   { ssr: false }
 );
 
+async function pollWorkflowStatus(
+  runId: string,
+  { onProgress, signal }: { onProgress?: (status: string) => void; signal?: AbortSignal }
+): Promise<{ status: string; result?: { issued: number; emailed: number; results: unknown[] }; error?: string }> {
+  for (let i = 0; i < 120; i++) {
+    if (signal?.aborted) throw new Error("Aborted");
+    await new Promise((r) => setTimeout(r, 1000));
+    onProgress?.(`Polling (${i + 1}s)...`);
+
+    const res = await fetch(`/api/workflow-status?runId=${runId}`);
+    if (!res.ok) continue;
+    const data = await res.json();
+
+    if (data.status === "completed") return data;
+    if (data.status === "failed") return { status: "failed", error: data.error ?? "Workflow failed" };
+  }
+  return { status: "timeout", error: "Workflow timed out" };
+}
+
 export default function AttendeesTab({
   event,
   canManageAttendees,
