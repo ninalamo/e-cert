@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { issueCertificatesForCompletedAction } from "@/features/events/server/attendee.actions";
+import { toast } from "sonner";
 import type { Event } from "@/types/event";
-import { PlusIcon, UploadIcon, InfoIcon } from "lucide-react";
+import { PlusIcon, UploadIcon } from "lucide-react";
 
 const AttendeesManager = dynamic(
   () => import("@/features/events/components/attendees-manager"),
@@ -24,39 +24,79 @@ export default function AttendeesTab({
   const [selectedAttendeeIds, setSelectedAttendeeIds] = useState<string[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [issueBusy, setIssueBusy] = useState(false);
-  const [issueMessage, setIssueMessage] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   async function handleIssueSelected() {
+    const count = selectedAttendeeIds.length;
     setIssueBusy(true);
-    setIssueMessage(null);
     try {
-      const result = await issueCertificatesForCompletedAction(event.id, {
-        send_email: true,
-        attendeeIds: selectedAttendeeIds,
+      const res = await fetch(`/api/events/${event.id}/bulk-issue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendeeIds: selectedAttendeeIds, sendEmail: true }),
       });
-      const failed = result.results.filter((r) => !r.success).length;
-      setIssueMessage(
-        `${result.issued} issued, ${result.emailed} emailed` +
-          (failed ? `, ${failed} failed` : "")
-      );
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Request failed (${res.status})`);
+      }
+
+      const { runId } = await res.json();
       setSelectedAttendeeIds([]);
-      setRefresh((n) => n + 1);
+      toast.loading(`Issuing ${count} certificate${count > 1 ? "s" : ""}...`, {
+        id: `bulk-issue-${runId}`,
+      });
+
+      pollWorkflow(runId);
     } catch (err) {
-      setIssueMessage(err instanceof Error ? err.message : "Failed to issue certificates");
+      toast.error(err instanceof Error ? err.message : "Failed to start certificate issuance");
     } finally {
       setIssueBusy(false);
     }
   }
 
+  function pollWorkflow(runId: string) {
+    const toastId = `bulk-issue-${runId}`;
+    let attempts = 0;
+    const maxAttempts = 120;
+
+    const interval = setInterval(async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(interval);
+        toast.error("Timed out waiting for certificate issuance", { id: toastId });
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/workflow-status?runId=${runId}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        if (data.status === "completed" && data.result) {
+          clearInterval(interval);
+          const { issued, emailed, results } = data.result;
+          const failed = results.filter((r: { success: boolean }) => !r.success).length;
+          toast.success(
+            `${issued} issued, ${emailed} emailed` + (failed ? `, ${failed} failed` : ""),
+            { id: toastId, duration: 8000 }
+          );
+          setSelectedAttendeeIds([]);
+          setRefresh((n) => n + 1);
+        } else if (data.status === "failed") {
+          clearInterval(interval);
+          toast.error("Certificate issuance failed", { id: toastId });
+          setRefresh((n) => n + 1);
+        }
+      } catch {
+        // Retry on network errors
+      }
+    }, 3000);
+  }
+
   return (
     <div className="space-y-4">
-      {issueMessage && (
-        <div className="flex items-start gap-3 rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)] p-3 text-sm">
-          <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-success-text)]" />
-          <p className="text-[var(--color-success-text)]">{issueMessage}</p>
-        </div>
-      )}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
