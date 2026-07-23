@@ -26,7 +26,19 @@ import {
   LockIcon,
   LockOpenIcon,
   XCircleIcon,
+  EyeIcon,
+  EyeOffIcon,
+  ChevronDownIcon,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type AlignType = "left" | "right" | "top" | "bottom" | "center-horizontal" | "center-vertical";
 
@@ -103,6 +115,7 @@ export interface CanvasElement {
   bold: boolean;
   align: "left" | "center" | "right";
   locked?: boolean;
+  hidden?: boolean;
 }
 
 interface TemplateCanvasProps {
@@ -241,12 +254,30 @@ function escapeAttr(s: string) {
   return s.replace(/"/g, "&quot;");
 }
 
+function getElementLabel(el: CanvasElement): string {
+  if (el.type === "image") return "Image";
+  if (el.type === "qr") return "QR Code";
+  const text = el.content.replace(/<[^>]*>/g, "").trim();
+  return text.slice(0, 40) || "Empty text";
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+}
+
+function textToSimpleHtml(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => `<p>${line || "&nbsp;"}</p>`)
+    .join("");
+}
+
 export function elementsToHtml(
   elements: CanvasElement[],
   width = 1123,
   height = 794
 ): string {
-  const sorted = [...elements].sort((a, b) => a.z - b.z);
+  const sorted = [...elements].filter((el) => !el.hidden).sort((a, b) => a.z - b.z);
   const blocks = sorted
     .map((el) => {
       const lockAttr = el.locked ? " data-locked=\"true\"" : "";
@@ -264,7 +295,7 @@ export function elementsToHtml(
       }
       const style = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;z-index:${el.z};font-size:${el.fontSize};font-family:${escapeAttr(
         el.fontFamily
-      )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};overflow:hidden;`;
+      )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};line-height:1.5;overflow:hidden;`;
       return `<div${lockAttr} style="${style}">${el.content}</div>`;
     })
     .join("\n");
@@ -472,6 +503,10 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const [activeAlignGuides, setActiveAlignGuides] = useState<{ orientation: 'horizontal' | 'vertical'; position: number }[]>([]);
   const [history, setHistory] = useState<CanvasElement[][]>(() => [parsed0]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [editingElement, setEditingElement] = useState<CanvasElement | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editSrc, setEditSrc] = useState("");
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
@@ -668,6 +703,40 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   }
   function selectEverything() {
     setSelectedIds(elements.map((e) => e.id));
+  }
+
+  function handleListItemClick(id: string, e: React.MouseEvent) {
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      toggleSelect(id);
+    } else {
+      selectOnly(id);
+    }
+  }
+
+  function openEditModal(el: CanvasElement) {
+    setEditingElement(el);
+    setEditContent(el.type === "text" ? stripHtml(el.content) : el.content);
+    setEditSrc(el.src ?? "");
+  }
+
+  function handleSaveEdit() {
+    if (!editingElement) return;
+    if (editingElement.type === "text") {
+      const htmlContent = textToSimpleHtml(editContent);
+      const newHeight = calculateTextHeight(htmlContent, editingElement.fontSize, editingElement.w);
+      const newElements = elements.map(e => e.id === editingElement.id ? { ...e, content: htmlContent, h: newHeight } : e);
+      saveToHistory(newElements);
+      setElements(newElements);
+    } else if (editingElement.type === "image") {
+      const newElements = elements.map(e => e.id === editingElement.id ? { ...e, src: editSrc } : e);
+      saveToHistory(newElements);
+      setElements(newElements);
+    }
+    setEditingElement(null);
+  }
+
+  function toggleElementVisibility(id: string) {
+    setElements((prev) => prev.map((e) => e.id === id ? { ...e, hidden: !e.hidden } : e));
   }
 
   function addText() {
@@ -1004,60 +1073,131 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const content = (
     <div className="flex gap-4">
       {onNameChange && onDescriptionChange && (
-        <div className="w-64 flex-shrink-0 space-y-4">
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-ios-sm)]">
-            <label htmlFor="canvas-name" className="block text-sm font-semibold mb-2 text-[var(--color-text)]">
-              Template Name
-            </label>
-            <input
-              id="canvas-name"
-              value={name}
-              onChange={(e) => onNameChange(e.target.value)}
-              required
-              placeholder="e.g. Certificate of Completion"
-              className="input text-sm"
-            />
-            <label htmlFor="canvas-description" className="block text-sm font-semibold mb-2 mt-4 text-[var(--color-text)]">
-              Description
-            </label>
-            <textarea
-              id="canvas-description"
-              value={description}
-              onChange={(e) => onDescriptionChange(e.target.value)}
-              placeholder="Optional description"
-              rows={4}
-              className="input text-sm resize-none"
-            />
-            <div className="mt-4 space-y-2">
-              {!fullscreen && (
-                <button
-                  type="button"
-                  onClick={() => onFullscreenChange?.(true)}
-                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
-                  title="Fullscreen"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-                  Fullscreen
-                </button>
+        <div className="w-64 flex-shrink-0 flex flex-col gap-4 max-h-[calc(100vh-220px)]">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setSidebarExpanded((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
+            >
+              Template
+              <ChevronDownIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${sidebarExpanded ? "rotate-180" : ""}`} />
+            </button>
+            {sidebarExpanded && (
+              <div className="px-4 pb-4 space-y-4">
+                <div>
+                  <label htmlFor="canvas-name" className="block text-xs font-semibold mb-1.5 text-[var(--color-text-secondary)]">
+                    Template Name
+                  </label>
+                  <input
+                    id="canvas-name"
+                    value={name}
+                    onChange={(e) => onNameChange?.(e.target.value)}
+                    required
+                    placeholder="e.g. Certificate of Completion"
+                    className="input text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="canvas-description" className="block text-xs font-semibold mb-1.5 text-[var(--color-text-secondary)]">
+                    Description
+                  </label>
+                  <textarea
+                    id="canvas-description"
+                    value={description}
+                    onChange={(e) => onDescriptionChange?.(e.target.value)}
+                    placeholder="Optional description"
+                    rows={3}
+                    className="input text-sm resize-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  {!fullscreen && (
+                    <button
+                      type="button"
+                      onClick={() => onFullscreenChange?.(true)}
+                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
+                      title="Fullscreen"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                      Fullscreen
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={loading || disabled}
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-brand-600)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97] disabled:opacity-50"
+                  >
+                    {loading ? "Saving..." : submitLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
+                        window.location.href = "/templates";
+                      }
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
+                  >
+                    Close Editor
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0">
+            <div className="border-b border-[var(--color-border)] px-4 py-2.5 flex items-center justify-between flex-shrink-0">
+              <span className="text-sm font-semibold text-[var(--color-text)]">
+                Components
+              </span>
+              <span className="text-xs text-[var(--color-text-muted)]">
+                {elements.length}
+              </span>
+            </div>
+            <div className="overflow-y-auto flex-1 min-h-0 divide-y divide-[var(--color-border)]">
+              {elements.length === 0 ? (
+                <p className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
+                  No components yet
+                </p>
+              ) : (
+                [...elements].sort((a, b) => a.z - b.z).map((el) => (
+                  <div
+                    key={el.id}
+                    onClick={(e) => handleListItemClick(el.id, e)}
+                    onDoubleClick={() => openEditModal(el)}
+                    className={`flex items-center gap-2 px-3 py-2 text-xs cursor-pointer transition-all ${
+                      el.hidden ? "opacity-40" : ""
+                    } ${
+                      isSelected(el.id)
+                        ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
+                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
+                    }`}
+                  >
+                    <span className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${
+                      el.type === "text"
+                        ? "bg-blue-100 text-blue-700"
+                        : el.type === "image"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-purple-100 text-purple-700"
+                    }`}>
+                      {el.type === "text" ? "T" : el.type === "image" ? "I" : "QR"}
+                    </span>
+                    <span className="truncate flex-1">{getElementLabel(el)}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleElementVisibility(el.id); }}
+                      className="flex-shrink-0 p-0.5 rounded hover:bg-[var(--color-surface-hover)] transition-colors"
+                      title={el.hidden ? "Show" : "Hide"}
+                    >
+                      {el.hidden
+                        ? <EyeOffIcon className="size-3 text-[var(--color-text-muted)]" />
+                        : <EyeIcon className="size-3 text-[var(--color-text-muted)]" />
+                      }
+                    </button>
+                    {el.locked && <LockIcon className="size-3 flex-shrink-0 opacity-50" />}
+                  </div>
+                ))
               )}
-              <button
-                type="submit"
-                disabled={loading || disabled}
-                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-brand-600)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97] disabled:opacity-50"
-              >
-                {loading ? "Saving..." : submitLabel}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
-                    window.location.href = "/templates";
-                  }
-                }}
-                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
-              >
-                Close Editor
-              </button>
             </div>
           </div>
         </div>
@@ -1656,7 +1796,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                   />
                 )
               ))}
-              {elements.map((el) => (
+              {elements.filter((el) => !el.hidden).map((el) => (
                 <Rnd
                   key={el.id}
                   size={{ width: el.w, height: el.h }}
@@ -1803,6 +1943,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                           color: el.color,
                           fontWeight: el.bold ? "bold" : "normal",
                           textAlign: el.align,
+                          lineHeight: "1.5",
                           overflow: "hidden",
                           outline: "none",
                           cursor: "text",
@@ -1862,10 +2003,90 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     </div>
   );
 
+  const editModal = (
+    <Dialog open={!!editingElement} onOpenChange={(open) => { if (!open) setEditingElement(null); }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            Edit {editingElement?.type === "text" ? "Text" : editingElement?.type === "image" ? "Image" : "QR Code"}
+          </DialogTitle>
+          <DialogDescription>
+            {editingElement && getElementLabel(editingElement)}
+          </DialogDescription>
+        </DialogHeader>
+        {editingElement?.type === "text" && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1.5">
+                Content
+              </label>
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={8}
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm focus:border-[var(--color-brand-500)] focus:outline-none resize-y"
+              />
+            </div>
+            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-secondary)] p-3">
+              <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">Preview</p>
+              <div
+                className="text-sm leading-relaxed"
+                style={{
+                  fontSize: editingElement.fontSize,
+                  fontFamily: editingElement.fontFamily,
+                  color: editingElement.color,
+                  fontWeight: editingElement.bold ? "bold" : "normal",
+                  textAlign: editingElement.align,
+                }}
+                dangerouslySetInnerHTML={{ __html: editContent }}
+              />
+            </div>
+          </div>
+        )}
+        {editingElement?.type === "image" && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1.5">
+                Image Source
+              </label>
+              <input
+                value={editSrc}
+                onChange={(e) => setEditSrc(e.target.value)}
+                placeholder="Enter image URL or data URL"
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm focus:border-[var(--color-brand-500)] focus:outline-none"
+              />
+            </div>
+            {editSrc && (
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-secondary)] p-3">
+                <p className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2">Preview</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={editSrc} alt="Preview" className="max-h-40 rounded object-contain" />
+              </div>
+            )}
+          </div>
+        )}
+        {editingElement?.type === "qr" && (
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-secondary)] p-4 text-center text-sm text-[var(--color-text-muted)]">
+            QR Code content is automatically generated from template data.
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setEditingElement(null)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveEdit} disabled={editingElement?.locked}>
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (fullscreen) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-surface)] p-2 gap-2">
         {content}
+        {editModal}
         <button
           type="button"
           onClick={() => onFullscreenChange?.(false)}
@@ -1882,6 +2103,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   return (
     <div className="space-y-2">
       {content}
+      {editModal}
     </div>
   );
 });
