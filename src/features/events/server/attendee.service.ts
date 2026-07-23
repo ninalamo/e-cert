@@ -19,6 +19,7 @@ export async function getAttendees(
   eventId: string,
   client?: SupabaseClient
 ): Promise<EventAttendee[]> {
+  console.log(`[AttendeeService] Fetching attendees for event ${eventId}`);
   return repos(client ?? (await createClient())).attendeeRepo.findByEventId(eventId);
 }
 

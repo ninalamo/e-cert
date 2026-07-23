@@ -6,6 +6,7 @@ import type { AttendeeMetadata } from "@/types/event-attendee";
 
 export async function getAttendeesAction(eventId: string) {
   await requireRole(["admin", "staff"]);
+  console.log(`[AttendeeAction] getAttendeesAction called for event ${eventId}`);
   return attendeeService.getAttendees(eventId);
 }
 
