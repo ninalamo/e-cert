@@ -202,7 +202,7 @@ function uid() {
 function calculateTextHeight(content: string, fontSize: string, width: number): number {
   const size = parseInt(fontSize, 10) || 16;
   const lineHeight = size * 1.5;
-  
+
   const tempDiv = document.createElement('div');
   tempDiv.style.position = 'absolute';
   tempDiv.style.visibility = 'hidden';
@@ -213,10 +213,10 @@ function calculateTextHeight(content: string, fontSize: string, width: number): 
   tempDiv.style.wordWrap = 'break-word';
   tempDiv.innerHTML = content;
   document.body.appendChild(tempDiv);
-  
+
   const height = tempDiv.offsetHeight;
   document.body.removeChild(tempDiv);
-  
+
   return Math.max(lineHeight, height);
 }
 
@@ -295,9 +295,9 @@ export function elementsToHtml(
         )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};overflow:hidden;`;
         return `<div${lockAttr} style="${style}">{{qr_code}}</div>`;
       }
-      const style = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;z-index:${el.z};font-size:${el.fontSize};font-family:${escapeAttr(
+      const style = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;min-height:${el.h}px;z-index:${el.z};font-size:${el.fontSize};font-family:${escapeAttr(
         el.fontFamily
-      )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};line-height:1.5;overflow:hidden;`;
+      )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};line-height:1.5;overflow:visible;`;
       return `<div${lockAttr} style="${style}">${el.content}</div>`;
     })
     .join("\n");
@@ -539,11 +539,11 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
 
   const snapValue = (value: number, orientation: 'horizontal' | 'vertical') => {
     if (!snapEnabled) return value;
-    
+
     const SNAP_THRESHOLD = 5;
     let snapped = value;
     let minDistance = SNAP_THRESHOLD;
-    
+
     guides
       .filter(g => g.orientation === orientation)
       .forEach(guide => {
@@ -553,11 +553,11 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           snapped = guide.position;
         }
       });
-    
+
     if (minDistance >= SNAP_THRESHOLD) {
       snapped = Math.round(value / gridSize) * gridSize;
     }
-    
+
     return snapped;
   };
 
@@ -1091,7 +1091,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     const alignment = computeAlignmentGuides(id, d.x, d.y, el.w, el.h);
     const snappedX = alignment.snappedX !== d.x ? alignment.snappedX : snapValue(d.x, 'vertical');
     const snappedY = alignment.snappedY !== d.y ? alignment.snappedY : snapValue(d.y, 'horizontal');
-    
+
     if (
       selectedIds.length > 1 &&
       isSelected(id) &&
@@ -1228,7 +1228,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                       className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
                       title="Fullscreen"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
                       Fullscreen
                     </button>
                   )}
@@ -1280,32 +1280,27 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                     onDragLeave={() => { if (dragOverId === el.id) setDragOverId(null); }}
                     onClick={(e) => handleListItemClick(el.id, e)}
                     onDoubleClick={() => openEditModal(el)}
-                    className={`flex items-center gap-1.5 px-2 py-1.5 text-xs cursor-pointer transition-all select-none ${
-                      el.hidden ? "opacity-40" : ""
-                    } ${
-                      dragOverId === el.id && draggedId !== el.id
+                    className={`flex items-center gap-1.5 px-2 py-1.5 text-xs cursor-pointer transition-all select-none ${el.hidden ? "opacity-40" : ""
+                      } ${dragOverId === el.id && draggedId !== el.id
                         ? dropSide === "before"
                           ? "border-t-2 border-t-[var(--color-brand-500)]"
                           : "border-b-2 border-b-[var(--color-brand-500)]"
                         : ""
-                    } ${
-                      draggedId === el.id ? "opacity-30" : ""
-                    } ${
-                      isSelected(el.id)
+                      } ${draggedId === el.id ? "opacity-30" : ""
+                      } ${isSelected(el.id)
                         ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
-                    }`}
+                      }`}
                   >
                     <span className="flex-shrink-0 cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
                       <GripVerticalIcon className="size-3" />
                     </span>
-                    <span className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${
-                      el.type === "text"
+                    <span className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${el.type === "text"
                         ? "bg-blue-100 text-blue-700"
                         : el.type === "image"
                           ? "bg-emerald-100 text-emerald-700"
                           : "bg-purple-100 text-purple-700"
-                    }`}>
+                      }`}>
                       {el.type === "text" ? "T" : el.type === "image" ? "I" : "QR"}
                     </span>
                     <span className="truncate flex-1">{getElementLabel(el)}</span>
@@ -1455,13 +1450,13 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                 </button>
                 <div className="w-px h-3.5 bg-[var(--color-border)]" />
                 <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("top")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align top">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="6" height="16" x="4" y="6" rx="2"/><rect width="6" height="9" x="14" y="6" rx="2"/><path d="M22 2H2"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="6" height="16" x="4" y="6" rx="2" /><rect width="6" height="9" x="14" y="6" rx="2" /><path d="M22 2H2" /></svg>
                 </button>
                 <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("center-vertical")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align center vertical">
                   <AlignVerticalJustifyCenterIcon className="size-3.5" />
                 </button>
                 <button type="button" disabled={(selCount === 0 && elements.every((e) => e.locked)) || allSelectedLocked} onClick={() => handleAlign("bottom")} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:text-[var(--color-text)] hover:bg-[var(--color-surface)] disabled:opacity-40" title="Align bottom">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="6" height="16" x="4" y="2" rx="2"/><rect width="6" height="9" x="14" y="9" rx="2"/><path d="M22 22H2"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="6" height="16" x="4" y="2" rx="2" /><rect width="6" height="9" x="14" y="9" rx="2" /><path d="M22 22H2" /></svg>
                 </button>
               </div>
 
@@ -1469,10 +1464,10 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
 
               <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
                 <button type="button" onClick={() => setSnapEnabled(!snapEnabled)} className={`rounded-md px-1.5 py-1 transition-all ${snapEnabled ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`} title={snapEnabled ? "Snap to grid: ON — click to disable" : "Snap to grid: OFF — click to enable"}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3z" /><path d="M3 9h18M3 15h18M9 3v18M15 3v18" /></svg>
                 </button>
                 <button type="button" onClick={() => setShowGrid(!showGrid)} className={`rounded-md px-1.5 py-1 transition-all ${showGrid ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`} title={showGrid ? "Show grid: ON — click to hide" : "Show grid: OFF — click to show"}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
                 </button>
                 {(snapEnabled || showGrid) && (
                   <select value={gridSize} onChange={(e) => setGridSize(Number(e.target.value))} className="rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-1 py-0.5 text-[10px] font-medium text-[var(--color-text)] focus:border-[var(--color-brand-500)] focus:outline-none" title="Grid spacing size (px)">
@@ -1484,7 +1479,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                 )}
                 {guides.length > 0 && (
                   <button type="button" onClick={() => setGuides([])} className="rounded-md px-1 py-1 text-[var(--color-text-secondary)] hover:text-[var(--color-danger-text)] transition-all" title="Clear all guide lines">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                   </button>
                 )}
               </div>
@@ -1494,7 +1489,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                   <div className="ml-auto" />
                   <div className="w-px h-4 bg-[var(--color-border)]" />
                   <button type="button" onClick={() => onFullscreenChange?.(true)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface-secondary)] active:scale-[0.97]" title="Toggle fullscreen mode (Esc to exit)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
                   </button>
                 </>
               )}
@@ -1519,438 +1514,434 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           </div>
         )}
 
-      {selCount > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-ios-sm)]">
-          <span className="px-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
-            {selCount} selected
-          </span>
+        {selCount > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-[var(--shadow-ios-sm)]">
+            <span className="px-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+              {selCount} selected
+            </span>
 
-          <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
 
-          <select
-            value={firstSel?.fontFamily ?? ""}
-            onChange={(e) => updateSelected({ fontFamily: e.target.value })}
-            disabled={allSelectedLocked}
-            className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
-            title="Font family"
-          >
-            <option value="">Font</option>
-            {FONT_FAMILIES.map((f) => (
-              <option key={f} value={f}>
-                {f.split(",")[0]}
-              </option>
-            ))}
-          </select>
-          <select
-            value={firstSel?.fontSize ?? ""}
-            onChange={(e) => updateSelected({ fontSize: e.target.value })}
-            disabled={allSelectedLocked}
-            className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
-            title="Font size"
-          >
-            <option value="">Size</option>
-            {FONT_SIZES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <input
-            type="color"
-            value={firstSel?.color ?? "#000000"}
-            onChange={(e) => updateSelected({ color: e.target.value })}
-            disabled={allSelectedLocked}
-            className="h-7 w-8 cursor-pointer rounded-lg border border-[var(--color-border-strong)] transition-all hover:border-[var(--color-brand-500)] disabled:opacity-40"
-            title="Text color"
-          />
-          <button
-            type="button"
-            disabled={allSelectedLocked}
-            onClick={() => updateSelected({ bold: !firstSel?.bold })}
-            title={firstSel?.bold ? "Bold: ON — click to disable" : "Bold: OFF — click to enable"}
-            className={`inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-xs font-bold transition-all active:scale-[0.97] disabled:opacity-40 ${
-              firstSel?.bold
-                ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
-                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
-            }`}
-          >
-            <BoldIcon className="size-3.5" />
-          </button>
+            <select
+              value={firstSel?.fontFamily ?? ""}
+              onChange={(e) => updateSelected({ fontFamily: e.target.value })}
+              disabled={allSelectedLocked}
+              className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
+              title="Font family"
+            >
+              <option value="">Font</option>
+              {FONT_FAMILIES.map((f) => (
+                <option key={f} value={f}>
+                  {f.split(",")[0]}
+                </option>
+              ))}
+            </select>
+            <select
+              value={firstSel?.fontSize ?? ""}
+              onChange={(e) => updateSelected({ fontSize: e.target.value })}
+              disabled={allSelectedLocked}
+              className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
+              title="Font size"
+            >
+              <option value="">Size</option>
+              {FONT_SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            <input
+              type="color"
+              value={firstSel?.color ?? "#000000"}
+              onChange={(e) => updateSelected({ color: e.target.value })}
+              disabled={allSelectedLocked}
+              className="h-7 w-8 cursor-pointer rounded-lg border border-[var(--color-border-strong)] transition-all hover:border-[var(--color-brand-500)] disabled:opacity-40"
+              title="Text color"
+            />
+            <button
+              type="button"
+              disabled={allSelectedLocked}
+              onClick={() => updateSelected({ bold: !firstSel?.bold })}
+              title={firstSel?.bold ? "Bold: ON — click to disable" : "Bold: OFF — click to enable"}
+              className={`inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-xs font-bold transition-all active:scale-[0.97] disabled:opacity-40 ${firstSel?.bold
+                  ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
+                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+            >
+              <BoldIcon className="size-3.5" />
+            </button>
 
-          <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
 
-          <div className="flex gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
-            {([
-              { key: "left", icon: AlignLeftIcon, label: "Align text left" },
-              { key: "center", icon: AlignCenterIcon, label: "Align text center" },
-              { key: "right", icon: AlignRightIcon, label: "Align text right" },
-            ] as const).map(({ key, icon: Icon, label }) => (
+            <div className="flex gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
+              {([
+                { key: "left", icon: AlignLeftIcon, label: "Align text left" },
+                { key: "center", icon: AlignCenterIcon, label: "Align text center" },
+                { key: "right", icon: AlignRightIcon, label: "Align text right" },
+              ] as const).map(({ key, icon: Icon, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={allSelectedLocked}
+                  onClick={() => updateSelected({ align: key })}
+                  title={label}
+                  className={`rounded-md px-2 py-1 text-xs font-semibold transition-all disabled:opacity-40 ${firstSel?.align === key
+                      ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                    }`}
+                >
+                  <Icon className="size-3.5" />
+                </button>
+              ))}
+            </div>
+
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
+            <button
+              type="button"
+              disabled={selCount === 0 || allSelectedLocked || !elements.some((el) => isSelected(el.id) && el.type === "text")}
+              onClick={fitSelectedToText}
+              className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-brand-100)] px-2 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-200)] active:scale-[0.97] disabled:opacity-40"
+              title="Fit bounding box to text content"
+            >
+              <TypeIcon className="size-3.5" />
+              Fit
+            </button>
+
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
+            <div className="flex gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
               <button
-                key={key}
                 type="button"
                 disabled={allSelectedLocked}
-                onClick={() => updateSelected({ align: key })}
-                title={label}
-                className={`rounded-md px-2 py-1 text-xs font-semibold transition-all disabled:opacity-40 ${
-                  firstSel?.align === key
-                    ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
-                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
-                }`}
+                onClick={bringSelectedToFront}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
+                title="Bring to front (highest layer)"
               >
-                <Icon className="size-3.5" />
+                <LayersIcon className="size-3.5" />
+                Front
               </button>
-            ))}
-          </div>
+              <button
+                type="button"
+                disabled={allSelectedLocked}
+                onClick={moveSelectedForward}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
+                title="Move forward one layer"
+              >
+                <ArrowUpIcon className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={allSelectedLocked}
+                onClick={moveSelectedBackward}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
+                title="Move backward one layer"
+              >
+                <ArrowDownIcon className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={allSelectedLocked}
+                onClick={sendSelectedToBack}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
+                title="Send to back (lowest layer)"
+              >
+                Back
+              </button>
+            </div>
 
-          <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
 
-          <button
-            type="button"
-            disabled={selCount === 0 || allSelectedLocked || !elements.some((el) => isSelected(el.id) && el.type === "text")}
-            onClick={fitSelectedToText}
-            className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-brand-100)] px-2 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-200)] active:scale-[0.97] disabled:opacity-40"
-            title="Fit bounding box to text content"
-          >
-            <TypeIcon className="size-3.5" />
-            Fit
-          </button>
-
-          <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
-
-          <div className="flex gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
             <button
               type="button"
-              disabled={allSelectedLocked}
-              onClick={bringSelectedToFront}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
-              title="Bring to front (highest layer)"
+              onClick={() => updateSelected({ locked: !elements.filter((e) => isSelected(e.id)).some((e) => e.locked) })}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] ${elements.filter((e) => isSelected(e.id)).every((e) => e.locked)
+                  ? "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]"
+                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
+                }`}
+              title={elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock selected elements" : "Lock selected elements (prevent move/edit)"}
             >
-              <LayersIcon className="size-3.5" />
-              Front
-            </button>
-            <button
-              type="button"
-              disabled={allSelectedLocked}
-              onClick={moveSelectedForward}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
-              title="Move forward one layer"
-            >
-              <ArrowUpIcon className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              disabled={allSelectedLocked}
-              onClick={moveSelectedBackward}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
-              title="Move backward one layer"
-            >
-              <ArrowDownIcon className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              disabled={allSelectedLocked}
-              onClick={sendSelectedToBack}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] active:scale-[0.97] disabled:opacity-40"
-              title="Send to back (lowest layer)"
-            >
-              Back
+              {elements.filter((e) => isSelected(e.id)).every((e) => e.locked)
+                ? <LockIcon className="size-3.5" />
+                : <LockOpenIcon className="size-3.5" />}
+              {elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock" : "Lock"}
             </button>
           </div>
+        )}
 
-          <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
-
-          <button
-            type="button"
-            onClick={() => updateSelected({ locked: !elements.filter((e) => isSelected(e.id)).some((e) => e.locked) })}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] ${
-              elements.filter((e) => isSelected(e.id)).every((e) => e.locked)
-                ? "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]"
-                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
-            }`}
-            title={elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock selected elements" : "Lock selected elements (prevent move/edit)"}
-          >
-            {elements.filter((e) => isSelected(e.id)).every((e) => e.locked)
-              ? <LockIcon className="size-3.5" />
-              : <LockOpenIcon className="size-3.5" />}
-            {elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock" : "Lock"}
-          </button>
-        </div>
-      )}
-
-      {!preview && (
-        <>
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImageSelect}
-          />
-          <input
-            ref={bgInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleBackgroundSelect}
-          />
-        </>
-      )}
-
-      <div
-        className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3"
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
-        style={{ maxHeight: fullscreen ? "calc(100vh - 80px)" : "calc(100vh - 320px)" }}
-      >
-        <div className="inline-block bg-[var(--color-surface)] p-1.5 rounded-lg shadow-sm">
-          <Ruler 
-            orientation="horizontal" 
-            length={CANVAS_W} 
-            onAddGuide={(pos) => setGuides(prev => [...prev, { orientation: 'horizontal', position: pos }])}
-          />
-          <div className="flex">
-            <Ruler 
-              orientation="vertical" 
-              length={CANVAS_H}
-              onAddGuide={(pos) => setGuides(prev => [...prev, { orientation: 'vertical', position: pos }])}
+        {!preview && (
+          <>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageSelect}
             />
-            <div
-              ref={canvasRef}
-              className="relative shadow bg-white overflow-hidden"
-              style={{
-                width: CANVAS_W,
-                height: CANVAS_H,
-                background: canvasBg
-                  ? `url("${canvasBg}") center / cover no-repeat`
-                  : "transparent",
-              }}
-              onMouseDown={handleCanvasMouseDown}
-            >
-              {showGrid && (
-                <div
-                  className="pointer-events-none absolute inset-0 z-0"
-                  style={{
-                    backgroundImage: `linear-gradient(to right, rgba(100,150,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(100,150,255,0.3) 1px, transparent 1px)`,
-                    backgroundSize: `${gridSize}px ${gridSize}px`,
-                    mixBlendMode: 'difference',
-                  }}
-                />
-              )}
-              {activeAlignGuides.map((g, i) => (
-                g.orientation === 'vertical' ? (
-                  <div
-                    key={`align-v-${i}-${g.position}`}
-                    className="pointer-events-none absolute z-50"
-                    style={{
-                      left: g.position,
-                      top: 0,
-                      width: 1,
-                      height: CANVAS_H,
-                      backgroundColor: '#ff3366',
-                    }}
-                  />
-                ) : (
-                  <div
-                    key={`align-h-${i}-${g.position}`}
-                    className="pointer-events-none absolute z-50"
-                    style={{
-                      left: 0,
-                      top: g.position,
-                      width: CANVAS_W,
-                      height: 1,
-                      backgroundColor: '#ff3366',
-                    }}
-                  />
-                )
-              ))}
-              {elements.filter((el) => !el.hidden).map((el) => (
-                <Rnd
-                  key={el.id}
-                  size={{ width: el.w, height: el.h }}
-                  position={{ x: el.x, y: el.y }}
-                  bounds="parent"
-                  dragHandleClassName="cert-drag"
-                  disableDragging={!!el.locked}
-                  onDragStart={() => handleDragStart(el.id)}
-                  onDrag={(_, d) => {
-                    const guideResult = computeAlignmentGuides(el.id, d.x, d.y, el.w, el.h);
-                    setActiveAlignGuides(guideResult.guides);
-                  }}
-                  onDragStop={(_, d) => {
-                    setActiveAlignGuides([]);
-                    handleDragStop(el.id, d);
-                  }}
-                  enableResizing={el.locked ? false : (el.type === 'text' || el.type === 'qr' ? {
-                    top: false,
-                    right: true,
-                    bottom: false,
-                    left: true,
-                    topRight: false,
-                    bottomRight: false,
-                    bottomLeft: false,
-                    topLeft: false,
-                  } : true)}
-                  onResizeStop={(_, __, ref, ___, pos) => {
-                    const snappedW = snapEnabled ? Math.round(parseInt(ref.style.width, 10) / gridSize) * gridSize : parseInt(ref.style.width, 10);
-                    const snappedX = snapValue(pos.x, 'vertical');
-                    const snappedY = snapValue(pos.y, 'horizontal');
-                    
-                    let newElements: CanvasElement[];
-                    if (el.type === 'qr') {
-                      newElements = elements.map(e => e.id === el.id ? {
-                        ...e,
-                        w: snappedW,
-                        h: snappedW,
-                        x: snappedX,
-                        y: snappedY,
-                      } : e);
-                    } else if (el.type === 'text') {
-                      const calculatedH = calculateTextHeight(el.content, el.fontSize, snappedW);
-                      newElements = elements.map(e => e.id === el.id ? {
-                        ...e,
-                        w: snappedW,
-                        h: calculatedH,
-                        x: snappedX,
-                        y: snappedY,
-                      } : e);
-                    } else {
-                      const snappedH = snapEnabled ? Math.round(parseInt(ref.style.height, 10) / gridSize) * gridSize : parseInt(ref.style.height, 10);
-                      newElements = elements.map(e => e.id === el.id ? {
-                        ...e,
-                        w: snappedW,
-                        h: snappedH,
-                        x: snappedX,
-                        y: snappedY,
-                      } : e);
-                    }
-                    saveToHistory(newElements);
-                    setElements(newElements);
-                  }}
-                  style={{ zIndex: el.z }}
-                  onMouseDown={(e) => handleElementMouseDown(el.id, e)}
-                  className={`group ${
-                    el.locked
-                      ? "ring-2 ring-amber-400 opacity-80"
-                      : isSelected(el.id)
-                        ? "ring-2 ring-blue-500"
-                        : "ring-1 ring-transparent hover:ring-blue-300"
-                  }`}
-                >
-                  <div className="relative h-full w-full">
-                    {el.locked && (
-                      <div className="absolute -top-5 left-0 z-10 flex items-center gap-0.5 rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                        <LockIcon className="size-2.5" />
-                        locked
-                      </div>
-                    )}
-                    {isSelected(el.id) && !el.locked && (() => {
-                      const nearTop = el.y < 30;
-                      const nearLeft = el.x < 80;
-                      let handleClass = "cert-drag absolute z-10 flex cursor-move items-center gap-1 rounded bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white";
-                      
-                      if (nearTop && nearLeft) {
-                        handleClass += " top-0 right-0 translate-x-full";
-                      } else if (nearTop) {
-                        handleClass += " -bottom-6 left-0";
-                      } else if (nearLeft) {
-                        handleClass += " -top-6 right-0 translate-x-full";
-                      } else {
-                        handleClass += " -top-6 left-0";
-                      }
-                      
-                      return (
-                        <div className={handleClass}>
-                          <span>⠿ drag</span>
-                        </div>
-                      );
-                    })()}
-                    {el.type === "image" ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={el.src}
-                        alt=""
-                        draggable={false}
-                        className="cert-drag h-full w-full"
-                        style={{ objectFit: "contain" }}
-                      />
-                    ) : el.type === 'qr' ? (
-                      <div
-                        className="cert-drag flex items-center justify-center h-full w-full text-xs text-gray-400"
-                        style={{
-                          fontSize: el.fontSize,
-                          fontFamily: el.fontFamily,
-                          color: el.color,
-                          border: "2px dashed #ccc",
-                          borderRadius: 4,
-                          background: "repeating-conic-gradient(#f0f0f0 0% 25%, white 0% 50%) 50% / 12px 12px",
-                        }}
-                      >
-                        QR
-                      </div>
-                    ) : (
-                      <div
-                        contentEditable={!el.locked}
-                        suppressContentEditableWarning
-                        onBlur={(e) => {
-                          const newContent = e.currentTarget.innerHTML;
-                          const newHeight = calculateTextHeight(newContent, el.fontSize, el.w);
-                          update(el.id, { 
-                            content: newContent,
-                            h: newHeight
-                          });
-                        }}
-                        onMouseDown={(e) => {
-                          if (isSelected(el.id)) e.stopPropagation();
-                        }}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          fontSize: el.fontSize,
-                          fontFamily: el.fontFamily,
-                          color: el.color,
-                          fontWeight: el.bold ? "bold" : "normal",
-                          textAlign: el.align,
-                          lineHeight: "1.5",
-                          overflow: "hidden",
-                          outline: "none",
-                          cursor: "text",
-                        }}
-                        dangerouslySetInnerHTML={{ __html: el.content }}
-                      />
-                    )}
-                  </div>
-                </Rnd>
-              ))}
+            <input
+              ref={bgInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleBackgroundSelect}
+            />
+          </>
+        )}
 
-              {marquee && (
-                <div
-                  className="pointer-events-none absolute z-50 border border-blue-500 bg-blue-500/20"
-                  style={{
-                    left: marquee.x,
-                    top: marquee.y,
-                    width: marquee.w,
-                    height: marquee.h,
-                  }}
-                />
-              )}
-              {guides.map((guide, idx) => (
-                <div
-                  key={idx}
-                  className="pointer-events-none absolute z-40"
-                  style={{
-                    left: guide.orientation === 'vertical' ? guide.position : 0,
-                    top: guide.orientation === 'horizontal' ? guide.position : 0,
-                    width: guide.orientation === 'vertical' ? 1 : '100%',
-                    height: guide.orientation === 'horizontal' ? 1 : '100%',
-                    backgroundColor: '#ff0000',
-                    opacity: 0.5,
-                  }}
-                />
-              ))}
+        <div
+          className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3"
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          style={{ maxHeight: fullscreen ? "calc(100vh - 80px)" : "calc(100vh - 320px)" }}
+        >
+          <div className="inline-block bg-[var(--color-surface)] p-1.5 rounded-lg shadow-sm">
+            <Ruler
+              orientation="horizontal"
+              length={CANVAS_W}
+              onAddGuide={(pos) => setGuides(prev => [...prev, { orientation: 'horizontal', position: pos }])}
+            />
+            <div className="flex">
+              <Ruler
+                orientation="vertical"
+                length={CANVAS_H}
+                onAddGuide={(pos) => setGuides(prev => [...prev, { orientation: 'vertical', position: pos }])}
+              />
+              <div
+                ref={canvasRef}
+                className="relative shadow bg-white overflow-hidden"
+                style={{
+                  width: CANVAS_W,
+                  height: CANVAS_H,
+                  background: canvasBg
+                    ? `url("${canvasBg}") center / cover no-repeat`
+                    : "transparent",
+                }}
+                onMouseDown={handleCanvasMouseDown}
+              >
+                {showGrid && (
+                  <div
+                    className="pointer-events-none absolute inset-0 z-0"
+                    style={{
+                      backgroundImage: `linear-gradient(to right, rgba(100,150,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(100,150,255,0.3) 1px, transparent 1px)`,
+                      backgroundSize: `${gridSize}px ${gridSize}px`,
+                      mixBlendMode: 'difference',
+                    }}
+                  />
+                )}
+                {activeAlignGuides.map((g, i) => (
+                  g.orientation === 'vertical' ? (
+                    <div
+                      key={`align-v-${i}-${g.position}`}
+                      className="pointer-events-none absolute z-50"
+                      style={{
+                        left: g.position,
+                        top: 0,
+                        width: 1,
+                        height: CANVAS_H,
+                        backgroundColor: '#ff3366',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      key={`align-h-${i}-${g.position}`}
+                      className="pointer-events-none absolute z-50"
+                      style={{
+                        left: 0,
+                        top: g.position,
+                        width: CANVAS_W,
+                        height: 1,
+                        backgroundColor: '#ff3366',
+                      }}
+                    />
+                  )
+                ))}
+                {elements.filter((el) => !el.hidden).map((el) => (
+                  <Rnd
+                    key={el.id}
+                    size={{ width: el.w, height: el.h }}
+                    position={{ x: el.x, y: el.y }}
+                    bounds="parent"
+                    dragHandleClassName="cert-drag"
+                    disableDragging={!!el.locked}
+                    onDragStart={() => handleDragStart(el.id)}
+                    onDrag={(_, d) => {
+                      const guideResult = computeAlignmentGuides(el.id, d.x, d.y, el.w, el.h);
+                      setActiveAlignGuides(guideResult.guides);
+                    }}
+                    onDragStop={(_, d) => {
+                      setActiveAlignGuides([]);
+                      handleDragStop(el.id, d);
+                    }}
+                    enableResizing={el.locked ? false : (el.type === 'text' || el.type === 'qr' ? {
+                      top: false,
+                      right: true,
+                      bottom: false,
+                      left: true,
+                      topRight: false,
+                      bottomRight: false,
+                      bottomLeft: false,
+                      topLeft: false,
+                    } : true)}
+                    onResizeStop={(_, __, ref, ___, pos) => {
+                      const snappedW = snapEnabled ? Math.round(parseInt(ref.style.width, 10) / gridSize) * gridSize : parseInt(ref.style.width, 10);
+                      const snappedX = snapValue(pos.x, 'vertical');
+                      const snappedY = snapValue(pos.y, 'horizontal');
+
+                      let newElements: CanvasElement[];
+                      if (el.type === 'qr') {
+                        newElements = elements.map(e => e.id === el.id ? {
+                          ...e,
+                          w: snappedW,
+                          h: snappedW,
+                          x: snappedX,
+                          y: snappedY,
+                        } : e);
+                      } else if (el.type === 'text') {
+                        const calculatedH = calculateTextHeight(el.content, el.fontSize, snappedW);
+                        newElements = elements.map(e => e.id === el.id ? {
+                          ...e,
+                          w: snappedW,
+                          h: calculatedH,
+                          x: snappedX,
+                          y: snappedY,
+                        } : e);
+                      } else {
+                        const snappedH = snapEnabled ? Math.round(parseInt(ref.style.height, 10) / gridSize) * gridSize : parseInt(ref.style.height, 10);
+                        newElements = elements.map(e => e.id === el.id ? {
+                          ...e,
+                          w: snappedW,
+                          h: snappedH,
+                          x: snappedX,
+                          y: snappedY,
+                        } : e);
+                      }
+                      saveToHistory(newElements);
+                      setElements(newElements);
+                    }}
+                    style={{ zIndex: el.z }}
+                    onMouseDown={(e) => handleElementMouseDown(el.id, e)}
+                    className={`group ${el.locked
+                        ? "ring-2 ring-amber-400 opacity-80"
+                        : isSelected(el.id)
+                          ? "ring-2 ring-blue-500"
+                          : "ring-1 ring-transparent hover:ring-blue-300"
+                      }`}
+                  >
+                    <div className="relative h-full w-full">
+                      {el.locked && (
+                        <div className="absolute -top-5 left-0 z-10 flex items-center gap-0.5 rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          <LockIcon className="size-2.5" />
+                          locked
+                        </div>
+                      )}
+                      {isSelected(el.id) && !el.locked && (() => {
+                        const nearTop = el.y < 30;
+                        const nearLeft = el.x < 80;
+                        let handleClass = "cert-drag absolute z-10 flex cursor-move items-center gap-1 rounded bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white";
+
+                        if (nearTop && nearLeft) {
+                          handleClass += " top-0 right-0 translate-x-full";
+                        } else if (nearTop) {
+                          handleClass += " -bottom-6 left-0";
+                        } else if (nearLeft) {
+                          handleClass += " -top-6 right-0 translate-x-full";
+                        } else {
+                          handleClass += " -top-6 left-0";
+                        }
+
+                        return (
+                          <div className={handleClass}>
+                            <span>⠿ drag</span>
+                          </div>
+                        );
+                      })()}
+                      {el.type === "image" ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={el.src}
+                          alt=""
+                          draggable={false}
+                          className="cert-drag h-full w-full"
+                          style={{ objectFit: "contain" }}
+                        />
+                      ) : el.type === 'qr' ? (
+                        <div
+                          className="cert-drag flex items-center justify-center h-full w-full text-xs text-gray-400"
+                          style={{
+                            fontSize: el.fontSize,
+                            fontFamily: el.fontFamily,
+                            color: el.color,
+                            border: "2px dashed #ccc",
+                            borderRadius: 4,
+                            background: "repeating-conic-gradient(#f0f0f0 0% 25%, white 0% 50%) 50% / 12px 12px",
+                          }}
+                        >
+                          QR
+                        </div>
+                      ) : (
+                        <div
+                          contentEditable={!el.locked}
+                          suppressContentEditableWarning
+                          onBlur={(e) => {
+                            const newContent = e.currentTarget.innerHTML;
+                            const newHeight = calculateTextHeight(newContent, el.fontSize, el.w);
+                            update(el.id, {
+                              content: newContent,
+                              h: newHeight
+                            });
+                          }}
+                          onMouseDown={(e) => {
+                            if (isSelected(el.id)) e.stopPropagation();
+                          }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            fontSize: el.fontSize,
+                            fontFamily: el.fontFamily,
+                            color: el.color,
+                            fontWeight: el.bold ? "bold" : "normal",
+                            textAlign: el.align,
+                            lineHeight: "1.5",
+                            overflow: "hidden",
+                            outline: "none",
+                            cursor: "text",
+                          }}
+                          dangerouslySetInnerHTML={{ __html: el.content }}
+                        />
+                      )}
+                    </div>
+                  </Rnd>
+                ))}
+
+                {marquee && (
+                  <div
+                    className="pointer-events-none absolute z-50 border border-blue-500 bg-blue-500/20"
+                    style={{
+                      left: marquee.x,
+                      top: marquee.y,
+                      width: marquee.w,
+                      height: marquee.h,
+                    }}
+                  />
+                )}
+                {guides.map((guide, idx) => (
+                  <div
+                    key={idx}
+                    className="pointer-events-none absolute z-40"
+                    style={{
+                      left: guide.orientation === 'vertical' ? guide.position : 0,
+                      top: guide.orientation === 'horizontal' ? guide.position : 0,
+                      width: guide.orientation === 'vertical' ? 1 : '100%',
+                      height: guide.orientation === 'horizontal' ? 1 : '100%',
+                      backgroundColor: '#ff0000',
+                      opacity: 0.5,
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
 
       <style jsx global>{`
@@ -2088,7 +2079,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-text)] shadow-lg transition-all hover:bg-[var(--color-surface-hover)] active:scale-[0.97]"
           title="Exit fullscreen (Esc)"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
           Exit Fullscreen
         </button>
       </div>
@@ -2144,16 +2135,16 @@ function Ruler({
       );
     }
   }
-  
+
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!onAddGuide) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const position = orientation === "horizontal" 
-      ? e.clientX - rect.left 
+    const position = orientation === "horizontal"
+      ? e.clientX - rect.left
       : e.clientY - rect.top;
     onAddGuide(Math.round(position));
   };
-  
+
   return (
     <div
       className="relative bg-gray-100 cursor-pointer"
