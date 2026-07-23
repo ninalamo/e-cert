@@ -43,7 +43,7 @@ export default function HealthPage() {
           {error}
         </pre>
       )}
-      {data && (
+      {data !== null && (
         <pre className="bg-green-50 border border-green-200 p-4 rounded overflow-auto max-h-[70vh] whitespace-pre-wrap">
           {JSON.stringify(data, null, 2)}
         </pre>
