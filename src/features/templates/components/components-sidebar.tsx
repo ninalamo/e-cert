@@ -9,7 +9,7 @@ import {
   LockOpenIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  ChevronDownIcon,
+  ChevronRightIcon,
 } from "lucide-react";
 
 export interface ComponentsSidebarItem {
@@ -68,7 +68,8 @@ export default function ComponentsSidebar({
   title = "Components",
 }: ComponentsSidebarProps) {
   return (
-    <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0">
+    <div className="flex-shrink-0 flex flex-col">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0 flex-shrink-0">
       <button
         type="button"
         onClick={onToggle}
@@ -81,7 +82,7 @@ export default function ComponentsSidebar({
           <span className="text-xs text-[var(--color-text-muted)]">
             {items.length}
           </span>
-          <ChevronDownIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${expanded ? "rotate-180" : ""}`} />
+          <ChevronRightIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${expanded ? "rotate-90" : ""}`} />
         </div>
       </button>
       {expanded && (
@@ -188,7 +189,8 @@ export default function ComponentsSidebar({
             ))
           )}
         </div>
-      )}
+)}
+      </div>
     </div>
   );
 }

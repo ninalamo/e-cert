@@ -15,9 +15,6 @@ interface TemplateSidebarProps {
   loading?: boolean;
   disabled?: boolean;
   fullscreen?: boolean;
-  elementsCount?: number;
-  onComponentsToggle?: () => void;
-  componentsExpanded?: boolean;
   showFullscreenToggle?: boolean;
   showPreview?: boolean;
   expanded?: boolean;
@@ -37,42 +34,23 @@ export default function TemplateSidebar({
   loading = false,
   disabled = false,
   fullscreen = false,
-  elementsCount = 0,
-  onComponentsToggle,
-  componentsExpanded = true,
   expanded = true,
   onExpandedChange,
 }: TemplateSidebarProps) {
   return (
     <div className="flex-shrink-0 flex flex-col">
-      <button
-        type="button"
-        onClick={onComponentsToggle}
-        className="w-full border-b border-[var(--color-border)] px-4 py-2.5 flex items-center justify-between flex-shrink-0 transition-colors hover:bg-[var(--color-surface-hover)]"
-      >
-        <span className="text-sm font-semibold text-[var(--color-text)]">
-          Components
-        </span>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--color-text-muted)]">
-            {elementsCount}
-          </span>
-          <ChevronRightIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${componentsExpanded ? "rotate-90" : ""}`} />
-        </div>
-      </button>
-
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0 flex-shrink-0">
         <button
           type="button"
           onClick={() => onExpandedChange?.(!expanded)}
           className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
         >
-          Template
+          Details
           <ChevronRightIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${expanded ? "rotate-90" : ""}`} />
         </button>
         {expanded && (
-          <div className="px-4 pb-4 space-y-4">
-            <div>
+          <div className="px-4 pt-4 pb-4 space-y-4">
+            <div className="pt-4">
               <label htmlFor="canvas-name" className="block text-xs font-semibold mb-1.5 text-[var(--color-text-secondary)]">
                 Template Name
               </label>

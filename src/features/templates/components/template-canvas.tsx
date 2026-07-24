@@ -1265,7 +1265,7 @@ const content = (
           </button>
           {drawerOpen && (
             <div className="w-64 flex-shrink-0 flex flex-col h-[calc(100vh-220px)] overflow-hidden">
-              <TemplateSidebar
+<TemplateSidebar
                 name={name}
                 description={description}
                 onNameChange={onNameChange}
@@ -1284,10 +1284,9 @@ const content = (
                 submitLabel={submitLabel}
                 expanded={sidebarExpanded}
                 onExpandedChange={setSidebarExpanded}
-                componentsExpanded={componentsExpanded}
-                onComponentsToggle={() => setComponentsExpanded((v) => !v)}
               />
-          <ComponentsSidebar
+              <div className="h-4" />
+              <ComponentsSidebar
               items={componentItems}
               expanded={componentsExpanded}
               onToggle={() => setComponentsExpanded((v) => !v)}

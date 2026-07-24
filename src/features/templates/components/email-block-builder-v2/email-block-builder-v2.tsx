@@ -444,27 +444,22 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
         {/* Left sidebar */}
         {sidebarExpanded && (
           <div className="w-64 flex-shrink-0 flex flex-col gap-4 max-h-full overflow-y-auto">
-            <TemplateSidebar
-              name={name}
-              description={description}
-              onNameChange={onNameChange}
-              onDescriptionChange={onDescriptionChange}
-              onPreview={onPreview}
-              onFullscreenChange={onFullscreenChange}
-              onSave={onSave}
-              onClose={() => onFullscreenChange?.(false)}
-              submitLabel={submitLabel}
-              loading={loading}
-              disabled={disabled}
-              fullscreen={fullscreen}
-              elementsCount={blocks.length}
-              onComponentsToggle={() => setComponentsExpanded((v) => !v)}
-              componentsExpanded={componentsExpanded}
-              showFullscreenToggle={true}
-              showPreview={true}
-            />
-
-            <ComponentsSidebar
+<TemplateSidebar
+               name={name}
+               description={description}
+               onNameChange={onNameChange}
+               onDescriptionChange={onDescriptionChange}
+               onPreview={onPreview}
+               onFullscreenChange={onFullscreenChange}
+               onSave={onSave}
+               onClose={() => onFullscreenChange?.(false)}
+               submitLabel={submitLabel}
+               loading={loading}
+               disabled={disabled}
+               fullscreen={fullscreen}
+             />
+             <div className="h-4" />
+             <ComponentsSidebar
               items={componentItems}
               expanded={componentsExpanded}
               onToggle={() => setComponentsExpanded((v) => !v)}
