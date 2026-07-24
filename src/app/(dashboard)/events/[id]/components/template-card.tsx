@@ -132,8 +132,8 @@ export default function TemplateCard({
         <div className="mb-3 flex items-center gap-2">
           <MailIcon className="size-4 text-[var(--color-text-muted)]" />
           <p className="section-title mb-0">Email Template</p>
-          <span className="rounded-full bg-surface-tertiary px-2.5 py-0.5 text-[11px] font-medium text-tertiary">
-            Optional
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
+            Coming soon
           </span>
         </div>
         <div className="mb-2 text-sm">
@@ -151,7 +151,7 @@ export default function TemplateCard({
         <select
           value={selectedEmail}
           onChange={(e) => setSelectedEmail(e.target.value)}
-          disabled={event.status !== "draft"}
+          disabled
           className="input mb-3 disabled:opacity-50"
         >
           <option value="">System default template</option>
@@ -165,11 +165,7 @@ export default function TemplateCard({
           <button
             type="button"
             onClick={handleEmailSave}
-            disabled={
-              savingEmail ||
-              selectedEmail === (event.email_template_id ?? "") ||
-              event.status !== "draft"
-            }
+            disabled
             className="btn-brand-soft disabled:opacity-50"
           >
             {savingEmail ? "Saving..." : "Assign Email Template"}
