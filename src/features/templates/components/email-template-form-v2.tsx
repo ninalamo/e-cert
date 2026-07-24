@@ -1,18 +1,7 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { EmailPreview } from "./email-template-editor";
 import EmailBlockBuilderV2 from "./email-block-builder-v2/email-block-builder-v2";
 import type { EmailBlockBuilderV2Handle } from "./email-block-builder-v2/email-block-builder-v2";
-import CodeEditor from "@/components/ui/code-editor";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { CopyIcon, XIcon } from "lucide-react";
 
 interface EmailTemplateFormV2Props {
   initialData?: {
@@ -42,22 +31,7 @@ export default function EmailTemplateFormV2({
   const [htmlContent, setHtmlContent] = useState(initialData?.html_content ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showSource, setShowSource] = useState(false);
   const builderRef = useRef<EmailBlockBuilderV2Handle | null>(null);
-
-  const handleFullscreenExit = useCallback(() => {
-    if (fullscreen) setFullscreen(false);
-  }, [fullscreen]);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") handleFullscreenExit();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [handleFullscreenExit]);
 
   async function handleSave() {
     setError(null);
@@ -92,26 +66,6 @@ export default function EmailTemplateFormV2({
             <p className="text-xs text-[var(--color-text-muted)]">
               Design your email template. Drag and drop blocks to build your layout, or switch to Editor mode for rich text editing.
             </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowSource(!showSource)}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
-                  showSource
-                    ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
-                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
-                }`}
-              >
-                {showSource ? "Hide Source" : "Show Source"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPreview(true)}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-all"
-              >
-                Preview
-              </button>
-            </div>
           </div>
           <EmailBlockBuilderV2
             ref={builderRef}
@@ -122,65 +76,12 @@ export default function EmailTemplateFormV2({
             description={description}
             onNameChange={setName}
             onDescriptionChange={setDescription}
-            fullscreen={fullscreen}
-            onFullscreenChange={setFullscreen}
             submitLabel={submitLabel}
             loading={loading}
             onSave={handleSave}
-            onPreview={() => setShowPreview(true)}
           />
         </div>
       </fieldset>
-
-      {/* Preview Dialog */}
-      {showPreview && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowPreview(false)}>
-          <div className="mx-4 flex flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl" style={{ width: "600px", maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-              <span className="text-sm font-semibold text-[var(--color-text)]">Email Preview</span>
-              <button type="button" onClick={() => setShowPreview(false)} className="rounded-lg p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-              </button>
-            </div>
-            <div className="overflow-y-auto p-4" style={{ maxHeight: "calc(90vh - 60px)" }}>
-              <EmailPreview html={htmlContent} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Source Code Dialog */}
-      {showSource && (
-        <Dialog open={showSource} onOpenChange={setShowSource}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
-                HTML Source
-                <Button variant="ghost" size="icon" onClick={() => setShowSource(false)}>
-                  <XIcon className="size-4" />
-                </Button>
-              </DialogTitle>
-            </DialogHeader>
-            <div className="flex gap-2 p-4 border-t border-[var(--color-border)]">
-              <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(builderRef.current?.getHtml() ?? htmlContent)}>
-                <CopyIcon className="size-3.5 mr-1.5" />
-                Copy HTML
-              </Button>
-            </div>
-            <CodeEditor
-              value={htmlContent}
-              onChange={() => {}}
-              rows={30}
-              readOnly
-            />
-            <DialogFooter className="border-t border-[var(--color-border)]">
-              <Button variant="outline" onClick={() => setShowSource(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* Loading Overlay */}
       {loading && (

@@ -540,47 +540,6 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
               </div>
 
               <div className="flex-1" />
-
-              {/* Preview button */}
-              <button
-                type="button"
-                onClick={onPreview}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-all"
-              >
-                Preview
-              </button>
-
-              {/* Fullscreen button */}
-              <button
-                type="button"
-                onClick={() => onFullscreenChange?.(!fullscreen)}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-brand-600)] hover:bg-[var(--color-brand-50)] transition-all"
-              >
-                {fullscreen ? "Exit Fullscreen" : "Fullscreen"}
-              </button>
-
-              {/* Save button */}
-              <button
-                type="button"
-                onClick={onSave}
-                disabled={loading}
-                className="rounded-lg bg-[var(--color-brand-600)] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-brand-700)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? "Saving..." : submitLabel}
-              </button>
-
-              {/* Close Editor button */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
-                    window.location.href = "/templates";
-                  }
-                }}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-danger-text)] hover:bg-[var(--color-danger-bg)] transition-all"
-              >
-                Close Editor
-              </button>
             </div>
           </div>
 
