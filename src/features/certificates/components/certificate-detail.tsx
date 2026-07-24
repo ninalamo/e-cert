@@ -121,7 +121,7 @@ export default function CertificateDetail({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {isAdmin && !certificate.revoked_at && (
+          {/* {isAdmin && !certificate.revoked_at && (
             <button
               onClick={() => setRevokeDialogOpen(true)}
               className="btn-danger"
@@ -129,14 +129,14 @@ export default function CertificateDetail({
               <ShieldOffIcon className="size-4" />
               <span className="hidden sm:inline">Revoke</span>
             </button>
-          )}
+          )} */}
           <button
             onClick={() => window.open(`/view/${certificate.id}`, "_blank")}
             className="btn-brand"
           >
             <PrinterIcon className="size-4" />
-            <span className="hidden sm:inline">Print</span>
-            <span className="sm:hidden">Print</span>
+            <span className="hidden sm:inline">Preview</span>
+            <span className="sm:hidden">Preview</span>
           </button>
         </div>
       </div>
