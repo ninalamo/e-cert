@@ -63,7 +63,7 @@ export class CertificateRepository extends BaseRepository<Certificate> {
       .order("created_at", { ascending: false });
 
     if (error) return [];
-    return (data ?? []) as Array<Certificate & { events: { name: string } | null }>;
+    return (data ?? []) as unknown as Array<Certificate & { events: { name: string } | null }>;
   }
 
   async findByIdForRecipient(

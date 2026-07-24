@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { createEmailTemplateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 
-const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });
+const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 
 export default function NewEmailTemplatePage() {
   return (
@@ -16,7 +16,6 @@ export default function NewEmailTemplatePage() {
         </p>
       </div>
       <TemplateForm
-        templateType="email"
         submitLabel="Save Changes"
         onSubmit={async (data) => {
           return await createEmailTemplateAction({

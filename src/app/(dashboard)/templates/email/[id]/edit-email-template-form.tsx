@@ -8,7 +8,7 @@ import {
   isEmailTemplateLockedAction,
 } from "@/features/templates/server/template.actions";
 
-const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });
+const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
 
@@ -59,18 +59,16 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
 
       <TemplateForm
         key={template.id}
-        templateType={template.type}
         initialData={{
           name: template.name,
           description: template.description ?? "",
-          type: template.type,
           html_content: template.html_content,
           css_content: template.css_content ?? "",
         }}
         disabled={locked}
         submitLabel="Save Changes"
         onSubmit={async (data) => {
-          if (locked) return { template: null, error: "Template is locked." };
+          if (locked) return { error: "Template is locked." };
           return await updateTemplateAction(id, data);
         }}
       />
