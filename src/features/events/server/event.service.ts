@@ -48,14 +48,16 @@ export async function getEventWithStats(id: string, client?: SupabaseClient) {
   const event = await eventRepo.findById(id);
   if (!event) return null;
 
-  const [allCerts, template] = await Promise.all([
+  const [allCerts, template, emailTemplate] = await Promise.all([
     certRepo.findMany({ event_id: id }, { columns: "id, revoked_at" }),
     event.template_id ? templateRepo.findById(event.template_id) : null,
+    event.email_template_id ? templateRepo.findById(event.email_template_id) : null,
   ]);
 
   return {
     event,
     template,
+    emailTemplate,
     stats: {
       total: allCerts.length,
       active: allCerts.filter((c) => !c.revoked_at).length,
@@ -67,7 +69,7 @@ export async function getEventWithStats(id: string, client?: SupabaseClient) {
 
 export async function createEvent(
   data: Pick<Event, "organization_id" | "name"> &
-    Partial<Pick<Event, "description" | "event_date" | "location" | "organizer" | "certificate_title" | "certificate_number_pattern" | "valid_until" | "template_id">>,
+    Partial<Pick<Event, "description" | "event_date" | "location" | "organizer" | "certificate_title" | "certificate_number_pattern" | "valid_until" | "template_id" | "email_template_id">>,
   client?: SupabaseClient
 ): Promise<{ event: Event | null; error?: string }> {
   const { data: event, error } = await repos(client ?? (await createClient())).eventRepo.create({
@@ -80,6 +82,7 @@ export async function createEvent(
     certificate_number_pattern: data.certificate_number_pattern ?? "EPOCH",
     valid_until: data.valid_until ?? null,
     template_id: data.template_id ?? null,
+    email_template_id: data.email_template_id ?? null,
     status: "draft",
   } as Partial<Event>);
 
@@ -91,7 +94,7 @@ export async function createEvent(
 
 export async function updateEvent(
   id: string,
-  data: Partial<Pick<Event, "name" | "description" | "event_date" | "location" | "organizer" | "certificate_title" | "certificate_number_pattern" | "valid_until" | "status" | "template_id">>,
+  data: Partial<Pick<Event, "name" | "description" | "event_date" | "location" | "organizer" | "certificate_title" | "certificate_number_pattern" | "valid_until" | "status" | "template_id" | "email_template_id">>,
   client?: SupabaseClient
 ): Promise<{ event: Event | null; error?: string }> {
   const { eventRepo } = repos(client ?? (await createClient()));
@@ -149,6 +152,35 @@ export async function cloneTemplateForEvent(
   }
 
   await eventRepo.update(eventId, { template_id: template.id });
+  return { templateId: template.id };
+}
+
+export async function cloneEmailTemplateForEvent(
+  sourceTemplateId: string,
+  eventId: string,
+  cloneName: string,
+  client?: SupabaseClient
+): Promise<{ templateId: string | null; error?: string }> {
+  const { eventRepo, templateRepo } = repos(client ?? (await createClient()));
+  const source = await templateRepo.findById(sourceTemplateId);
+  if (!source) {
+    return { templateId: null, error: "Source email template not found" };
+  }
+
+  const { data: template, error: cloneError } = await templateRepo.create({
+    organization_id: source.organization_id,
+    name: cloneName,
+    description: source.description,
+    type: 'email',
+    html_content: source.html_content,
+    css_content: source.css_content,
+  });
+
+  if (!template) {
+    return { templateId: null, error: cloneError ?? "Failed to clone email template" };
+  }
+
+  await eventRepo.update(eventId, { email_template_id: template.id });
   return { templateId: template.id };
 }
 

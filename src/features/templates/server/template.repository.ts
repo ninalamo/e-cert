@@ -21,6 +21,21 @@ export class CertificateTemplateRepository extends BaseRepository<CertificateTem
     );
   }
 
+  async findByOrganizationIdAndType(
+    organizationId: string,
+    type: 'certificate' | 'email',
+    columns?: string
+  ): Promise<CertificateTemplate[]> {
+    return this.findMany(
+      { organization_id: organizationId, type },
+      {
+        orderBy: "created_at",
+        ascending: false,
+        columns,
+      }
+    );
+  }
+
   async findByOrganizationIdAndName(organizationId: string, name: string): Promise<CertificateTemplate | null> {
     const { data, error } = await this.client
       .from(this.table)

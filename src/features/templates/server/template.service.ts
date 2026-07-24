@@ -22,6 +22,17 @@ export async function isTemplateLocked(
   );
 }
 
+export async function isEmailTemplateLocked(
+  templateId: string,
+  client?: SupabaseClient
+): Promise<boolean> {
+  const c = client ?? (await createClient());
+  const events = await new eventRepo.EventRepository(c).findByEmailTemplateId(templateId);
+  return events.some(
+    (e) => e.status !== "draft" && LIVE_STATUSES.includes(e.status)
+  );
+}
+
 export async function getTemplatesWithLockState(
   organizationId: string,
   client?: SupabaseClient
@@ -50,6 +61,28 @@ export async function getTemplates(
   );
 }
 
+export async function getCertificateTemplates(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<CertificateTemplate[]> {
+  return repo(client ?? (await createClient())).findByOrganizationIdAndType(
+    organizationId,
+    'certificate',
+    TEMPLATE_LISTING_COLUMNS
+  );
+}
+
+export async function getEmailTemplates(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<CertificateTemplate[]> {
+  return repo(client ?? (await createClient())).findByOrganizationIdAndType(
+    organizationId,
+    'email',
+    TEMPLATE_LISTING_COLUMNS
+  );
+}
+
 export async function getTemplate(
   id: string,
   client?: SupabaseClient
@@ -57,8 +90,17 @@ export async function getTemplate(
   return repo(client ?? (await createClient())).findById(id);
 }
 
+export async function getEmailTemplate(
+  id: string,
+  client?: SupabaseClient
+): Promise<CertificateTemplate | null> {
+  const template = await repo(client ?? (await createClient())).findById(id);
+  if (template && template.type !== 'email') return null;
+  return template;
+}
+
 export async function createTemplate(
-  data: Pick<CertificateTemplate, "organization_id" | "name" | "description" | "html_content" | "css_content">,
+  data: Pick<CertificateTemplate, "organization_id" | "name" | "description" | "html_content" | "css_content"> & { type?: 'certificate' | 'email' },
   client?: SupabaseClient
 ): Promise<{ template: CertificateTemplate | null; error?: string }> {
   const r = repo(client ?? (await createClient()));
@@ -67,11 +109,21 @@ export async function createTemplate(
     return { template: null, error: `A template named "${data.name}" already exists. Please choose a different name.` };
   }
 
-  const { data: template, error } = await r.create(data as Partial<CertificateTemplate>);
+  const { data: template, error } = await r.create({
+    ...data,
+    type: data.type ?? 'certificate',
+  } as Partial<CertificateTemplate>);
   if (!template) {
     return { template: null, error: error ?? "Failed to create template" };
   }
   return { template };
+}
+
+export async function createEmailTemplate(
+  data: Pick<CertificateTemplate, "organization_id" | "name" | "description" | "html_content" | "css_content">,
+  client?: SupabaseClient
+): Promise<{ template: CertificateTemplate | null; error?: string }> {
+  return createTemplate({ ...data, type: 'email' }, client);
 }
 
 export async function updateTemplate(

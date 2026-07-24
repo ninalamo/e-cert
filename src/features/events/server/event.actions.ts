@@ -44,6 +44,7 @@ export async function createEventAction(data: {
   certificate_number_pattern?: string;
   valid_until?: string;
   template_id?: string;
+  email_template_id?: string;
 }) {
   await requireRole(["admin", "staff"]);
   const client = await createClient();
@@ -63,6 +64,7 @@ export async function updateEventAction(
     valid_until?: string;
     status?: "draft" | "active" | "archive";
     template_id?: string;
+    email_template_id?: string;
   }
 ) {
   await requireRole(["admin", "staff"]);
@@ -88,6 +90,21 @@ export async function cloneTemplateForEventAction(
   const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
   const cloneName = `${source.name} Copy (${eventName}) ${timestamp}`;
   return eventService.cloneTemplateForEvent(sourceTemplateId, eventId, cloneName);
+}
+
+export async function cloneEmailTemplateForEventAction(
+  sourceTemplateId: string,
+  eventId: string,
+  eventName: string
+) {
+  await requireRole(["admin", "staff"]);
+  const source = await eventService.getTemplateForClone(sourceTemplateId);
+  if (!source) {
+    return { templateId: null, error: "Source email template not found" };
+  }
+  const timestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const cloneName = `${source.name} Copy (${eventName}) ${timestamp}`;
+  return eventService.cloneEmailTemplateForEvent(sourceTemplateId, eventId, cloneName);
 }
 
 export async function issueEventCertificateAction(data: {

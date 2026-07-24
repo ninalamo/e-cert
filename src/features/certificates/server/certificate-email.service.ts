@@ -1,7 +1,9 @@
 import { CertificateEmailRepository } from "./certificate-email.repository";
 import { getEmailProvider } from "@/lib/email";
-import { certificateEmailHtml } from "./email-template";
+import { certificateEmailHtml, renderEmailTemplate } from "./email-template";
 import { CertificateRepository } from "./certificate.repository";
+import { CertificateTemplateRepository } from "@/features/templates/server/template.repository";
+import { EventRepository } from "@/features/events/server/event.repository";
 import { getCertificatePdfBuffer } from "./certificate.service";
 import { ORG_NAME } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
@@ -27,6 +29,8 @@ export async function sendCertificateEmail(
   const supabase = client ?? (await createClient());
   const certRepo = new CertificateRepository(supabase);
   const emailRepo = new CertificateEmailRepository(supabaseAdmin);
+  const eventRepo = new EventRepository(supabase);
+  const templateRepo = new CertificateTemplateRepository(supabase);
   const existingLog = await emailRepo.findLatestByCertificateId(certificateId);
   const certificate = await certRepo.findById(certificateId);
   if (!certificate) {
@@ -69,14 +73,52 @@ export async function sendCertificateEmail(
     }
   }
 
-  const html = certificateEmailHtml({
-    recipientName: certificate.recipient_name,
-    certificateNumber: certificate.certificate_number,
-    issuedDate: new Date(certificate.issued_at).toLocaleDateString(),
-    downloadUrl: viewUrl,
-    verifyUrl,
-    orgName,
-  });
+  // Check if event has a custom email template
+  let html: string;
+  if (certificate.event_id) {
+    const event = await eventRepo.findById(certificate.event_id);
+    if (event?.email_template_id) {
+      const emailTemplate = await templateRepo.findById(event.email_template_id);
+      if (emailTemplate && emailTemplate.type === 'email') {
+        console.log(`[EmailService] Using custom email template: ${emailTemplate.name}`);
+        html = renderEmailTemplate(emailTemplate.html_content, {
+          recipient_name: certificate.recipient_name,
+          certificate_number: certificate.certificate_number,
+          issued_date: new Date(certificate.issued_at).toLocaleDateString(),
+          download_url: viewUrl,
+          verify_url: verifyUrl,
+          org_name: orgName,
+        });
+      } else {
+        html = certificateEmailHtml({
+          recipientName: certificate.recipient_name,
+          certificateNumber: certificate.certificate_number,
+          issuedDate: new Date(certificate.issued_at).toLocaleDateString(),
+          downloadUrl: viewUrl,
+          verifyUrl,
+          orgName,
+        });
+      }
+    } else {
+      html = certificateEmailHtml({
+        recipientName: certificate.recipient_name,
+        certificateNumber: certificate.certificate_number,
+        issuedDate: new Date(certificate.issued_at).toLocaleDateString(),
+        downloadUrl: viewUrl,
+        verifyUrl,
+        orgName,
+      });
+    }
+  } else {
+    html = certificateEmailHtml({
+      recipientName: certificate.recipient_name,
+      certificateNumber: certificate.certificate_number,
+      issuedDate: new Date(certificate.issued_at).toLocaleDateString(),
+      downloadUrl: viewUrl,
+      verifyUrl,
+      orgName,
+    });
+  }
 
   const emailProvider = getEmailProvider();
 

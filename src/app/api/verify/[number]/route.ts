@@ -51,10 +51,19 @@ export async function GET(
     status = "expired";
   }
 
-  const eventArr = certificate.events as unknown as { name: string; description: string | null; event_date: string | null; location: string | null; organizer: string | null; certificate_title: string | null }[] | null;
-  const event = eventArr?.[0] ?? null;
-  const orgArr = certificate.organizations as unknown as { name: string; slug: string }[] | null;
-  const org = orgArr?.[0] ?? null;
+  const event = certificate.events as unknown as {
+    name: string;
+    description: string | null;
+    event_date: string | null;
+    location: string | null;
+    organizer: string | null;
+    certificate_title: string | null;
+  } | null;
+
+  const org = certificate.organizations as unknown as {
+    name: string;
+    slug: string;
+  } | null;
 
   return NextResponse.json({
     valid: true,
@@ -65,15 +74,16 @@ export async function GET(
     valid_until: certificate.expires_at,
     status,
     organization: org ? { name: org.name } : null,
+    event_name: event?.name,
     event: event
       ? {
-          name: event.name,
-          description: event.description,
-          event_date: event.event_date,
-          location: event.location,
-          organizer: event.organizer,
-          certificate_title: event.certificate_title,
-        }
+        name: event.name,
+        description: event.description,
+        event_date: event.event_date,
+        location: event.location,
+        organizer: event.organizer,
+        certificate_title: event.certificate_title,
+      }
       : null,
   }, { headers: CACHE_HEADERS });
 }

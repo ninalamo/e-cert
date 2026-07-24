@@ -55,3 +55,23 @@ export function certificateEmailHtml(data: {
 </body>
 </html>`;
 }
+
+export function renderEmailTemplate(
+  html: string,
+  data: {
+    recipient_name: string;
+    certificate_number: string;
+    issued_date: string;
+    download_url: string;
+    verify_url: string;
+    org_name: string;
+  }
+): string {
+  return html
+    .replace(/\{\{recipient_name\}\}/g, data.recipient_name)
+    .replace(/\{\{certificate_number\}\}/g, data.certificate_number)
+    .replace(/\{\{issued_date\}\}/g, data.issued_date)
+    .replace(/\{\{download_url\}\}/g, data.download_url)
+    .replace(/\{\{verify_url\}\}/g, data.verify_url)
+    .replace(/\{\{org_name\}\}/g, data.org_name);
+}

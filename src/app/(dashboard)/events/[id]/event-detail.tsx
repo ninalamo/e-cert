@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   getEventWithStatsAction,
 } from "@/features/events/server/event.actions";
-import { getTemplatesAction } from "@/features/templates/server/template.actions";
+import { getTemplatesAction, getEmailTemplatesAction } from "@/features/templates/server/template.actions";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonEventDetail } from "@/components/ui/skeleton";
@@ -19,6 +19,7 @@ import AttendeesTab from "./components/attendees-tab";
 interface EventDetailData {
   event: Event;
   template: CertificateTemplate | null;
+  emailTemplate: CertificateTemplate | null;
 }
 
 function isExpired(dateStr: string | null): boolean {
@@ -36,16 +37,19 @@ export default function EventDetail({
   initialTab = "details",
   initialData = null,
   initialTemplates = [],
+  initialEmailTemplates = [],
 }: {
   eventId: string;
   canDelete?: boolean;
   initialTab?: "details" | "attendees";
   initialData?: EventDetailData | null;
   initialTemplates?: CertificateTemplate[];
+  initialEmailTemplates?: CertificateTemplate[];
 }) {
   const [data, setData] = useState<EventDetailData | null>(initialData);
   const [loading, setLoading] = useState(!initialData);
   const [templates, setTemplates] = useState<CertificateTemplate[]>(initialTemplates);
+  const [emailTemplates, setEmailTemplates] = useState<CertificateTemplate[]>(initialEmailTemplates);
   const [activeTab, setActiveTab] = useState<"details" | "attendees">(initialTab);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -76,6 +80,17 @@ export default function EventDetail({
     return () => { active = false; };
   }, [data?.event.organization_id, initialTemplates.length]);
 
+  useEffect(() => {
+    if (initialEmailTemplates.length > 0) return;
+    const orgId = data?.event.organization_id;
+    if (!orgId) return;
+    let active = true;
+    getEmailTemplatesAction(orgId)
+      .then((t) => { if (active) setEmailTemplates(t); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [data?.event.organization_id, initialEmailTemplates.length]);
+
   function switchTab(tab: "details" | "attendees") {
     setActiveTab(tab);
     const url = new URL(window.location.href);
@@ -99,7 +114,7 @@ export default function EventDetail({
   if (loading) return <SkeletonEventDetail activeTab={initialTab} />;
   if (!data) return <p className="text-red-600 text-sm">Event not found</p>;
 
-  const { event, template } = data;
+  const { event, template, emailTemplate } = data;
   const config = statusConfig[event.status] ?? { label: event.status, badgeClass: "status-badge status-badge--draft", description: "" };
   const showArchiveTip = event.status === "active" && isExpired(event.valid_until);
   const canManageAttendees = event.status === "draft" || event.status === "active";
@@ -120,6 +135,10 @@ export default function EventDetail({
 
   function handleTemplateUpdated(event: Event, template: CertificateTemplate | null) {
     setData((prev) => prev ? { ...prev, event, template } : prev);
+  }
+
+  function handleEmailTemplateUpdated(event: Event, emailTemplate: CertificateTemplate | null) {
+    setData((prev) => prev ? { ...prev, event, emailTemplate } : prev);
   }
 
   return (
@@ -265,7 +284,10 @@ export default function EventDetail({
             event={event}
             templates={templates}
             currentTemplate={template}
+            emailTemplates={emailTemplates}
+            currentEmailTemplate={emailTemplate}
             onUpdated={handleTemplateUpdated}
+            onEmailTemplateUpdated={handleEmailTemplateUpdated}
           />
         </div>
       )}

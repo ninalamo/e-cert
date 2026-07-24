@@ -170,6 +170,14 @@ export async function getCertificates(
   return certRepo.findByOrganizationId(organizationId);
 }
 
+export async function getCertificatesWithEvent(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<Array<Certificate & { events: { name: string } | null }>> {
+  const certRepo = repo(client ?? (await createClient()));
+  return certRepo.findByOrganizationIdWithEvent(organizationId);
+}
+
 export async function getCertificate(
   id: string,
   client?: SupabaseClient
@@ -195,6 +203,17 @@ export async function getMyCertificates(
   const certRepo = repo(c);
   const { ORG_ID } = await import("@/lib/org");
   return certRepo.findByRecipientEmail(email, ORG_ID, columns);
+}
+
+export async function getMyCertificatesWithEvent(
+  email: string,
+  columns?: string,
+  client?: SupabaseClient
+): Promise<Array<Certificate & { events: { name: string } | null }>> {
+  const c = client ?? (await createClient());
+  const certRepo = repo(c);
+  const { ORG_ID } = await import("@/lib/org");
+  return certRepo.findByRecipientEmailWithEvent(email, ORG_ID, columns);
 }
 
 export async function getMyCertificate(

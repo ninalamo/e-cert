@@ -2,6 +2,7 @@ export interface Event {
   id: string;
   organization_id: string;
   template_id: string | null;
+  email_template_id: string | null;
   name: string;
   description: string | null;
   event_date: string | null;
