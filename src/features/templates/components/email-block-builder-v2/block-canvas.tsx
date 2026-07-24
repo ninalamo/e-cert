@@ -1,7 +1,5 @@
-"use client";
-
 import { useState, useCallback } from "react";
-import type { EmailBlock, EmailBlockType, AnyEmailBlock, HeaderBlockProps, TextBlockProps, ImageBlockProps, ButtonBlockProps, DividerBlockProps, SpacerBlockProps, ColumnsBlockProps } from "./types";
+import type { EmailBlock, EmailBlockType, AnyEmailBlock, HeaderBlockProps, TextBlockProps, ImageBlockProps, ButtonBlockProps, DividerBlockProps, SpacerBlockProps, ColumnsBlockProps, TableBlockProps } from "./types";
 import { blockToHtml, getBlockLabel, BLOCK_TYPE_ICONS, BLOCK_COLORS, BLOCK_TYPE_LABELS } from "./block-definitions";
 import {
   GripVerticalIcon,

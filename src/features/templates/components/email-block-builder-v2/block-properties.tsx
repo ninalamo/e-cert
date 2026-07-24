@@ -10,6 +10,7 @@ import type {
   DividerBlockProps,
   SpacerBlockProps,
   ColumnsBlockProps,
+  TableBlockProps,
 } from "./types";
 import { BLOCK_TYPE_LABELS } from "./block-definitions";
 import { EMAIL_PLACEHOLDER_FIELDS, PlaceholderKey } from "./types";
@@ -509,6 +510,127 @@ function ColumnsProperties({
   );
 }
 
+function TableProperties({
+  block,
+  onUpdate,
+}: {
+  block: EmailBlock<"table">;
+  onUpdate: (props: Partial<TableBlockProps>) => void;
+}) {
+  const p = block.props;
+  return (
+    <>
+      <Section label="Table">
+        <div className="grid grid-cols-2 gap-2">
+          <InputField label="Rows" value={p.rows.length} onChange={(v) => {
+            const count = Math.max(1, parseInt(v) || 1);
+            const newRows = [...p.rows];
+            if (newRows.length < count) {
+              const cols = newRows[0]?.cells.length || 2;
+              while (newRows.length < count) {
+                newRows.push({
+                  cells: Array.from({ length: cols }, (_, i) => ({ content: `Cell ${i + 1}`, isHeader: false }))
+                });
+              }
+            } else if (newRows.length > count) {
+              newRows.splice(count);
+            }
+            onUpdate({ rows: newRows });
+          }} type="number" min={1} max={20} />
+          <InputField label="Columns" value={p.rows[0]?.cells.length || 2} onChange={(v) => {
+            const count = Math.max(1, parseInt(v) || 1);
+            const newRows = p.rows.map(row => {
+              const newCells = [...row.cells];
+              if (newCells.length < count) {
+                while (newCells.length < count) {
+                  newCells.push({ content: `Cell ${newCells.length + 1}`, isHeader: row.cells[0]?.isHeader || false });
+                }
+              } else if (newCells.length > count) {
+                newCells.splice(count);
+              }
+              return { ...row, cells: newCells };
+            });
+            onUpdate({ rows: newRows });
+          }} type="number" min={1} max={10} />
+        </div>
+        <label className="flex items-center gap-2 text-xs cursor-pointer">
+          <input
+            type="checkbox"
+            checked={p.rows[0]?.cells.every(c => c.isHeader) || false}
+            onChange={(e) => {
+              const newRows = p.rows.map((row, ri) => ({
+                ...row,
+                cells: row.cells.map(c => ({ ...c, isHeader: ri === 0 && e.target.checked }))
+              }));
+              onUpdate({ rows: newRows });
+            }}
+            className="rounded border-[var(--color-border)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-500)]"
+          />
+          <span className="text-[var(--color-text-secondary)]">First row as header</span>
+        </label>
+      </Section>
+      <Section label="Style">
+        <div className="grid grid-cols-2 gap-2">
+          <ColorField label="Header Text" value={p.headerColor} onChange={(v) => onUpdate({ headerColor: v })} />
+          <ColorField label="Header BG" value={p.headerBgColor} onChange={(v) => onUpdate({ headerBgColor: v })} />
+          <ColorField label="Row Text" value={p.rowColor} onChange={(v) => onUpdate({ rowColor: v })} />
+          <ColorField label="Row BG" value={p.rowBgColor} onChange={(v) => onUpdate({ rowBgColor: v })} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <ColorField label="Border Color" value={p.borderColor} onChange={(v) => onUpdate({ borderColor: v })} />
+          <InputField label="Border Width" value={p.borderWidth} onChange={(v) => onUpdate({ borderWidth: parseInt(v) || 1 })} type="number" min={0} max={5} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <InputField label="Cell Padding" value={p.cellPadding} onChange={(v) => onUpdate({ cellPadding: parseInt(v) || 8 })} type="number" min={0} max={30} />
+          <SelectField
+            label="Alignment"
+            value={p.align}
+            onChange={(v) => onUpdate({ align: v as TableBlockProps["align"] })}
+            options={[
+              { value: "left", label: "Left" },
+              { value: "center", label: "Center" },
+              { value: "right", label: "Right" },
+            ]}
+          />
+        </div>
+      </Section>
+      <Section label="Cell Content">
+        {p.rows.map((row, rowIndex) => (
+          <div key={rowIndex} className="space-y-1">
+            <div className="text-[10px] font-medium text-[var(--color-text-muted)]">Row {rowIndex + 1} {row.cells[0]?.isHeader ? '(Header)' : ''}</div>
+            <div className="grid grid-cols-2 gap-1">
+              {row.cells.map((cell, cellIndex) => (
+                <input
+                  key={cellIndex}
+                  type="text"
+                  value={cell.content}
+                  onChange={(e) => {
+                    const newRows = [...p.rows];
+                    newRows[rowIndex] = {
+                      ...newRows[rowIndex],
+                      cells: newRows[rowIndex].cells.map((c, i) => i === cellIndex ? { ...c, content: e.target.value } : c)
+                    };
+                    onUpdate({ rows: newRows });
+                  }}
+                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-brand-400)]"
+                  placeholder={cell.isHeader ? `Header ${cellIndex + 1}` : `Cell ${cellIndex + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </Section>
+      <PaddingFields
+        top={p.paddingTop}
+        right={p.paddingRight}
+        bottom={p.paddingBottom}
+        left={p.paddingLeft}
+        onChange={(key, val) => onUpdate({ [key]: val })}
+      />
+    </>
+  );
+}
+
 export default function BlockProperties({ block, onUpdate, onClose }: BlockPropertiesProps) {
   const handleUpdate = (props: Record<string, unknown>) => {
     onUpdate(props);
@@ -553,6 +675,9 @@ export default function BlockProperties({ block, onUpdate, onClose }: BlockPrope
         )}
         {block.type === "columns" && (
           <ColumnsProperties block={block as EmailBlock<"columns">} onUpdate={handleUpdate} />
+        )}
+        {block.type === "table" && (
+          <TableProperties block={block as EmailBlock<"table">} onUpdate={handleUpdate} />
         )}
       </div>
     </div>

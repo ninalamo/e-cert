@@ -79,6 +79,27 @@ export const DEFAULT_SPACER_PROPS: BlockPropsMap["spacer"] = {
   paddingLeft: 0,
 };
 
+export const DEFAULT_TABLE_PROPS: BlockPropsMap["table"] = {
+  rows: [
+    { cells: [{ content: "Header 1", isHeader: true }, { content: "Header 2", isHeader: true }] },
+    { cells: [{ content: "Cell 1", isHeader: false }, { content: "Cell 2", isHeader: false }] },
+    { cells: [{ content: "Cell 3", isHeader: false }, { content: "Cell 4", isHeader: false }] },
+  ],
+  headerColor: "#ffffff",
+  headerBgColor: "#18181b",
+  rowColor: "#27272a",
+  rowBgColor: "#ffffff",
+  borderColor: "#e4e4e7",
+  borderWidth: 1,
+  cellPadding: 12,
+  align: "left",
+  showHeader: true,
+  paddingTop: 8,
+  paddingBottom: 8,
+  paddingLeft: 24,
+  paddingRight: 24,
+};
+
 export function defaultColumnsProps(): BlockPropsMap["columns"] {
   const col1Id = uid();
   const col2Id = uid();
@@ -106,6 +127,7 @@ export const DEFAULT_PROPS: {
   divider: { ...DEFAULT_DIVIDER_PROPS },
   spacer: { ...DEFAULT_SPACER_PROPS },
   columns: defaultColumnsProps(),
+  table: { ...DEFAULT_TABLE_PROPS },
 };
 
 export function createBlock<T extends EmailBlockType>(
@@ -168,6 +190,31 @@ function columnsToHtml(block: EmailBlock<"columns">): string {
   return `<table role="presentation" style="width:100%;border-collapse:collapse;${padStyle(p.paddingTop, p.paddingRight, p.paddingBottom, p.paddingLeft)}"><tr>${colTds}</tr></table>`;
 }
 
+function tableToHtml(block: EmailBlock<"table">): string {
+  const p = block.props;
+  const rowsHtml = p.rows
+    .map((row, rowIndex) => {
+      // Skip header row if showHeader is false
+      if (!p.showHeader && rowIndex === 0 && row.cells.some(c => c.isHeader)) {
+        return "";
+      }
+      const cellsHtml = row.cells
+        .map((cell) => {
+          const tag = cell.isHeader ? "th" : "td";
+          const bgColor = cell.isHeader ? p.headerBgColor : p.rowBgColor;
+          const color = cell.isHeader ? p.headerColor : p.rowColor;
+          const fw = cell.isHeader ? "font-weight:600;" : "";
+          return `<${tag} style="border:${p.borderWidth}px solid ${esc(p.borderColor)};padding:${p.cellPadding}px;background-color:${esc(bgColor)};color:${esc(color)};text-align:${p.align};${fw}">${esc(cell.content)}</${tag}>`;
+        })
+        .join("");
+      return `<tr>${cellsHtml}</tr>`;
+    })
+    .filter(Boolean)
+    .join("");
+
+  return `<div style="${padStyle(p.paddingTop, p.paddingRight, p.paddingBottom, p.paddingLeft)}"><table role="presentation" style="width:100%;border-collapse:collapse;border:${p.borderWidth}px solid ${esc(p.borderColor)};">${rowsHtml}</table></div>`;
+}
+
 export function blockToHtml(block: AnyEmailBlock): string {
   switch (block.type) {
     case "header":
@@ -184,6 +231,8 @@ export function blockToHtml(block: AnyEmailBlock): string {
       return spacerToHtml(block as EmailBlock<"spacer">);
     case "columns":
       return columnsToHtml(block as EmailBlock<"columns">);
+    case "table":
+      return tableToHtml(block as EmailBlock<"table">);
     default:
       return "";
   }
@@ -211,6 +260,8 @@ export function getBlockLabel(block: AnyEmailBlock): string {
       return `Spacer (${(block.props as BlockPropsMap["spacer"]).height}px)`;
     case "columns":
       return `${(block.props as BlockPropsMap["columns"]).columnCount} Columns`;
+    case "table":
+      return `Table (${(block.props as BlockPropsMap["table"]).rows.length} rows)`;
     default:
       return block.type;
   }
@@ -224,6 +275,7 @@ export const BLOCK_TYPE_LABELS: Record<EmailBlockType, string> = {
   divider: "Divider",
   spacer: "Spacer",
   columns: "Columns",
+  table: "Table",
 };
 
 export const BLOCK_TYPE_ICONS: Record<EmailBlockType, string> = {
@@ -234,6 +286,7 @@ export const BLOCK_TYPE_ICONS: Record<EmailBlockType, string> = {
   divider: "---",
   spacer: "↕",
   columns: "||",
+  table: "⊞",
 };
 
 export const BLOCK_COLORS: Record<EmailBlockType, string> = {
@@ -244,6 +297,7 @@ export const BLOCK_COLORS: Record<EmailBlockType, string> = {
   divider: "bg-orange-50 text-orange-600 border-orange-200",
   spacer: "bg-slate-50 text-slate-400 border-slate-200",
   columns: "bg-cyan-100 text-cyan-700 border-cyan-200",
+  table: "bg-amber-100 text-amber-700 border-amber-200",
 };
 
 export function insertPlaceholder(text: string, placeholder: PlaceholderKey): string {

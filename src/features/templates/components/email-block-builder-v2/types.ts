@@ -5,7 +5,8 @@ export type EmailBlockType =
   | "button" 
   | "divider" 
   | "spacer"
-  | "columns";
+  | "columns"
+  | "table";
 
 export interface BaseBlockProps {
   paddingTop: number;
@@ -57,6 +58,28 @@ export interface SpacerBlockProps extends BaseBlockProps {
   height: number;
 }
 
+export interface TableCell {
+  content: string;
+  isHeader: boolean;
+}
+
+export interface TableRow {
+  cells: TableCell[];
+}
+
+export interface TableBlockProps extends BaseBlockProps {
+  rows: TableRow[];
+  headerColor: string;
+  headerBgColor: string;
+  rowColor: string;
+  rowBgColor: string;
+  borderColor: string;
+  borderWidth: number;
+  cellPadding: number;
+  align: "left" | "center" | "right";
+  showHeader: boolean;
+}
+
 export interface ColumnBlock {
   id: string;
   widthPercent: number;
@@ -77,6 +100,7 @@ export type BlockPropsMap = {
   divider: DividerBlockProps;
   spacer: SpacerBlockProps;
   columns: ColumnsBlockProps;
+  table: TableBlockProps;
 };
 
 export interface EmailBlock<T extends EmailBlockType = EmailBlockType> {

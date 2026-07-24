@@ -419,6 +419,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       { type: "divider", label: "Divider", icon: "---", color: "text-orange-600 bg-orange-50" },
       { type: "spacer", label: "Spacer", icon: "⋮", color: "text-slate-500 bg-slate-50" },
       { type: "columns", label: "Columns", icon: "||", color: "text-cyan-700 bg-cyan-50" },
+      { type: "table", label: "Table", icon: "⊞", color: "text-amber-700 bg-amber-50" },
     ];
 
     useImperativeHandle(
