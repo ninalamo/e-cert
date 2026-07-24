@@ -12,6 +12,7 @@ import {
 const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
+import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
 
 export default function EditEmailTemplateForm({ id }: { id: string }) {
   const router = useRouter();
@@ -19,6 +20,9 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewContent, setPreviewContent] = useState("");
+  const [previewName, setPreviewName] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -73,11 +77,22 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
         fullscreen={fullscreen}
         onFullscreenChange={setFullscreen}
         onClose={() => router.push("/templates")}
-        onPreview={() => alert("Preview not implemented yet")}
+        onPreview={(html, name) => {
+          setPreviewContent(html);
+          setPreviewName(name);
+          setPreviewOpen(true);
+        }}
         onSubmit={async (data) => {
           if (locked) return { error: "Template is locked." };
           return await updateTemplateAction(id, data);
         }}
+      />
+
+      <EmailTemplatePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        html={previewContent}
+        name={previewName}
       />
     </div>
   );

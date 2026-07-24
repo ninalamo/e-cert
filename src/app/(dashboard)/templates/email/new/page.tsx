@@ -4,11 +4,15 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { createEmailTemplateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
+import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
 
 const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 
 export default function NewEmailTemplatePage() {
   const [fullscreen, setFullscreen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewName, setPreviewName] = useState("");
 
   return (
     <div className="space-y-6">
@@ -23,7 +27,11 @@ export default function NewEmailTemplatePage() {
         fullscreen={fullscreen}
         onFullscreenChange={setFullscreen}
         onClose={() => window.history.back()}
-        onPreview={() => alert("Preview not implemented yet")}
+        onPreview={(html, name) => {
+          setPreviewHtml(html);
+          setPreviewName(name);
+          setPreviewOpen(true);
+        }}
         onSubmit={async (data) => {
           return await createEmailTemplateAction({
             organization_id: ORG_ID,
@@ -33,6 +41,12 @@ export default function NewEmailTemplatePage() {
             css_content: data.css_content,
           });
         }}
+      />
+      <EmailTemplatePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        html={previewHtml}
+        name={previewName}
       />
     </div>
   );

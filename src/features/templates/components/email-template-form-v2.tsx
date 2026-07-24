@@ -18,7 +18,7 @@ interface EmailTemplateFormV2Props {
   }) => Promise<{ error?: string }>;
   submitLabel: string;
   disabled?: boolean;
-  onPreview?: () => void;
+  onPreview?: (html: string, name: string) => void;
   onFullscreenChange?: (fullscreen: boolean) => void;
   onClose?: () => void;
   fullscreen?: boolean;
@@ -87,7 +87,7 @@ export default function EmailTemplateFormV2({
             submitLabel={submitLabel}
             loading={loading}
             onSave={handleSave}
-            onPreview={onPreview}
+            onPreview={() => onPreview?.(htmlContent, name)}
             onFullscreenChange={onFullscreenChange}
             onClose={onClose}
             fullscreen={fullscreen}

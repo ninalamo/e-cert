@@ -5,9 +5,10 @@ import { ChevronRightIcon } from "lucide-react";
 interface TemplateSidebarProps {
   name: string;
   description: string;
+  htmlContent?: string;
   onNameChange?: (name: string) => void;
   onDescriptionChange?: (description: string) => void;
-  onPreview?: () => void;
+  onPreview?: (html: string, name: string) => void;
   onFullscreenChange?: (fullscreen: boolean) => void;
   onSave?: () => void;
   onClose?: () => void;
@@ -24,6 +25,7 @@ interface TemplateSidebarProps {
 export default function TemplateSidebar({
   name,
   description,
+  htmlContent = "",
   onNameChange,
   onDescriptionChange,
   onPreview,
@@ -80,7 +82,7 @@ export default function TemplateSidebar({
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={onPreview}
+                onClick={() => onPreview?.(htmlContent, name)}
                 className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
                 title="Preview with sample data"
               >

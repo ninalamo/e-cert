@@ -451,6 +451,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
 <TemplateSidebar
                 name={name}
                 description={description}
+                htmlContent={value}
                 onNameChange={onNameChange}
                 onDescriptionChange={onDescriptionChange}
                 onPreview={onPreview}
