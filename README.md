@@ -131,6 +131,36 @@ The proxy runs on every non-static request and:
 
 ---
 
+## Troubleshooting
+
+### `permission denied for table users` (SQL 42501)
+
+**Symptom:** Supabase logs show `permission denied for table users` when querying `certificates`. The RLS policy references `auth.users` but the `authenticator` role lacks SELECT on it.
+
+**Cause:** The `auth.users` table is missing grants for `authenticated`/`anon`/`service_role`. This can happen on projects set up outside the dashboard (CLI, self-hosted, or imported schemas).
+
+**Verify:**
+
+```sql
+SELECT grantee, privilege_type
+FROM information_schema.role_table_grants
+WHERE table_schema = 'auth' AND table_name = 'users';
+```
+
+If `authenticated`, `anon`, or `service_role` are missing `SELECT`:
+
+**Fix:**
+
+```sql
+GRANT SELECT ON auth.users TO authenticated;
+GRANT SELECT ON auth.users TO service_role;
+GRANT SELECT ON auth.users TO anon;
+```
+
+> **Note:** These grants are managed by the Supabase platform, not app migrations. Do not add them to `schema.sql` — they are redundant on healthy projects.
+
+---
+
 ## Getting Started
 
 ```bash
