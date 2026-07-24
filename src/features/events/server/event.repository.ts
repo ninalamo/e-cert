@@ -28,6 +28,10 @@ export class EventRepository extends BaseRepository<Event> {
     return this.findMany({ template_id: templateId });
   }
 
+  async findByEmailTemplateId(emailTemplateId: string): Promise<Event[]> {
+    return this.findMany({ email_template_id: emailTemplateId });
+  }
+
   async findPaginated(
     organizationId: string,
     options: {

@@ -61,6 +61,7 @@ export default function EditTemplateForm({ id }: { id: string }) {
         initialData={{
           name: template.name,
           description: template.description ?? "",
+          type: template.type,
           html_content: template.html_content,
           css_content: template.css_content ?? "",
         }}

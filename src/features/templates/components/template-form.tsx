@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import TemplateCanvas from "./template-canvas";
 import type { TemplateCanvasHandle } from "./template-canvas";
+import EmailTemplateEditor, { EmailPreview } from "./email-template-editor";
+import { DEFAULT_EMAIL_TEMPLATE } from "./email-placeholder-field";
 import CodeEditor from "@/components/ui/code-editor";
 import {
   Dialog,
@@ -14,23 +16,26 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, MailIcon, FileTextIcon } from "lucide-react";
 
 interface TemplateFormProps {
   initialData?: {
     name: string;
     description: string;
+    type: 'certificate' | 'email';
     html_content: string;
     css_content: string;
   };
   onSubmit: (data: {
     name: string;
     description: string;
+    type: 'certificate' | 'email';
     html_content: string;
     css_content: string;
   }) => Promise<{ error?: string }>;
   submitLabel: string;
   disabled?: boolean;
+  hideTypeToggle?: boolean;
 }
 
 export default function TemplateForm({
@@ -38,9 +43,11 @@ export default function TemplateForm({
   onSubmit,
   submitLabel,
   disabled = false,
+  hideTypeToggle = false,
 }: TemplateFormProps) {
   const [name, setName] = useState(initialData?.name ?? "");
   const [description, setDescription] = useState(initialData?.description ?? "");
+  const [templateType, setTemplateType] = useState<'certificate' | 'email'>(initialData?.type ?? 'certificate');
   const [htmlContent, setHtmlContent] = useState(initialData?.html_content ?? DEFAULT_HTML);
   const [cssContent, setCssContent] = useState(initialData?.css_content ?? DEFAULT_CSS);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +57,8 @@ export default function TemplateForm({
   const [showSource, setShowSource] = useState(false);
   const [sourceTab, setSourceTab] = useState<"html" | "css">("html");
   const canvasRef = useRef<TemplateCanvasHandle>(null);
+
+  const isEmail = templateType === 'email';
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -61,12 +70,13 @@ export default function TemplateForm({
     setError(null);
     setLoading(true);
 
-    const html = canvasRef.current?.getHtml() ?? htmlContent;
-    const css = canvasRef.current?.getCss() ?? cssContent;
+    const html = isEmail ? htmlContent : (canvasRef.current?.getHtml() ?? htmlContent);
+    const css = isEmail ? "" : (canvasRef.current?.getCss() ?? cssContent);
 
     const result = await onSubmit({
       name,
       description,
+      type: templateType,
       html_content: html,
       css_content: css,
     });
@@ -79,6 +89,20 @@ export default function TemplateForm({
     setLoading(false);
   }
 
+  function handleTypeChange(newType: 'certificate' | 'email') {
+    if (newType === templateType) return;
+    
+    if (newType === 'email' && !initialData?.type) {
+      setHtmlContent(DEFAULT_EMAIL_TEMPLATE);
+      setCssContent("");
+    } else if (newType === 'certificate' && !initialData?.type) {
+      setHtmlContent(DEFAULT_HTML);
+      setCssContent(DEFAULT_CSS);
+    }
+    
+    setTemplateType(newType);
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
@@ -88,82 +112,132 @@ export default function TemplateForm({
       )}
 
       <fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Design your certificate. Use the {"\""}Insert field{"\""} buttons to add
-              placeholders that are filled in when a certificate is issued.
-            </p>
-            <p className="text-xs text-amber-600">
-              For best results, use a background image with the same dimensions as the canvas size.
-            </p>
+        {/* Type Toggle */}
+        {!hideTypeToggle && (
+          <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
             <button
               type="button"
-              onClick={() => setShowSource(!showSource)}
-              className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
-                showSource
-                  ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
-                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+              onClick={() => handleTypeChange('certificate')}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                templateType === 'certificate'
+                  ? "bg-[var(--color-brand-600)] text-white shadow-sm"
+                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
               }`}
             >
-              {showSource ? "Hide Source" : "Show Source"}
+              <FileTextIcon className="size-4" />
+              Certificate
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTypeChange('email')}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                templateType === 'email'
+                  ? "bg-[var(--color-brand-600)] text-white shadow-sm"
+                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
+              }`}
+            >
+              <MailIcon className="size-4" />
+              Email
             </button>
           </div>
-          <div className={showSource ? "flex flex-col lg:flex-row gap-3" : ""}>
-            <div className={showSource ? "lg:flex-1 min-w-0" : ""}>
-              <TemplateCanvas
-                ref={canvasRef}
+        )}
+
+        {/* Editor */}
+        <div className="space-y-3">
+          {isEmail ? (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Design your email template. Use the placeholder buttons to add
+                  dynamic fields that are filled in when the email is sent.
+                </p>
+              </div>
+              <EmailTemplateEditor
                 value={htmlContent}
                 onChange={setHtmlContent}
-                css={cssContent}
-                onCssChange={setCssContent}
-                fullscreen={fullscreen}
-                onFullscreenChange={setFullscreen}
-                submitLabel={submitLabel}
-                loading={loading}
                 disabled={disabled}
-                name={name}
-                description={description}
-                onNameChange={setName}
-                onDescriptionChange={setDescription}
               />
-            </div>
-            {showSource && (
-              <div className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] lg:w-96 lg:flex-shrink-0 flex flex-col">
-                <div className="flex border-b border-[var(--color-border)]">
-                  {(["html", "css"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setSourceTab(tab)}
-                      className={`flex-1 px-3 py-2 text-xs font-semibold transition-all ${
-                        sourceTab === tab
-                          ? "text-[var(--color-brand-700)] border-b-2 border-[var(--color-brand-600)]"
-                          : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
-                      }`}
-                    >
-                      {tab.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-                <div className="p-4">
-                  {sourceTab === "html" ? (
-                    <CodeEditor
-                      value={htmlContent}
-                      onChange={setHtmlContent}
-                      rows={14}
-                    />
-                  ) : (
-                    <CodeEditor
-                      value={cssContent}
-                      onChange={setCssContent}
-                      rows={14}
-                    />
-                  )}
-                </div>
+              <EmailPreview html={htmlContent} />
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Design your certificate. Use the {"\""}Insert field{"\""} buttons to add
+                  placeholders that are filled in when a certificate is issued.
+                </p>
+                <p className="text-xs text-amber-600">
+                  For best results, use a background image with the same dimensions as the canvas size.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowSource(!showSource)}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
+                    showSource
+                      ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
+                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                  }`}
+                >
+                  {showSource ? "Hide Source" : "Show Source"}
+                </button>
               </div>
-            )}
-          </div>
+              <div className={showSource ? "flex flex-col lg:flex-row gap-3" : ""}>
+                <div className={showSource ? "lg:flex-1 min-w-0" : ""}>
+                  <TemplateCanvas
+                    ref={canvasRef}
+                    value={htmlContent}
+                    onChange={setHtmlContent}
+                    css={cssContent}
+                    onCssChange={setCssContent}
+                    fullscreen={fullscreen}
+                    onFullscreenChange={setFullscreen}
+                    submitLabel={submitLabel}
+                    loading={loading}
+                    disabled={disabled}
+                    name={name}
+                    description={description}
+                    onNameChange={setName}
+                    onDescriptionChange={setDescription}
+                  />
+                </div>
+                {showSource && (
+                  <div className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] lg:w-96 lg:flex-shrink-0 flex flex-col">
+                    <div className="flex border-b border-[var(--color-border)]">
+                      {(["html", "css"] as const).map((tab) => (
+                        <button
+                          key={tab}
+                          type="button"
+                          onClick={() => setSourceTab(tab)}
+                          className={`flex-1 px-3 py-2 text-xs font-semibold transition-all ${
+                            sourceTab === tab
+                              ? "text-[var(--color-brand-700)] border-b-2 border-[var(--color-brand-600)]"
+                              : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                          }`}
+                        >
+                          {tab.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="p-4">
+                      {sourceTab === "html" ? (
+                        <CodeEditor
+                          value={htmlContent}
+                          onChange={setHtmlContent}
+                          rows={14}
+                        />
+                      ) : (
+                        <CodeEditor
+                          value={cssContent}
+                          onChange={setCssContent}
+                          rows={14}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </fieldset>
 
@@ -178,7 +252,7 @@ export default function TemplateForm({
           <div className="flex items-start gap-3 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-3 text-sm">
             <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-info-text)]" />
             <p className="text-[var(--color-info-text)]">
-              This will update the template with your changes.
+              This will update the {isEmail ? 'email' : 'certificate'} template with your changes.
             </p>
           </div>
           <DialogFooter>
