@@ -43,6 +43,13 @@ export async function getCertificatesAction(organizationId: string) {
   return certService.getCertificates(organizationId);
 }
 
+export async function getCertificatesWithEventAction(
+  organizationId: string
+) {
+  await requireRole(["admin", "staff"]);
+  return certService.getCertificatesWithEvent(organizationId);
+}
+
 export async function getCertificateAction(id: string) {
   const session = await requireRole(["admin", "staff", "participant"]);
   if (session.role === "participant") {

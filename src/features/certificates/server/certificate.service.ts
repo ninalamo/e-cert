@@ -170,6 +170,14 @@ export async function getCertificates(
   return certRepo.findByOrganizationId(organizationId);
 }
 
+export async function getCertificatesWithEvent(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<Array<Certificate & { events: { name: string } | null }>> {
+  const certRepo = repo(client ?? (await createClient()));
+  return certRepo.findByOrganizationIdWithEvent(organizationId);
+}
+
 export async function getCertificate(
   id: string,
   client?: SupabaseClient

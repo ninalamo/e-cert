@@ -85,6 +85,29 @@ export class CertificateRepository extends BaseRepository<Certificate> {
     return this.count({ organization_id: organizationId });
   }
 
+  async findByOrganizationIdWithEvent(
+    organizationId: string,
+    options?: { limit?: number; offset?: number; columns?: string }
+  ): Promise<Array<Certificate & { events: { name: string } | null }>> {
+    const selectColumns = options?.columns
+      ? `${options.columns}, events!event_id(name)`
+      : `*, events!event_id(name)`;
+
+    let q = this.client
+      .from(this.table)
+      .select(selectColumns, { count: "exact" })
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+
+    if (options?.limit !== undefined && options.offset !== undefined) {
+      q = q.range(options.offset, options.offset + options.limit - 1);
+    }
+
+    const { data, error } = await q;
+    if (error) return [];
+    return (data ?? []) as unknown as Array<Certificate & { events: { name: string } | null }>;
+  }
+
   async deleteByEventId(eventId: string): Promise<boolean> {
     const { error } = await this.client
       .from(this.table)

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CertificatesList from "@/features/certificates/components/certificates-list";
-import { getCertificates } from "@/features/certificates/server/certificate.service";
+import { getCertificatesWithEventAction } from "@/features/certificates/server/certificate.actions";
 import { requireRole } from "@/lib/permissions";
 import { ORG_ID } from "@/lib/org";
 
@@ -11,7 +11,7 @@ export default async function CertificatesPage({
 }) {
   const { q } = await searchParams;
   await requireRole(["admin", "staff"]);
-  const certificates = await getCertificates(ORG_ID);
+  const certificates = await getCertificatesWithEventAction(ORG_ID);
 
   return (
     <Card>
