@@ -17,7 +17,6 @@ import {
   LayersIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  BoldIcon,
   AlignLeftIcon,
   AlignCenterIcon,
   AlignRightIcon,
@@ -1252,7 +1251,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   }));
 
 const content = (
-    <div className="flex gap-4">
+    <div className="flex gap-4 min-w-0">
       {onNameChange && onDescriptionChange && (
         <>
           <button
@@ -1355,9 +1354,6 @@ const content = (
                 </button>
                 <button type="button" onClick={clearSelection} disabled={selCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-surface)] active:scale-[0.97] disabled:opacity-40" title="Deselect all (Esc)">
                   <XCircleIcon className="size-3.5" />
-                </button>
-                <button type="button" onClick={removeSelected} disabled={selCount === 0} className="inline-flex items-center rounded-md px-1.5 py-1 text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97] disabled:opacity-40" title="Delete selected (Del)">
-                  <Trash2Icon className="size-3.5" />
                 </button>
               </div>
 
@@ -1474,15 +1470,17 @@ const content = (
             </div>
 
             {PLACEHOLDER_FIELDS.length > 0 && (
-              <div className="flex items-center gap-1 border-t border-[var(--color-border)] px-1.5 py-1">
-                <span className="px-1 text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Placeholders</span>
+              <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--color-border)] bg-[var(--color-surface-secondary)]/70 px-1.5 py-1.5">
+                <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                  Placeholders
+                </span>
                 {PLACEHOLDER_FIELDS.map((f) => (
                   <button
                     key={f.key}
                     type="button"
                     onClick={() => addFieldText(f.key)}
                     title={`Add {{${f.key}}} as a new text element`}
-                    className="rounded-md bg-[var(--color-brand-50)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-100)] active:scale-[0.97]"
+                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[10px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-brand-300)] hover:bg-[var(--color-brand-50)] hover:text-[var(--color-brand-700)] active:scale-[0.97]"
                   >
                     {f.label}
                   </button>
@@ -1497,136 +1495,6 @@ const content = (
             <span className="px-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
               {selCount} selected
             </span>
-
-            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
-
-            <select
-              value={firstSel?.fontFamily ?? ""}
-              onChange={(e) => updateSelected({ fontFamily: e.target.value })}
-              disabled={allSelectedLocked}
-              className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
-              title="Font family"
-            >
-              <option value="">Font</option>
-              {FONT_FAMILIES.map((f) => (
-                <option key={f} value={f}>
-                  {f.split(",")[0]}
-                </option>
-              ))}
-            </select>
-            <select
-              value={firstSel?.fontSize ?? ""}
-              onChange={(e) => updateSelected({ fontSize: e.target.value })}
-              disabled={allSelectedLocked}
-              className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
-              title="Font size"
-            >
-              <option value="">Size</option>
-              {FONT_SIZES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <input
-              type="color"
-              value={firstSel?.color ?? "#000000"}
-              onChange={(e) => updateSelected({ color: e.target.value })}
-              disabled={allSelectedLocked}
-              className="h-7 w-8 cursor-pointer rounded-lg border border-[var(--color-border-strong)] transition-all hover:border-[var(--color-brand-500)] disabled:opacity-40"
-              title="Text color"
-            />
-            <button
-              type="button"
-              disabled={allSelectedLocked}
-              onClick={() => updateSelected({ bold: !firstSel?.bold })}
-              title={firstSel?.bold ? "Bold: ON — click to disable" : "Bold: OFF — click to enable"}
-              className={`inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-xs font-bold transition-all active:scale-[0.97] disabled:opacity-40 ${firstSel?.bold
-                  ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
-                }`}
-            >
-              <BoldIcon className="size-3.5" />
-            </button>
-
-            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
-
-            <div className="flex gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
-              {([
-                { key: "left", icon: AlignLeftIcon, label: "Align text left" },
-                { key: "center", icon: AlignCenterIcon, label: "Align text center" },
-                { key: "right", icon: AlignRightIcon, label: "Align text right" },
-                { key: "justify", icon: AlignJustifyIcon, label: "Justify text" },
-              ] as const).map(({ key, icon: Icon, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  disabled={allSelectedLocked}
-                  onClick={() => updateSelected({ align: key })}
-                  title={label}
-                  className={`rounded-md px-2 py-1 text-xs font-semibold transition-all disabled:opacity-40 ${firstSel?.align === key
-                      ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
-                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
-                    }`}
-                >
-                  <Icon className="size-3.5" />
-                </button>
-              ))}
-            </div>
-
-            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
-
-            <select
-              value={firstSel?.lineHeight ?? 1.5}
-              onChange={(e) => updateSelected({ lineHeight: parseFloat(e.target.value) })}
-              disabled={allSelectedLocked}
-              className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
-              title="Line height"
-            >
-              <option value={0.5}>0.5</option>
-              <option value={0.75}>0.75</option>
-              <option value={1}>1.0</option>
-              <option value={1.25}>1.25</option>
-              <option value={1.5}>1.5</option>
-              <option value={1.75}>1.75</option>
-              <option value={2}>2.0</option>
-              <option value={2.5}>2.5</option>
-              <option value={3}>3.0</option>
-            </select>
-
-            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
-
-            <select
-              value={firstSel?.paragraphSpacing ?? 0}
-              onChange={(e) => updateSelected({ paragraphSpacing: parseInt(e.target.value) })}
-              disabled={allSelectedLocked}
-              className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
-              title="Paragraph spacing (px)"
-            >
-              <option value={0}>0px</option>
-              <option value={2}>2px</option>
-              <option value={4}>4px</option>
-              <option value={6}>6px</option>
-              <option value={8}>8px</option>
-              <option value={10}>10px</option>
-              <option value={12}>12px</option>
-              <option value={16}>16px</option>
-              <option value={20}>20px</option>
-              <option value={24}>24px</option>
-            </select>
-
-            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
-
-            <button
-              type="button"
-              disabled={selCount === 0 || allSelectedLocked || !elements.some((el) => isSelected(el.id) && el.type === "text" && !isPlaceholderElement(el))}
-              onClick={fitSelectedToText}
-              className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-brand-100)] px-2 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-200)] active:scale-[0.97] disabled:opacity-40"
-              title="Fit bounding box to text content"
-            >
-              <TypeIcon className="size-3.5" />
-              Fit
-            </button>
 
             <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
 
@@ -1669,23 +1537,6 @@ const content = (
                 Back
               </button>
             </div>
-
-            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
-
-            <button
-              type="button"
-              onClick={() => updateSelected({ locked: !elements.filter((e) => isSelected(e.id)).some((e) => e.locked) })}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] ${elements.filter((e) => isSelected(e.id)).every((e) => e.locked)
-                  ? "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
-                }`}
-              title={elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock selected elements" : "Lock selected elements (prevent move/edit)"}
-            >
-              {elements.filter((e) => isSelected(e.id)).every((e) => e.locked)
-                ? <LockIcon className="size-3.5" />
-                : <LockOpenIcon className="size-3.5" />}
-              {elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock" : "Lock"}
-            </button>
           </div>
         )}
 
@@ -2006,6 +1857,145 @@ const content = (
           </div>
         </div>
       </div>
+
+      {!preview && selCount > 0 && (
+        <aside className="w-72 flex-shrink-0">
+          <div className="sticky top-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)]">
+            <div className="border-b border-[var(--color-border)] bg-[var(--color-surface-secondary)] px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-text)]">Properties</p>
+                  <p className="text-[11px] text-[var(--color-text-muted)]">{selCount} selected</p>
+                </div>
+                <span className="rounded-full bg-[var(--color-brand-50)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-brand-700)]">
+                  {firstSel?.type ?? "item"}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3 p-4">
+              <div className="grid gap-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Text</label>
+                <select
+                  value={firstSel?.fontFamily ?? ""}
+                  onChange={(e) => updateSelected({ fontFamily: e.target.value })}
+                  disabled={allSelectedLocked || firstSel?.type !== "text"}
+                  className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
+                  title="Font family"
+                >
+                  <option value="">Font</option>
+                  {FONT_FAMILIES.map((f) => (
+                    <option key={f} value={f}>{f.split(",")[0]}</option>
+                  ))}
+                </select>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={firstSel?.fontSize ?? ""}
+                    onChange={(e) => updateSelected({ fontSize: e.target.value })}
+                    disabled={allSelectedLocked || firstSel?.type !== "text"}
+                    className="flex-1 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
+                    title="Font size"
+                  >
+                    <option value="">Size</option>
+                    {FONT_SIZES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="color"
+                    value={firstSel?.color ?? "#000000"}
+                    onChange={(e) => updateSelected({ color: e.target.value })}
+                    disabled={allSelectedLocked || firstSel?.type !== "text"}
+                    className="h-8 w-10 cursor-pointer rounded-lg border border-[var(--color-border-strong)] transition-all hover:border-[var(--color-brand-500)] disabled:opacity-40"
+                    title="Text color"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Layout</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {([
+                    { key: "left", icon: AlignLeftIcon, label: "Left" },
+                    { key: "center", icon: AlignCenterIcon, label: "Center" },
+                    { key: "right", icon: AlignRightIcon, label: "Right" },
+                    { key: "justify", icon: AlignJustifyIcon, label: "Justify" },
+                  ] as const).map(({ key, icon: Icon, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      disabled={allSelectedLocked || firstSel?.type !== "text"}
+                      onClick={() => updateSelected({ align: key })}
+                      title={label}
+                      className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition-all disabled:opacity-40 ${firstSel?.align === key ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"}`}
+                    >
+                      <Icon className="size-3.5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Spacing</label>
+                <select
+                  value={firstSel?.lineHeight ?? 1.5}
+                  onChange={(e) => updateSelected({ lineHeight: parseFloat(e.target.value) })}
+                  disabled={allSelectedLocked || firstSel?.type !== "text"}
+                  className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
+                  title="Line height"
+                >
+                  {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3].map((val) => (
+                    <option key={val} value={val}>{val.toFixed(val % 1 === 0 ? 0 : 2)}</option>
+                  ))}
+                </select>
+                <select
+                  value={firstSel?.paragraphSpacing ?? 0}
+                  onChange={(e) => updateSelected({ paragraphSpacing: parseInt(e.target.value) })}
+                  disabled={allSelectedLocked || firstSel?.type !== "text"}
+                  className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
+                  title="Paragraph spacing"
+                >
+                  {[0, 2, 4, 6, 8, 10, 12, 16, 20, 24].map((val) => (
+                    <option key={val} value={val}>{val}px</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {firstSel?.type === "text" && (
+                  <button
+                    type="button"
+                    disabled={selCount === 0 || allSelectedLocked || isPlaceholderElement(firstSel)}
+                    onClick={fitSelectedToText}
+                    className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-brand-100)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-200)] active:scale-[0.97] disabled:opacity-40"
+                    title="Fit bounding box to text content"
+                  >
+                    <TypeIcon className="size-3.5" />
+                    Fit
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => updateSelected({ locked: !elements.filter((e) => isSelected(e.id)).some((e) => e.locked) })}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] ${elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]" : "bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"}`}
+                >
+                  {elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? <LockIcon className="size-3.5" /> : <LockOpenIcon className="size-3.5" />}
+                  {elements.filter((e) => isSelected(e.id)).every((e) => e.locked) ? "Unlock" : "Lock"}
+                </button>
+                <button
+                  type="button"
+                  onClick={removeSelected}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-danger-bg)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97]"
+                >
+                  <Trash2Icon className="size-3.5" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      )}
 
       <style jsx global>{`
         .cert-canvas .certificate {
