@@ -1,7 +1,5 @@
-import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CertificatesList from "@/features/certificates/components/certificates-list";
-import { SkeletonTable } from "@/components/ui/skeleton";
 import { getCertificates } from "@/features/certificates/server/certificate.service";
 import { requireRole } from "@/lib/permissions";
 import { ORG_ID } from "@/lib/org";

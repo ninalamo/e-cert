@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback, forwardRef, useImperativeHandle } from "react";
 import { Rnd } from "react-rnd";
 import QRCode from "qrcode";
 import { PLACEHOLDER_FIELDS } from "./placeholder-field";
@@ -513,6 +513,9 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const [editContent, setEditContent] = useState("");
   const [editSrc, setEditSrc] = useState("");
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [componentsExpanded, setComponentsExpanded] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [showRulers, setShowRulers] = useState(true);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [panning, setPanning] = useState(false);
@@ -1126,14 +1129,14 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     }
   }
 
-  function canvasPoint(e: { clientX: number; clientY: number }): { x: number; y: number } {
+  const canvasPoint = useCallback((e: { clientX: number; clientY: number }): { x: number; y: number } => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
     return {
       x: (e.clientX - rect.left) / zoom,
       y: (e.clientY - rect.top) / zoom,
     };
-  }
+  }, [zoom]);
 
   function handleCanvasMouseDown(e: React.MouseEvent) {
     if (e.target !== e.currentTarget) return;
@@ -1180,7 +1183,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [marquee, elements]);
+  }, [marquee, elements, canvasPoint]);
 
   function handleAlign(type: AlignType) {
     setElements((prev) => alignElements(prev, type, selectedIds, CANVAS_W, CANVAS_H));
@@ -1194,16 +1197,26 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const content = (
     <div className="flex gap-4">
       {onNameChange && onDescriptionChange && (
-        <div className="w-64 flex-shrink-0 flex flex-col gap-4 max-h-[calc(100vh-220px)]">
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => setSidebarExpanded((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
-            >
-              Template
-              <ChevronDownIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${sidebarExpanded ? "rotate-180" : ""}`} />
-            </button>
+        <>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen((v) => !v)}
+            className="self-start mt-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 text-[var(--color-text-muted)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+            title={drawerOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            <ChevronDownIcon className={`size-4 transition-transform ${drawerOpen ? "" : "-rotate-90"}`} />
+          </button>
+          {drawerOpen && (
+            <div className="w-64 flex-shrink-0 flex flex-col gap-4 max-h-[calc(100vh-220px)] overflow-y-auto">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSidebarExpanded((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                >
+                  Template
+                  <ChevronDownIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${sidebarExpanded ? "rotate-180" : ""}`} />
+                </button>
             {sidebarExpanded && (
               <div className="px-4 pb-4 space-y-4">
                 <div>
@@ -1233,27 +1246,25 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                   />
                 </div>
                 <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(true)}
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
+                    title="Preview certificate with sample data"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+                    Preview
+                  </button>
                   {!fullscreen && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setShowPreview(true)}
-                        className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
-                        title="Preview certificate with sample data"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
-                        Preview
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onFullscreenChange?.(true)}
-                        className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
-                        title="Enter fullscreen mode"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
-                        Fullscreen
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => onFullscreenChange?.(true)}
+                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
+                      title="Enter fullscreen mode"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+                      Fullscreen
+                    </button>
                   )}
                   {fullscreen && (
                     <button
@@ -1289,15 +1300,23 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
             )}
           </div>
           <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0">
-            <div className="border-b border-[var(--color-border)] px-4 py-2.5 flex items-center justify-between flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setComponentsExpanded((v) => !v)}
+              className="w-full border-b border-[var(--color-border)] px-4 py-2.5 flex items-center justify-between flex-shrink-0 transition-colors hover:bg-[var(--color-surface-hover)]"
+            >
               <span className="text-sm font-semibold text-[var(--color-text)]">
                 Components
               </span>
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {elements.length}
-              </span>
-            </div>
-            <div className="overflow-y-auto flex-1 min-h-0 divide-y divide-[var(--color-border)]">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--color-text-muted)]">
+                  {elements.length}
+                </span>
+                <ChevronDownIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${componentsExpanded ? "rotate-180" : ""}`} />
+              </div>
+            </button>
+            {componentsExpanded && (
+              <div className="overflow-y-auto flex-1 min-h-0 divide-y divide-[var(--color-border)]">
               {elements.length === 0 ? (
                 <p className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
                   No components yet
@@ -1372,8 +1391,11 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                 ))
               )}
             </div>
+            )}
+            </div>
           </div>
-        </div>
+        )}
+        </>
       )}
       <div className="flex-1 min-w-0">
         {!preview && (
@@ -1516,6 +1538,10 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                   </button>
                 )}
+                <div className="w-px h-3.5 bg-[var(--color-border)]" />
+                <button type="button" onClick={() => setShowRulers(!showRulers)} className={`rounded-md px-1 py-1 transition-all ${showRulers ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"}`} title={showRulers ? "Rulers: ON — click to hide" : "Rulers: OFF — click to show"}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 3H3v7h18V3z"/><path d="M21 14H3v7h18v-7z"/></svg>
+                </button>
               </div>
 
               {!fullscreen && (
@@ -1733,19 +1759,53 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           tabIndex={0}
           style={{ maxHeight: fullscreen ? "calc(100vh - 80px)" : "calc(100vh - 320px)", cursor: panning ? "grabbing" : spaceHeld ? "grab" : undefined, userSelect: panning ? "none" : undefined }}
         >
+          <div className="sticky top-0 right-0 z-50 flex justify-end pointer-events-none">
+            <div className="flex flex-col items-center rounded-lg bg-[var(--color-surface)] shadow-lg border border-[var(--color-border)] pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.min(5, z + 0.1))}
+                className="rounded-t-lg px-3 py-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] transition-colors"
+                title="Zoom in (Ctrl++)"
+              >
+                <PlusIcon className="size-4" />
+              </button>
+              <div className="h-px w-full bg-[var(--color-border)]" />
+              <button
+                type="button"
+                onClick={() => setZoom((z) => Math.max(0.1, z - 0.1))}
+                className="rounded-b-lg px-3 py-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] transition-colors"
+                title="Zoom out (Ctrl+-)"
+              >
+                <MinusIcon className="size-4" />
+              </button>
+              <div className="h-px w-full bg-[var(--color-border)]" />
+              <button
+                type="button"
+                onClick={() => setZoom(1)}
+                className="rounded-b-lg px-3 py-1.5 text-[10px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] transition-colors tabular-nums"
+                title="Reset zoom (Ctrl+0)"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+            </div>
+          </div>
           <div className="inline-flex items-center justify-center min-w-full min-h-full p-8">
             <div className="inline-block bg-[var(--color-surface)] p-4 rounded-lg shadow-sm" style={{ transform: `scale(${zoom})`, transformOrigin: "center center" }}>
-            <Ruler
-              orientation="horizontal"
-              length={CANVAS_W}
-              onAddGuide={(pos) => setGuides(prev => [...prev, { orientation: 'horizontal', position: pos }])}
-            />
-            <div className="flex">
+            {showRulers && (
               <Ruler
-                orientation="vertical"
-                length={CANVAS_H}
-                onAddGuide={(pos) => setGuides(prev => [...prev, { orientation: 'vertical', position: pos }])}
+                orientation="horizontal"
+                length={CANVAS_W}
+                onAddGuide={(pos) => setGuides(prev => [...prev, { orientation: 'horizontal', position: pos }])}
               />
+            )}
+            <div className="flex">
+              {showRulers && (
+                <Ruler
+                  orientation="vertical"
+                  length={CANVAS_H}
+                  onAddGuide={(pos) => setGuides(prev => [...prev, { orientation: 'vertical', position: pos }])}
+                />
+              )}
               <div
                 ref={canvasRef}
                 className="relative shadow bg-white border border-[var(--color-border)]"
@@ -1981,35 +2041,6 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
             </div>
           </div>
           </div>
-
-          <div className="absolute top-2 right-2 z-50 flex flex-col items-center rounded-lg bg-[var(--color-surface)] shadow-lg border border-[var(--color-border)]">
-            <button
-              type="button"
-              onClick={() => setZoom((z) => Math.min(5, z + 0.1))}
-              className="rounded-t-lg px-3 py-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] transition-colors"
-              title="Zoom in (Ctrl++)"
-            >
-              <PlusIcon className="size-4" />
-            </button>
-            <div className="h-px w-full bg-[var(--color-border)]" />
-            <button
-              type="button"
-              onClick={() => setZoom((z) => Math.max(0.1, z - 0.1))}
-              className="rounded-b-lg px-3 py-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] transition-colors"
-              title="Zoom out (Ctrl+-)"
-            >
-              <MinusIcon className="size-4" />
-            </button>
-            <div className="h-px w-full bg-[var(--color-border)]" />
-            <button
-              type="button"
-              onClick={() => setZoom(1)}
-              className="rounded-b-lg px-3 py-1.5 text-[10px] font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-surface-secondary)] transition-colors tabular-nums"
-              title="Reset zoom (Ctrl+0)"
-            >
-              {Math.round(zoom * 100)}%
-            </button>
-          </div>
         </div>
       </div>
 
@@ -2244,6 +2275,14 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const previewDates = useMemo(() => {
+    const now = new Date();
+    return {
+      issued: now.toLocaleDateString(),
+      expiry: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+    };
+  }, []);
+
   const previewModal = showPreview ? (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center"
@@ -2267,14 +2306,14 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
             __html: elementsToHtml(elements, CANVAS_W, CANVAS_H)
               .replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz")
               .replace(/\{\{certificate_number\}\}/g, "CERT-000001")
-              .replace(/\{\{issued_date\}\}/g, new Date().toLocaleDateString())
+              .replace(/\{\{issued_date\}\}/g, previewDates.issued)
               .replace(/\{\{organization_name\}\}/g, "Sample Organization")
               .replace(/\{\{event_name\}\}/g, "Sample Event")
               .replace(/\{\{event_date\}\}/g, new Date().toLocaleDateString())
               .replace(/\{\{event_location\}\}/g, "Sample Location")
               .replace(/\{\{event_organizer\}\}/g, "Sample Organizer")
               .replace(/\{\{certificate_title\}\}/g, "Certificate of Achievement")
-              .replace(/\{\{expiry_date\}\}/g, new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString())
+              .replace(/\{\{expiry_date\}\}/g, previewDates.expiry)
               .replace(/\{\{qr_code\}\}/g, qrDataUrl ? `<img src="${qrDataUrl}" style="width:100%;height:100%;object-fit:contain;" />` : '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#fff"/></svg>'),
           }}
           style={{

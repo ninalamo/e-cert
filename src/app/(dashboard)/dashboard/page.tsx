@@ -4,7 +4,6 @@ import ActivityFeed from "@/features/dashboard/components/activity-feed";
 import DashboardSearch from "@/features/dashboard/components/dashboard-search";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDashboardStats, getRecentActivity } from "@/features/dashboard/server/dashboard.service";
-import { requireSession } from "@/lib/permissions";
 import { ORG_ID } from "@/lib/org";
 
 export default async function DashboardPage() {
