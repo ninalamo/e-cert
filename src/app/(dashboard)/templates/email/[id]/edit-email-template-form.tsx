@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import {
   getEmailTemplateAction,
   updateTemplateAction,
@@ -13,9 +14,11 @@ import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
 
 export default function EditEmailTemplateForm({ id }: { id: string }) {
+  const router = useRouter();
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -67,6 +70,10 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
         }}
         disabled={locked}
         submitLabel="Save Changes"
+        fullscreen={fullscreen}
+        onFullscreenChange={setFullscreen}
+        onClose={() => router.push("/templates")}
+        onPreview={() => alert("Preview not implemented yet")}
         onSubmit={async (data) => {
           if (locked) return { error: "Template is locked." };
           return await updateTemplateAction(id, data);

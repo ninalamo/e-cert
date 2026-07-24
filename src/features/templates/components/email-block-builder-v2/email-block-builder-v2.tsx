@@ -41,6 +41,7 @@ interface EmailBlockBuilderV2Props {
   loading?: boolean;
   onSave?: () => void;
   onPreview?: () => void;
+  onClose?: () => void;
 }
 
 interface EmailBlockBuilderV2Handle {
@@ -120,6 +121,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       submitLabel = "Save Changes",
       loading = false,
       onSave,
+      onClose,
     },
     ref
   ) {
@@ -454,7 +456,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
                 onPreview={onPreview}
                 onFullscreenChange={onFullscreenChange}
                 onSave={onSave}
-                onClose={() => onFullscreenChange?.(false)}
+                onClose={onClose}
                 submitLabel={submitLabel}
                 loading={loading}
                 disabled={disabled}

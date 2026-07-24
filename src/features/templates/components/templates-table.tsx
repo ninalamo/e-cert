@@ -19,15 +19,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon, MailIcon, FileTextIcon } from "lucide-react";
 
-type FilterKey = "all" | "certificate" | "email" | "with-description" | "without-description";
+type FilterKey = "all" | "certificate" | "email";
 type SortKey = "name-asc" | "name-desc" | "created-desc" | "created-asc";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "certificate", label: "Certificates" },
   { key: "email", label: "Emails" },
-  { key: "with-description", label: "With description" },
-  { key: "without-description", label: "No description" },
 ];
 
 interface TemplatesTableProps {
@@ -60,9 +58,7 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
       const matchesFilter =
         filter === "all" ||
         (filter === "certificate" && t.type === "certificate") ||
-        (filter === "email" && t.type === "email") ||
-        (filter === "with-description" && !!t.description) ||
-        (filter === "without-description" && !t.description);
+        (filter === "email" && t.type === "email");
       return matchesQuery && matchesFilter;
     });
 
@@ -270,7 +266,7 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
                     <SearchIcon className="size-4" />
                   </span>
                 ) : (
-                  <Link href={`/templates/${t.id}`} className="btn-disclosure">
+                  <Link href={t.type === 'email' ? `/templates/email/${t.id}` : `/templates/${t.id}`} className="btn-disclosure">
                     Edit
                   </Link>
                 )}
@@ -348,7 +344,7 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
                   {previewTemplate.description || "No description"}
                 </span>
                 <Link
-                  href={`/templates/${previewTemplate.id}`}
+                  href={previewTemplate.type === 'email' ? `/templates/email/${previewTemplate.id}` : `/templates/${previewTemplate.id}`}
                   className="btn-brand text-xs px-4 py-2"
                 >
                   Edit Template

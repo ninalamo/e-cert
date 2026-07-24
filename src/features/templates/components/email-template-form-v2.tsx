@@ -18,6 +18,10 @@ interface EmailTemplateFormV2Props {
   }) => Promise<{ error?: string }>;
   submitLabel: string;
   disabled?: boolean;
+  onPreview?: () => void;
+  onFullscreenChange?: (fullscreen: boolean) => void;
+  onClose?: () => void;
+  fullscreen?: boolean;
 }
 
 export default function EmailTemplateFormV2({
@@ -25,6 +29,10 @@ export default function EmailTemplateFormV2({
   onSubmit,
   submitLabel,
   disabled = false,
+  onPreview,
+  onFullscreenChange,
+  onClose,
+  fullscreen = false,
 }: EmailTemplateFormV2Props) {
   const [name, setName] = useState(initialData?.name ?? "");
   const [description, setDescription] = useState(initialData?.description ?? "");
@@ -79,6 +87,10 @@ export default function EmailTemplateFormV2({
             submitLabel={submitLabel}
             loading={loading}
             onSave={handleSave}
+            onPreview={onPreview}
+            onFullscreenChange={onFullscreenChange}
+            onClose={onClose}
+            fullscreen={fullscreen}
           />
         </div>
       </fieldset>

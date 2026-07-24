@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { createEmailTemplateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
@@ -7,6 +8,8 @@ import { ORG_ID } from "@/lib/org";
 const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 
 export default function NewEmailTemplatePage() {
+  const [fullscreen, setFullscreen] = useState(false);
+
   return (
     <div className="space-y-6">
       <div>
@@ -17,6 +20,10 @@ export default function NewEmailTemplatePage() {
       </div>
       <TemplateForm
         submitLabel="Save Changes"
+        fullscreen={fullscreen}
+        onFullscreenChange={setFullscreen}
+        onClose={() => window.history.back()}
+        onPreview={() => alert("Preview not implemented yet")}
         onSubmit={async (data) => {
           return await createEmailTemplateAction({
             organization_id: ORG_ID,
