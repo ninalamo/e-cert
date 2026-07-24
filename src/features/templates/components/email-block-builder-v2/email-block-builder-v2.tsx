@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useCallback, useMemo, forwardRef, useImperativeHandle } from "react";
-import type { EmailBlock, EmailBlockType, AnyEmailBlock } from "./types";
+import type { EmailBlockType, AnyEmailBlock } from "./types";
 import {
   uid,
   createBlock,
   blocksToHtml,
-  DEFAULT_PROPS,
 } from "./block-definitions";
 import BlockCanvas from "./block-canvas";
 import BlockProperties from "./block-properties";
-import { BLOCK_TYPE_LABELS, BLOCK_TYPE_ICONS, BLOCK_COLORS } from "./block-definitions";
+import { BLOCK_TYPE_ICONS, BLOCK_COLORS } from "./block-definitions";
 import { EMAIL_PLACEHOLDER_FIELDS } from "./types";
 import {
   GripVerticalIcon,
@@ -19,15 +18,13 @@ import {
   EyeOffIcon,
   LockIcon,
   LockOpenIcon,
-  CopyIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  PlusIcon,
   ChevronDownIcon,
   Undo2Icon,
   Redo2Icon,
-  XIcon,
 } from "lucide-react";
+import TemplateSidebar from "../template-sidebar";
 
 interface EmailBlockBuilderV2Props {
   value: string;
@@ -117,6 +114,11 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       onNameChange,
       onDescriptionChange,
       onPreview,
+      fullscreen = false,
+      onFullscreenChange,
+      submitLabel = "Save Changes",
+      loading = false,
+      onSave,
     },
     ref
   ) {
@@ -417,46 +419,25 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
         {/* Left sidebar */}
         {sidebarExpanded && (
           <div className="w-64 flex-shrink-0 flex flex-col gap-4 max-h-full overflow-y-auto">
-            {/* Template Info */}
-            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setSidebarExpanded((v) => !v)}
-                className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
-              >
-                Template
-                <ChevronDownIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${sidebarExpanded ? "rotate-180" : ""}`} />
-              </button>
-              <div className="px-4 pb-4 space-y-4">
-                <div>
-                  <label htmlFor="template-name" className="block text-xs font-semibold mb-1.5 text-[var(--color-text-secondary)]">
-                    Template Name
-                  </label>
-                  <input
-                    id="template-name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => onNameChange?.(e.target.value)}
-                    required
-                    placeholder="e.g. Certificate Issued Notification"
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-brand-400)]"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="template-description" className="block text-xs font-semibold mb-1.5 text-[var(--color-text-secondary)]">
-                    Description
-                  </label>
-                  <textarea
-                    id="template-description"
-                    value={description}
-                    onChange={(e) => onDescriptionChange?.(e.target.value)}
-                    placeholder="Optional description"
-                    rows={3}
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-sm text-[var(--color-text)] outline-none transition-colors focus:border-[var(--color-brand-400)] resize-none"
-                  />
-                </div>
-              </div>
-            </div>
+            <TemplateSidebar
+              name={name}
+              description={description}
+              onNameChange={onNameChange}
+              onDescriptionChange={onDescriptionChange}
+              onPreview={onPreview}
+              onFullscreenChange={onFullscreenChange}
+              onSave={onSave}
+              onClose={() => onFullscreenChange?.(false)}
+              submitLabel={submitLabel}
+              loading={loading}
+              disabled={disabled}
+              fullscreen={fullscreen}
+              elementsCount={blocks.length}
+              onComponentsToggle={() => setComponentsExpanded((v) => !v)}
+              componentsExpanded={componentsExpanded}
+              showFullscreenToggle={true}
+              showPreview={true}
+            />
 
             {/* Components List */}
             <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0">
@@ -572,6 +553,38 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
                 className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-all"
               >
                 Preview
+              </button>
+
+              {/* Fullscreen button */}
+              <button
+                type="button"
+                onClick={() => onFullscreenChange?.(!fullscreen)}
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-brand-600)] hover:bg-[var(--color-brand-50)] transition-all"
+              >
+                {fullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              </button>
+
+              {/* Save button */}
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={loading}
+                className="rounded-lg bg-[var(--color-brand-600)] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-brand-700)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Saving..." : submitLabel}
+              </button>
+
+              {/* Close Editor button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
+                    window.location.href = "/templates";
+                  }
+                }}
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-danger-text)] hover:bg-[var(--color-danger-bg)] transition-all"
+              >
+                Close Editor
               </button>
             </div>
           </div>
