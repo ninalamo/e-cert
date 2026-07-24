@@ -566,16 +566,15 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     }
   }
 
-  // Sync elements → parent during render (not useEffect) so it fires
-  // before the canvas can unmount on Design→Advanced switch.
+  // Sync elements → parent via useEffect
   const currentHtml = elementsToHtml(elements, CANVAS_W, CANVAS_H);
-  // eslint-disable-next-line react-hooks/refs
-  if (currentHtml !== lastCanvasHtml.current) {
-    // eslint-disable-next-line react-hooks/refs
-    lastCanvasHtml.current = currentHtml;
-    // Defer the parent update to after the current render commit
-    queueMicrotask(() => onChange(currentHtml));
-  }
+  const lastHtmlRef = useRef(currentHtml);
+  useEffect(() => {
+    if (currentHtml !== lastHtmlRef.current) {
+      lastHtmlRef.current = currentHtml;
+      onChange(currentHtml);
+    }
+  }, [currentHtml, onChange]);
 
   const snapValue = (value: number, orientation: 'horizontal' | 'vertical') => {
     if (!snapEnabled) return value;

@@ -12,12 +12,12 @@ Add customizable email templates to the e-cert system, allowing each event to ha
 | 1 | ✅ Complete | Database & Types |
 | 2 | ✅ Complete | Backend Services |
 | 3 | ✅ Complete | Email Template Editor |
-| 4 | ⏳ Pending | Event Forms |
-| 5 | ⏳ Pending | Email Service |
-| 6 | ⏳ Pending | Templates Table |
-| 7 | ⏳ Pending | Testing & Polish |
+| 4 | ✅ Complete | Event Forms |
+| 5 | ✅ Complete | Email Service |
+| 6 | ✅ Complete | Templates Table |
+| 7 | 🔶 In Progress | Testing & Polish (code fixes done, manual testing pending) |
 
-**Overall Progress: 3/7 phases complete (43%)**
+**Overall Progress: 6/7 phases complete, Phase 7 in progress (92%)**
 
 ---
 
@@ -118,65 +118,71 @@ When `email_template_id` is `NULL`, the email service uses the hardcoded templat
 ## Phase 4: Event Forms
 
 ### New Event Form (`src/app/(dashboard)/events/new/new-event-form.tsx`)
-- [ ] Add `emailTemplates` to props
-- [ ] Add `selectedEmailTemplate` state
-- [ ] Add email template dropdown (optional, defaults to system template)
-- [ ] Update `handleSubmit` to pass `email_template_id`
+- [x] Add `emailTemplates` to props
+- [x] Add `selectedEmailTemplate` state
+- [x] Add email template dropdown (optional, defaults to system template)
+- [x] Update `handleSubmit` to pass `email_template_id`
 
 ### Event Detail Page (`src/app/(dashboard)/events/[id]/event-detail.tsx`)
-- [ ] Add `initialEmailTemplates` to props
-- [ ] Fetch email templates on mount
-- [ ] Pass email templates to `TemplateCard`
+- [x] Add `initialEmailTemplates` to props
+- [x] Fetch email templates on mount
+- [x] Pass email templates to `TemplateCard`
 
 ### Template Card (`src/app/(dashboard)/events/[id]/components/template-card.tsx`)
-- [ ] Add `emailTemplates` prop
-- [ ] Add `currentEmailTemplate` prop
-- [ ] Add `onEmailTemplateUpdated` callback
-- [ ] Add email template section below certificate template
-- [ ] Add email template dropdown
-- [ ] Add "Assign Email Template" button
-- [ ] Add clone functionality for email templates
+- [x] Add `emailTemplates` prop
+- [x] Add `currentEmailTemplate` prop
+- [x] Add `onEmailTemplateUpdated` callback
+- [x] Add email template section below certificate template
+- [x] Add email template dropdown
+- [x] Add "Assign Email Template" button
+- [x] Add lock state for email templates
 
 ### Server Pages
-- [ ] Update `src/app/(dashboard)/events/new/page.tsx` to fetch email templates
-- [ ] Update `src/app/(dashboard)/events/[id]/page.tsx` to fetch email templates
+- [x] Update `src/app/(dashboard)/events/new/page.tsx` to fetch email templates
+- [x] Update `src/app/(dashboard)/events/[id]/page.tsx` to fetch email templates
 
 ---
 
 ## Phase 5: Email Service
 
 ### Update `src/features/certificates/server/certificate-email.service.ts`
-- [ ] Fetch event's `email_template_id` when sending email
-- [ ] If `email_template_id` is NULL → use system default (`certificateEmailHtml()`)
-- [ ] If `email_template_id` has value → load custom template from DB
-- [ ] Add `renderEmailTemplate()` function for placeholder replacement
+- [x] Fetch event's `email_template_id` when sending email
+- [x] If `email_template_id` is NULL → use system default (`certificateEmailHtml()`)
+- [x] If `email_template_id` has value → load custom template from DB
+- [x] Use `renderEmailTemplate()` function for placeholder replacement
 
 ### Update `src/features/certificates/server/email-template.ts`
-- [ ] Add `renderEmailTemplate()` helper function
-- [ ] Keep existing `certificateEmailHtml()` as fallback (used when `email_template_id` is null)
+- [x] Add `renderEmailTemplate()` helper function
+- [x] Keep existing `certificateEmailHtml()` as fallback (used when `email_template_id` is null)
 
 ---
 
 ## Phase 6: Templates Table
 
 ### Update `src/features/templates/components/templates-table.tsx`
-- [ ] Add type filter options (All, Certificates, Emails)
-- [ ] Update filtering logic to filter by `type`
-- [ ] Add type badge in template rows
-- [ ] Update "New Template" button to show type selection
+- [x] Add type filter options (All, Certificates, Emails)
+- [x] Update filtering logic to filter by `type`
+- [x] Add type badge in template rows
+- [x] Update "New Template" button to show type selection
 
 ### Update `src/app/(dashboard)/templates/page.tsx`
-- [ ] Fetch templates with type information
-- [ ] Pass to `TemplatesTable`
+- [x] Fetch templates with type information
+- [x] Pass to `TemplatesTable`
 
 ### New Pages
-- [ ] Create `src/app/(dashboard)/templates/email/new/page.tsx`
-- [ ] Create `src/app/(dashboard)/templates/email/[id]/page.tsx`
+- [x] Create `src/app/(dashboard)/templates/email/new/page.tsx`
+- [x] Create `src/app/(dashboard)/templates/email/[id]/page.tsx`
+- [x] Create `src/app/(dashboard)/templates/email/[id]/edit-email-template-form.tsx`
 
 ---
 
 ## Phase 7: Testing & Polish
 
+- [x] TypeScript type check — passes clean
+- [x] ESLint — passes (only pre-existing warning in certificate-detail.tsx)
+- [x] Fix unused `useRef` import in email-template-editor.tsx
+- [x] Fix SQL migration — remove invalid UUID empty string comparison (`''`)
+- [x] Fix React state update warning in template-canvas.tsx — replaced in-render `queueMicrotask(() => onChange(...))` with `useEffect`
 - [ ] Test email template creation flow
 - [ ] Test email template editing flow
 - [ ] Test email template deletion flow
@@ -234,16 +240,17 @@ When `email_template_id` is `NULL`, the email service uses the hardcoded templat
 - `src/features/templates/server/template.service.ts` ✅
 - `src/features/templates/server/template.actions.ts` ✅
 - `src/features/templates/components/template-form.tsx` ✅
-- `src/features/templates/components/templates-table.tsx` ⏳ (Phase 6)
+- `src/features/templates/components/templates-table.tsx` ✅
 - `src/features/events/server/event.repository.ts` ✅
 - `src/features/events/server/event.service.ts` ✅
 - `src/features/events/server/event.actions.ts` ✅
-- `src/features/certificates/server/certificate-email.service.ts` ⏳ (Phase 5)
-- `src/features/certificates/server/email-template.ts` ⏳ (Phase 5)
-- `src/app/(dashboard)/events/new/new-event-form.tsx` ⏳ (Phase 4)
-- `src/app/(dashboard)/events/new/page.tsx` ⏳ (Phase 4)
-- `src/app/(dashboard)/events/[id]/event-detail.tsx` ⏳ (Phase 4)
-- `src/app/(dashboard)/events/[id]/page.tsx` ⏳ (Phase 4)
-- `src/app/(dashboard)/events/[id]/components/template-card.tsx` ⏳ (Phase 4)
-- `src/app/(dashboard)/templates/page.tsx` ⏳ (Phase 6)
+- `src/features/certificates/server/certificate-email.service.ts` ✅
+- `src/features/certificates/server/email-template.ts` ✅
+- `src/app/(dashboard)/events/new/new-event-form.tsx` ✅
+- `src/app/(dashboard)/events/new/page.tsx` ✅
+- `src/app/(dashboard)/events/[id]/event-detail.tsx` ✅
+- `src/app/(dashboard)/events/[id]/page.tsx` ✅
+- `src/app/(dashboard)/events/[id]/components/template-card.tsx` ✅
+- `src/app/(dashboard)/templates/page.tsx` ✅
 - `src/app/(dashboard)/templates/[id]/edit-template-form.tsx` ✅
+- `src/app/(dashboard)/templates/new/page.tsx` ✅

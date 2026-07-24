@@ -12,7 +12,7 @@ export default async function TemplatesPage() {
           Templates
         </h1>
         <p className="mt-1 text-sm text-tertiary">
-          Manage your certificate templates
+          Manage your certificate and email templates
         </p>
       </div>
       <TemplatesTable initialTemplates={templates} />

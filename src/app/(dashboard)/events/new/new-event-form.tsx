@@ -27,9 +27,17 @@ function buildPattern(prefix: string): string {
   return `${trimmed}${sep}####`;
 }
 
-export default function NewEventForm({ templates }: { templates: CertificateTemplate[] }) {
+export default function NewEventForm({
+  templates,
+  emailTemplates = [],
+}: {
+  templates: CertificateTemplate[];
+  emailTemplates?: CertificateTemplate[];
+}) {
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<string>("");
   const [cloneTemplate, setCloneTemplate] = useState(true);
+  const [cloneEmailTemplate, setCloneEmailTemplate] = useState(true);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [eventDate, setEventDate] = useState("");
@@ -99,6 +107,7 @@ export default function NewEventForm({ templates }: { templates: CertificateTemp
       certificate_title: certTitle || undefined,
       certificate_number_pattern: certPattern,
       valid_until: validUntil || undefined,
+      email_template_id: selectedEmailTemplate || undefined,
     });
 
     if (result?.error) {
@@ -304,6 +313,47 @@ export default function NewEventForm({ templates }: { templates: CertificateTemp
             >
               Preview Certificate
             </button>
+          )}
+        </div>
+
+        <div className="app-card space-y-4 rounded-2xl p-5 shadow-[var(--shadow-ios)]">
+          <div className="flex items-baseline justify-between">
+            <p className="section-title mb-0">Email Settings</p>
+            <span className="rounded-full bg-surface-tertiary px-2.5 py-0.5 text-[11px] font-medium text-tertiary">
+              Optional - uses system default if not set
+            </span>
+          </div>
+          <div>
+            <label htmlFor="email_template_id" className="mb-1.5 block text-[13px] font-semibold text-tertiary">
+              Email Template (optional)
+            </label>
+            <select
+              id="email_template_id"
+              value={selectedEmailTemplate}
+              onChange={(e) => setSelectedEmailTemplate(e.target.value)}
+              className="input h-11 rounded-xl text-[15px]"
+            >
+              <option value="">System default template</option>
+              {emailTemplates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-[11px] text-tertiary">
+              Custom email sent when certificate is issued. Leave empty for default.
+            </p>
+          </div>
+          {selectedEmailTemplate && (
+            <label className="flex items-center gap-2.5 text-[14px] text-secondary cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cloneEmailTemplate}
+                onChange={(e) => setCloneEmailTemplate(e.target.checked)}
+                className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
+              />
+              Clone email template for this event (independent copy you can customize)
+            </label>
           )}
         </div>
 
