@@ -4,7 +4,7 @@ import { listUsers } from "@/features/users/server/user.service";
 import { getCurrentUser } from "@/features/auth/server/auth.actions";
 
 export default async function UsersPage() {
-  const session = await requireRole(["admin"]);
+  await requireRole(["admin"]);
   const [users, currentUser] = await Promise.all([
     listUsers(),
     getCurrentUser(),

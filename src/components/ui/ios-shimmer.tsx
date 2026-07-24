@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 interface IOSShimmerProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -8,14 +7,6 @@ interface IOSShimmerProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function IOSShimmer({ className, ...props }: IOSShimmerProps) {
-  const [isMounted, setIsMounted] = useState(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
-  if (!isMounted) return null
-
   return (
     <div
       className={cn(

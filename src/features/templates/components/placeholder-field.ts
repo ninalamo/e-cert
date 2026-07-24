@@ -15,7 +15,6 @@ export const PLACEHOLDER_FIELDS = [
   { key: "event_organizer", label: "Event Organizer" },
   { key: "certificate_title", label: "Certificate Title" },
   { key: "expiry_date", label: "Expiry Date" },
-  { key: "qr_code", label: "QR Code" },
 ] as const;
 
 export type PlaceholderFieldKey = (typeof PLACEHOLDER_FIELDS)[number]["key"];
