@@ -37,6 +37,11 @@ interface EmailBlockBuilderV2Props {
   description?: string;
   onNameChange?: (name: string) => void;
   onDescriptionChange?: (desc: string) => void;
+  fullscreen?: boolean;
+  onFullscreenChange?: (fullscreen: boolean) => void;
+  submitLabel?: string;
+  loading?: boolean;
+  onSave?: () => void;
   onPreview?: () => void;
 }
 
@@ -618,6 +623,12 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
   }
 );
 
+function isPlaceholderBlock(block: AnyEmailBlock): boolean {
+  if (block.type !== "text") return false;
+  const text = (block.props as { content: string }).content.replace(/<[^>]*>/g, "").trim();
+  return /^\{\{.+\}\}$/.test(text);
+}
+
 function getBlockLabel(block: AnyEmailBlock): string {
   switch (block.type) {
     case "header":
@@ -642,3 +653,4 @@ function getBlockLabel(block: AnyEmailBlock): string {
 }
 
 export default EmailBlockBuilderV2;
+export type { EmailBlockBuilderV2Props, EmailBlockBuilderV2Handle };

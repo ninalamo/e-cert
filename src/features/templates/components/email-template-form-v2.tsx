@@ -1,10 +1,18 @@
-"use client";
-
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { EmailPreview } from "./email-template-editor";
 import EmailBlockBuilderV2 from "./email-block-builder-v2/email-block-builder-v2";
 import type { EmailBlockBuilderV2Handle } from "./email-block-builder-v2/email-block-builder-v2";
+import CodeEditor from "@/components/ui/code-editor";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { CopyIcon, XIcon } from "lucide-react";
 
 interface EmailTemplateFormV2Props {
   initialData?: {
@@ -36,6 +44,7 @@ export default function EmailTemplateFormV2({
   const [loading, setLoading] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showSource, setShowSource] = useState(false);
   const builderRef = useRef<EmailBlockBuilderV2Handle | null>(null);
 
   const handleFullscreenExit = useCallback(() => {
@@ -83,13 +92,26 @@ export default function EmailTemplateFormV2({
             <p className="text-xs text-[var(--color-text-muted)]">
               Design your email template. Drag and drop blocks to build your layout, or switch to Editor mode for rich text editing.
             </p>
-            <button
-              type="button"
-              onClick={() => setShowPreview(true)}
-              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-all"
-            >
-              Preview
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSource(!showSource)}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
+                  showSource
+                    ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
+                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                }`}
+              >
+                {showSource ? "Hide Source" : "Show Source"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPreview(true)}
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-all"
+              >
+                Preview
+              </button>
+            </div>
           </div>
           <EmailBlockBuilderV2
             ref={builderRef}
@@ -125,6 +147,39 @@ export default function EmailTemplateFormV2({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Source Code Dialog */}
+      {showSource && (
+        <Dialog open={showSource} onOpenChange={setShowSource}>
+          <DialogContent className="max-w-4xl max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                HTML Source
+                <Button variant="ghost" size="icon" onClick={() => setShowSource(false)}>
+                  <XIcon className="size-4" />
+                </Button>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex gap-2 p-4 border-t border-[var(--color-border)]">
+              <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(builderRef.current?.getHtml() ?? htmlContent)}>
+                <CopyIcon className="size-3.5 mr-1.5" />
+                Copy HTML
+              </Button>
+            </div>
+            <CodeEditor
+              value={htmlContent}
+              onChange={() => {}}
+              rows={30}
+              readOnly
+            />
+            <DialogFooter className="border-t border-[var(--color-border)]">
+              <Button variant="outline" onClick={() => setShowSource(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Loading Overlay */}
