@@ -59,6 +59,7 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
 
       <TemplateForm
         key={template.id}
+        templateType={template.type}
         initialData={{
           name: template.name,
           description: template.description ?? "",
@@ -67,7 +68,6 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
           css_content: template.css_content ?? "",
         }}
         disabled={locked}
-        hideTypeToggle={true}
         submitLabel="Save Changes"
         onSubmit={async (data) => {
           if (locked) return { template: null, error: "Template is locked." };

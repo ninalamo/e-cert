@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { InfoIcon, MailIcon, FileTextIcon } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 
 interface TemplateFormProps {
   initialData?: {
@@ -35,7 +35,7 @@ interface TemplateFormProps {
   }) => Promise<{ error?: string }>;
   submitLabel: string;
   disabled?: boolean;
-  hideTypeToggle?: boolean;
+  templateType: 'certificate' | 'email';
 }
 
 export default function TemplateForm({
@@ -43,13 +43,12 @@ export default function TemplateForm({
   onSubmit,
   submitLabel,
   disabled = false,
-  hideTypeToggle = false,
 }: TemplateFormProps) {
+  const templateType = initialData?.type ?? 'certificate';
   const [name, setName] = useState(initialData?.name ?? "");
   const [description, setDescription] = useState(initialData?.description ?? "");
-  const [templateType, setTemplateType] = useState<'certificate' | 'email'>(initialData?.type ?? 'certificate');
-  const [htmlContent, setHtmlContent] = useState(initialData?.html_content ?? DEFAULT_HTML);
-  const [cssContent, setCssContent] = useState(initialData?.css_content ?? DEFAULT_CSS);
+  const [htmlContent, setHtmlContent] = useState(initialData?.html_content ?? (templateType === 'email' ? DEFAULT_EMAIL_TEMPLATE : DEFAULT_HTML));
+  const [cssContent, setCssContent] = useState(initialData?.css_content ?? (templateType === 'email' ? "" : DEFAULT_CSS));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -89,20 +88,6 @@ export default function TemplateForm({
     setLoading(false);
   }
 
-  function handleTypeChange(newType: 'certificate' | 'email') {
-    if (newType === templateType) return;
-    
-    if (newType === 'email' && !initialData?.type) {
-      setHtmlContent(DEFAULT_EMAIL_TEMPLATE);
-      setCssContent("");
-    } else if (newType === 'certificate' && !initialData?.type) {
-      setHtmlContent(DEFAULT_HTML);
-      setCssContent(DEFAULT_CSS);
-    }
-    
-    setTemplateType(newType);
-  }
-
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
@@ -111,39 +96,8 @@ export default function TemplateForm({
         </div>
       )}
 
-      <fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
-        {/* Type Toggle */}
-        {!hideTypeToggle && (
-          <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
-            <button
-              type="button"
-              onClick={() => handleTypeChange('certificate')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                templateType === 'certificate'
-                  ? "bg-[var(--color-brand-600)] text-white shadow-sm"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
-              }`}
-            >
-              <FileTextIcon className="size-4" />
-              Certificate
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTypeChange('email')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                templateType === 'email'
-                  ? "bg-[var(--color-brand-600)] text-white shadow-sm"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
-              }`}
-            >
-              <MailIcon className="size-4" />
-              Email
-            </button>
-          </div>
-        )}
-
+<fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
         {/* Editor */}
-        <div className="space-y-3">
           {isEmail ? (
             <>
               <div className="flex items-center justify-between">
@@ -238,7 +192,6 @@ export default function TemplateForm({
               </div>
             </>
           )}
-        </div>
       </fieldset>
 
       <Dialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>

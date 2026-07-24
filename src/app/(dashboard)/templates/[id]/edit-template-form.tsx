@@ -58,6 +58,7 @@ export default function EditTemplateForm({ id }: { id: string }) {
 
       <TemplateForm
         key={template.id}
+        templateType={template.type}
         initialData={{
           name: template.name,
           description: template.description ?? "",

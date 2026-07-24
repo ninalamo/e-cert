@@ -16,8 +16,8 @@ export default function NewEmailTemplatePage() {
         </p>
       </div>
       <TemplateForm
+        templateType="email"
         submitLabel="Save Changes"
-        hideTypeToggle={true}
         onSubmit={async (data) => {
           return await createEmailTemplateAction({
             organization_id: ORG_ID,
