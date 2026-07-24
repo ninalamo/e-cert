@@ -152,6 +152,7 @@ export default function TemplateForm({
                     description={description}
                     onNameChange={setName}
                     onDescriptionChange={setDescription}
+                    onSave={confirmSave}
                   />
                 </div>
                 {showSource && (

@@ -25,6 +25,7 @@ import {
   Redo2Icon,
 } from "lucide-react";
 import TemplateSidebar from "../template-sidebar";
+import ComponentsSidebar, { ComponentsSidebarItem } from "../components-sidebar";
 
 interface EmailBlockBuilderV2Props {
   value: string;
@@ -133,6 +134,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
     const [componentsExpanded, setComponentsExpanded] = useState(true);
     const [dragOverId, setDragOverId] = useState<string | null>(null);
     const [draggedId, setDraggedId] = useState<string | null>(null);
+    const [dropSide, setDropSide] = useState<"before" | "after">("before");
 
     const pushHistory = useCallback(
       (newBlocks: AnyEmailBlock[]) => {
@@ -265,6 +267,9 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
       setDragOverId(id);
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      setDropSide(e.clientY < midY ? "before" : "after");
     }, []);
 
     const handleListDrop = useCallback(
@@ -273,18 +278,28 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
         const fromIndex = blocks.findIndex((b) => b.id === draggedId);
         const toIndex = blocks.findIndex((b) => b.id === targetId);
         if (fromIndex === -1 || toIndex === -1) return;
-        const newBlocks = moveArrayItem(blocks, fromIndex, toIndex);
+        const insertIndex = dropSide === "before" ? toIndex : toIndex + 1;
+        const newBlocks = moveArrayItem(blocks, fromIndex, insertIndex);
         updateBlocks(newBlocks);
         setDraggedId(null);
         setDragOverId(null);
       },
-      [blocks, draggedId, updateBlocks]
+      [blocks, draggedId, updateBlocks, dropSide]
     );
 
     const handleListDragEnd = useCallback(() => {
       setDraggedId(null);
       setDragOverId(null);
+      setDropSide("before");
     }, []);
+
+    const handleListMove = useCallback(
+      (fromIndex: number, toIndex: number) => {
+        const newBlocks = moveArrayItem(blocks, fromIndex, toIndex);
+        updateBlocks(newBlocks);
+      },
+      [blocks, updateBlocks]
+    );
 
     const handleListItemClick = useCallback(
       (id: string, e: React.MouseEvent) => {
@@ -385,6 +400,16 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       [blocks, selectedId]
     );
 
+    const componentItems: ComponentsSidebarItem[] = blocks.map((block, index) => ({
+      id: block.id,
+      type: block.type,
+      label: getBlockLabel(block),
+      icon: BLOCK_TYPE_ICONS[block.type],
+      color: BLOCK_COLORS[block.type],
+      hidden: block.hidden,
+      locked: block.locked,
+    }));
+
     const paletteItems: { type: EmailBlockType; label: string; icon: string; color: string }[] = [
       { type: "header", label: "Header", icon: "H", color: "text-blue-700 bg-blue-50" },
       { type: "text", label: "Text", icon: "T", color: "text-zinc-700 bg-zinc-50" },
@@ -439,56 +464,28 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
               showPreview={true}
             />
 
-            {/* Components List */}
-            <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0">
-              <button
-                type="button"
-                onClick={() => setComponentsExpanded((v) => !v)}
-                className="w-full border-b border-[var(--color-border)] px-4 py-2.5 flex items-center justify-between flex-shrink-0 transition-colors hover:bg-[var(--color-surface-hover)]"
-              >
-                <span className="text-sm font-semibold text-[var(--color-text)]">Components</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--color-text-muted)]">{blocks.length}</span>
-                  <ChevronDownIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${componentsExpanded ? "rotate-180" : ""}`} />
-                </div>
-              </button>
-              {componentsExpanded && (
-                <div className="overflow-y-auto flex-1 min-h-0 divide-y divide-[var(--color-border)]" onDrop={handleSidebarDrop} onDragOver={(e) => e.preventDefault()}>
-                  {blocks.length === 0 ? (
-                    <p className="px-4 py-3 text-xs text-[var(--color-text-muted)]">No components yet</p>
-                  ) : (
-                    blocks.map((block, index) => (
-                      <div
-                        key={block.id}
-                        className={`flex items-center gap-1.5 px-2 py-2 text-xs cursor-pointer transition-all select-none ${block.hidden ? "opacity-40" : ""} ${dragOverId === block.id && draggedId !== block.id ? "border-t-2 border-t-[var(--color-brand-500)]" : ""} ${draggedId === block.id ? "opacity-30" : ""} ${selectedId === block.id ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"}`}
-                        draggable
-                        onDragStart={(e) => handleListDragStart(block.id, e)}
-                        onDragOver={(e) => handleListDragOver(block.id, e)}
-                        onDrop={() => handleListDrop(block.id)}
-                        onDragEnd={handleListDragEnd}
-                        onDragLeave={() => { if (dragOverId === block.id) setDragOverId(null); }}
-                        onClick={(e) => handleListItemClick(block.id, e)}
-                      >
-                        <span className="flex-shrink-0 cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                          <GripVerticalIcon className="size-3" />
-                        </span>
-                        <span className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${BLOCK_COLORS[block.type]}`}>
-                          {BLOCK_TYPE_ICONS[block.type]}
-                        </span>
-                        <span className="truncate flex-1">{getBlockLabel(block)}</span>
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <button type="button" onClick={(e) => { e.stopPropagation(); handleListMoveUp(index); }} disabled={index === 0 || disabled} className="rounded p-0.5 hover:bg-[var(--color-surface-secondary)] disabled:opacity-30" title="Move up"><ArrowUpIcon className="size-3" /></button>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); handleListMoveDown(index); }} disabled={index === blocks.length - 1 || disabled} className="rounded p-0.5 hover:bg-[var(--color-surface-secondary)] disabled:opacity-30" title="Move down"><ArrowDownIcon className="size-3" /></button>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); handleToggleHidden(block.id); }} disabled={disabled} className="rounded p-0.5 hover:bg-[var(--color-surface-secondary)]" title={block.hidden ? "Show" : "Hide"}>{block.hidden ? <EyeOffIcon className="size-3" /> : <EyeIcon className="size-3" />}</button>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); handleToggleLocked(block.id); }} disabled={disabled} className="rounded p-0.5 hover:bg-[var(--color-surface-secondary)]" title={block.locked ? "Unlock" : "Lock"}>{block.locked ? <LockIcon className="size-3" /> : <LockOpenIcon className="size-3" />}</button>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }} disabled={disabled} className="rounded p-0.5 hover:bg-[var(--color-danger-bg)]" title="Delete"><Trash2Icon className="size-3 text-[var(--color-text-muted)] hover:text-[var(--color-danger-text)]" /></button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+            <ComponentsSidebar
+              items={componentItems}
+              expanded={componentsExpanded}
+              onToggle={() => setComponentsExpanded((v) => !v)}
+              selectedId={selectedId}
+              onSelect={handleListItemClick}
+              onReorder={handleListMove}
+              onToggleHidden={handleToggleHidden}
+              onToggleLocked={handleToggleLocked}
+              onDelete={handleDeleteBlock}
+              onDragStart={handleListDragStart}
+              onDragOver={handleListDragOver}
+              onDrop={handleListDrop}
+              onDragEnd={handleListDragEnd}
+              onDragLeave={() => { if (dragOverId) setDragOverId(null); }}
+              disabled={disabled}
+              dragOverId={dragOverId}
+              draggedId={draggedId}
+              dropSide={dropSide}
+              emptyMessage="No components yet"
+              title="Components"
+            />
           </div>
         )}
 
