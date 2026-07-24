@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { createTemplateAction, createEmailTemplateAction } from "@/features/templates/server/template.actions";
+import { createTemplateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 
 const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });

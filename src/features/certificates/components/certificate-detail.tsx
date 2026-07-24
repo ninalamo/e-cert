@@ -18,7 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeftIcon,
-  ShieldOffIcon,
   CalendarIcon,
   MapPinIcon,
   UserIcon,

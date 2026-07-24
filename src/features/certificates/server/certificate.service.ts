@@ -197,6 +197,17 @@ export async function getMyCertificates(
   return certRepo.findByRecipientEmail(email, ORG_ID, columns);
 }
 
+export async function getMyCertificatesWithEvent(
+  email: string,
+  columns?: string,
+  client?: SupabaseClient
+): Promise<Array<Certificate & { events: { name: string } | null }>> {
+  const c = client ?? (await createClient());
+  const certRepo = repo(c);
+  const { ORG_ID } = await import("@/lib/org");
+  return certRepo.findByRecipientEmailWithEvent(email, ORG_ID, columns);
+}
+
 export async function getMyCertificate(
   id: string,
   email: string,

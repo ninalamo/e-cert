@@ -3,6 +3,7 @@
 import * as certService from "./certificate.service";
 import * as emailService from "./certificate-email.service";
 import { requireRole, requireSession } from "@/lib/permissions";
+import type { Certificate } from "@/types/certificate";
 
 export async function issueCertificateAction(data: {
   organization_id: string;
@@ -65,9 +66,9 @@ export async function getEmailLogsAction(certificateId: string) {
   return emailService.getEmailLogs(certificateId);
 }
 
-export async function getMyCertificatesAction() {
+export async function getMyCertificatesAction(): Promise<Array<Certificate & { events: { name: string } | null }>> {
   const session = await requireSession();
-  return certService.getMyCertificates(
+  return certService.getMyCertificatesWithEvent(
     session.email!,
     "id, certificate_number, issued_at, expires_at, revoked_at"
   );

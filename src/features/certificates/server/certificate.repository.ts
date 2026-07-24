@@ -46,6 +46,26 @@ export class CertificateRepository extends BaseRepository<Certificate> {
     );
   }
 
+  async findByRecipientEmailWithEvent(
+    email: string,
+    organizationId: string,
+    columns?: string
+  ): Promise<Array<Certificate & { events: { name: string } | null }>> {
+    const selectColumns = columns
+      ? `${columns}, events!event_id(name)`
+      : `*, events!event_id(name)`;
+
+    const { data, error } = await this.client
+      .from(this.table)
+      .select(selectColumns)
+      .eq("recipient_email", email)
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+
+    if (error) return [];
+    return (data ?? []) as Array<Certificate & { events: { name: string } | null }>;
+  }
+
   async findByIdForRecipient(
     id: string,
     email: string
