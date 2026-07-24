@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { getCertificate } from "@/features/certificates/server/certificate.service";
-import { getEvent } from "@/features/events/server/event.service";
+import { createClient } from "@/lib/supabase/server";
+import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
+import { EventRepository } from "@/features/events/server/event.repository";
 import { generateQrCodeDataUrl } from "@/lib/qr";
 import { requireRole } from "@/lib/permissions";
 import CertificateDetail from "@/features/certificates/components/certificate-detail";
@@ -15,13 +16,19 @@ export default async function CertificateDetailPage({
   const { id } = await params;
   const { eventId } = await searchParams;
 
-  const session = await requireRole(["admin", "staff", "participant"]);
+  const [session, supabase] = await Promise.all([
+    requireRole(["admin", "staff", "participant"]),
+    createClient(),
+  ]);
 
-  const certificate = await getCertificate(id);
+  const certRepo = new CertificateRepository(supabase);
+  const eventRepo = new EventRepository(supabase);
+
+  const certificate = await certRepo.findById(id);
   if (!certificate) notFound();
 
   const eventToShow = eventId || certificate.event_id;
-  const event = eventToShow ? await getEvent(eventToShow) : null;
+  const event = eventToShow ? await eventRepo.findById(eventToShow) : null;
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const verifyUrl = `${baseUrl}/verify?number=${encodeURIComponent(certificate.certificate_number)}`;
