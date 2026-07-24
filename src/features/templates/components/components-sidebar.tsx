@@ -25,7 +25,7 @@ export interface ComponentsSidebarItem {
 export interface ComponentsSidebarProps {
   items: ComponentsSidebarItem[];
   expanded?: boolean;
-  onToggle?: () => void;
+  onExpandedChange?: (expanded: boolean) => void;
   selectedId?: string | null;
   onSelect?: (id: string, e: React.MouseEvent) => void;
   onReorder?: (fromIndex: number, toIndex: number) => void;
@@ -48,7 +48,7 @@ export interface ComponentsSidebarProps {
 export default function ComponentsSidebar({
   items,
   expanded = true,
-  onToggle,
+  onExpandedChange,
   selectedId,
   onSelect,
   onReorder,
@@ -72,7 +72,7 @@ export default function ComponentsSidebar({
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0 flex-shrink-0">
       <button
         type="button"
-        onClick={onToggle}
+        onClick={() => onExpandedChange?.(!expanded)}
         className="w-full border-b border-[var(--color-border)] px-4 py-2.5 flex items-center justify-between flex-shrink-0 transition-colors hover:bg-[var(--color-surface-hover)]"
       >
         <span className="text-sm font-semibold text-[var(--color-text)]">

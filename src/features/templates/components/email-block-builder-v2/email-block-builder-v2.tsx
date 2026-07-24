@@ -131,6 +131,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
     const [history, setHistory] = useState<AnyEmailBlock[][]>([[]]);
     const [historyIndex, setHistoryIndex] = useState(0);
     const [sidebarExpanded, setSidebarExpanded] = useState(true);
+    const [templateSidebarExpanded, setTemplateSidebarExpanded] = useState(true);
     const [componentsExpanded, setComponentsExpanded] = useState(true);
     const [dragOverId, setDragOverId] = useState<string | null>(null);
     const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -445,42 +446,43 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
         {sidebarExpanded && (
           <div className="w-64 flex-shrink-0 flex flex-col gap-4 max-h-full overflow-y-auto">
 <TemplateSidebar
-               name={name}
-               description={description}
-               onNameChange={onNameChange}
-               onDescriptionChange={onDescriptionChange}
-               onPreview={onPreview}
-               onFullscreenChange={onFullscreenChange}
-               onSave={onSave}
-               onClose={() => onFullscreenChange?.(false)}
-               submitLabel={submitLabel}
-               loading={loading}
+                name={name}
+                description={description}
+                onNameChange={onNameChange}
+                onDescriptionChange={onDescriptionChange}
+                onPreview={onPreview}
+                onFullscreenChange={onFullscreenChange}
+                onSave={onSave}
+                onClose={() => onFullscreenChange?.(false)}
+                submitLabel={submitLabel}
+                loading={loading}
+                disabled={disabled}
+                fullscreen={fullscreen}
+                expanded={templateSidebarExpanded}
+                onExpandedChange={setTemplateSidebarExpanded}
+              />
+              <ComponentsSidebar
+               items={componentItems}
+               expanded={componentsExpanded}
+               onExpandedChange={() => setComponentsExpanded((v) => !v)}
+               selectedId={selectedId}
+               onSelect={handleListItemClick}
+               onReorder={handleListMove}
+               onToggleHidden={handleToggleHidden}
+               onToggleLocked={handleToggleLocked}
+               onDelete={handleDeleteBlock}
+               onDragStart={handleListDragStart}
+               onDragOver={handleListDragOver}
+               onDrop={handleListDrop}
+               onDragEnd={handleListDragEnd}
+               onDragLeave={() => { if (dragOverId) setDragOverId(null); }}
                disabled={disabled}
-               fullscreen={fullscreen}
+               dragOverId={dragOverId}
+               draggedId={draggedId}
+               dropSide={dropSide}
+               emptyMessage="No components yet"
+               title="Components"
              />
-             <div className="h-4" />
-             <ComponentsSidebar
-              items={componentItems}
-              expanded={componentsExpanded}
-              onToggle={() => setComponentsExpanded((v) => !v)}
-              selectedId={selectedId}
-              onSelect={handleListItemClick}
-              onReorder={handleListMove}
-              onToggleHidden={handleToggleHidden}
-              onToggleLocked={handleToggleLocked}
-              onDelete={handleDeleteBlock}
-              onDragStart={handleListDragStart}
-              onDragOver={handleListDragOver}
-              onDrop={handleListDrop}
-              onDragEnd={handleListDragEnd}
-              onDragLeave={() => { if (dragOverId) setDragOverId(null); }}
-              disabled={disabled}
-              dragOverId={dragOverId}
-              draggedId={draggedId}
-              dropSide={dropSide}
-              emptyMessage="No components yet"
-              title="Components"
-            />
           </div>
         )}
 

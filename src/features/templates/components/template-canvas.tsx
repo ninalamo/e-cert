@@ -1264,7 +1264,7 @@ const content = (
             <ChevronDownIcon className={`size-4 transition-transform ${drawerOpen ? "" : "-rotate-90"}`} />
           </button>
           {drawerOpen && (
-            <div className="w-64 flex-shrink-0 flex flex-col h-[calc(100vh-220px)] overflow-hidden">
+            <div className="w-64 flex-shrink-0 flex flex-col gap-4 h-[calc(100vh-220px)] overflow-hidden">
 <TemplateSidebar
                 name={name}
                 description={description}
@@ -1285,11 +1285,10 @@ const content = (
                 expanded={sidebarExpanded}
                 onExpandedChange={setSidebarExpanded}
               />
-              <div className="h-4" />
               <ComponentsSidebar
               items={componentItems}
               expanded={componentsExpanded}
-              onToggle={() => setComponentsExpanded((v) => !v)}
+              onExpandedChange={() => setComponentsExpanded((v) => !v)}
               selectedId={selectedIds.length === 1 ? selectedIds[0] : null}
               onSelect={handleListItemClick}
               onReorder={handleListMove}
