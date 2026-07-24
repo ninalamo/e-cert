@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated workflow files:
+    ".well-known/**",
+    "src/app/.well-known/**",
   ]),
 ]);
 

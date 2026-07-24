@@ -80,22 +80,10 @@ function alignElements(elements: CanvasElement[], type: AlignType, selectedIds: 
       dy = alignToCanvas ? canvasH - maxY : (selectedIds.length > 0 ? maxY - bboxH : canvasH - maxY);
       break;
     case "center-horizontal":
-      if (alignToCanvas) {
-        const canvasCenterX = canvasW / 2;
-        dx = canvasCenterX - (minX + bboxW / 2);
-      } else {
-        const centerX = selectedIds.length > 0 ? minX + bboxW / 2 : canvasW / 2;
-        dx = centerX - (minX + bboxW / 2);
-      }
+      dx = canvasW / 2 - (minX + bboxW / 2);
       break;
     case "center-vertical":
-      if (alignToCanvas) {
-        const canvasCenterY = canvasH / 2;
-        dy = canvasCenterY - (minY + bboxH / 2);
-      } else {
-        const centerY = selectedIds.length > 0 ? minY + bboxH / 2 : canvasH / 2;
-        dy = centerY - (minY + bboxH / 2);
-      }
+      dy = canvasH / 2 - (minY + bboxH / 2);
       break;
   }
 
@@ -120,6 +108,8 @@ export interface CanvasElement {
   color: string;
   bold: boolean;
   align: "left" | "center" | "right" | "justify";
+  lineHeight?: number;
+  paragraphSpacing?: number;
   locked?: boolean;
   hidden?: boolean;
 }
@@ -203,9 +193,9 @@ function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
-function calculateTextHeight(content: string, fontSize: string, width: number): number {
+function calculateTextHeight(content: string, fontSize: string, width: number, lineHeightRatio = 1.5, paragraphSpacing = 0): number {
   const size = parseInt(fontSize, 10) || 16;
-  const lineHeight = size * 1.5;
+  const lineHeight = size * lineHeightRatio;
 
   const tempDiv = document.createElement('div');
   tempDiv.style.position = 'absolute';
@@ -216,6 +206,11 @@ function calculateTextHeight(content: string, fontSize: string, width: number): 
   tempDiv.style.whiteSpace = 'normal';
   tempDiv.style.wordWrap = 'break-word';
   tempDiv.innerHTML = content;
+  if (paragraphSpacing) {
+    tempDiv.querySelectorAll('p').forEach((p) => {
+      p.style.margin = `${paragraphSpacing}px 0`;
+    });
+  }
   document.body.appendChild(tempDiv);
 
   const height = tempDiv.offsetHeight;
@@ -267,6 +262,12 @@ function getElementLabel(el: CanvasElement): string {
   return text.slice(0, 40) || "Empty text";
 }
 
+function isPlaceholderElement(el: CanvasElement): boolean {
+  if (el.type !== "text") return false;
+  const text = el.content.replace(/<[^>]*>/g, "").trim();
+  return /^\{\{.+\}\}$/.test(text);
+}
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
 }
@@ -281,7 +282,8 @@ function textToSimpleHtml(text: string): string {
 export function elementsToHtml(
   elements: CanvasElement[],
   width = 1123,
-  height = 794
+  height = 794,
+  placeholderOverrides?: Record<string, string>
 ): string {
   const sorted = [...elements].filter((el) => !el.hidden).sort((a, b) => a.z - b.z);
   const blocks = sorted
@@ -299,10 +301,31 @@ export function elementsToHtml(
         )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};overflow:hidden;`;
         return `<div${lockAttr} style="${style}">{{qr_code}}</div>`;
       }
-      const style = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;min-height:${el.h}px;z-index:${el.z};font-size:${el.fontSize};font-family:${escapeAttr(
+      const lh = el.lineHeight ?? 1.5;
+      const ps = el.paragraphSpacing ?? 0;
+      let innerContent = el.content;
+      if (placeholderOverrides) {
+        for (const [key, val] of Object.entries(placeholderOverrides)) {
+          if (val) innerContent = innerContent.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), val);
+        }
+      }
+      if (ps) {
+        innerContent = innerContent.replace(/<p(\s[^>]*)?>/gi, (match, attrs) => {
+          if (!attrs) return `<p style="margin:${ps}px 0;">`;
+          if (/style="/.test(attrs)) {
+            return `<p${attrs.replace(/style="/, `style="margin:${ps}px 0;`)}`;
+          }
+          return `<p${attrs} style="margin:${ps}px 0;">`;
+        });
+      }
+      const fitFontSize = el.fontSize;
+      const centerStyle = isPlaceholderElement(el)
+        ? "display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;word-break:break-word;"
+        : "";
+      const style = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;z-index:${el.z};font-size:${fitFontSize};font-family:${escapeAttr(
         el.fontFamily
-      )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};line-height:1.5;overflow:visible;`;
-      return `<div${lockAttr} style="${style}">${el.content}</div>`;
+      )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};line-height:${lh};overflow:hidden;${centerStyle}`;
+      return `<div${lockAttr} style="${style}">${innerContent}</div>`;
     })
     .join("\n");
   return `<div class="certificate" style="position:relative;width:${width}px;height:${height}px;overflow:hidden;">\n${blocks}\n</div>`;
@@ -353,6 +376,7 @@ function parseHtmlToElements(html: string): CanvasElement[] {
           color: get(/color:([^;]+)/) || "#000000",
           bold: /font-weight:\s*bold/.test(style),
           align: (get(/text-align:([^;]+)/) as CanvasElement["align"]) || "center",
+          lineHeight: parseFloat(get(/line-height:([^;]+)/)) || 1.5,
         });
       } else {
         out.push({
@@ -365,6 +389,7 @@ function parseHtmlToElements(html: string): CanvasElement[] {
           color: get(/color:([^;]+)/) || "#000000",
           bold: /font-weight:\s*bold/.test(style),
           align: (get(/text-align:([^;]+)/) as CanvasElement["align"]) || "left",
+          lineHeight: parseFloat(get(/line-height:([^;]+)/)) || 1.5,
         });
       }
     }
@@ -527,6 +552,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
 
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
@@ -744,7 +770,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     if (!editingElement) return;
     if (editingElement.type === "text") {
       const htmlContent = textToSimpleHtml(editContent);
-      const newHeight = calculateTextHeight(htmlContent, editingElement.fontSize, editingElement.w);
+      const newHeight = calculateTextHeight(htmlContent, editingElement.fontSize, editingElement.w, editingElement.lineHeight ?? 1.5, editingElement.paragraphSpacing ?? 0);
       const newElements = elements.map(e => e.id === editingElement.id ? { ...e, content: htmlContent, h: newHeight } : e);
       saveToHistory(newElements);
       setElements(newElements);
@@ -861,8 +887,11 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   function addFieldText(fieldKey: string) {
     const z = elements.length ? Math.max(...elements.map((e) => e.z)) + 1 : 1;
     const content = `{{${fieldKey}}}`;
-    const w = 300;
-    const h = 48;
+    const fontSize = "20px";
+    const fontFamily = "Georgia, serif";
+    const bold = false;
+    const w = calculateTextWidth(content, fontSize, fontFamily, bold);
+    const h = calculateTextHeight(content, fontSize, w);
     const el: CanvasElement = {
       id: uid(),
       type: "text",
@@ -872,10 +901,10 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
       h,
       z,
       content,
-      fontSize: "20px",
-      fontFamily: "Georgia, serif",
+      fontSize,
+      fontFamily,
       color: "#1a1a1a",
-      bold: false,
+      bold,
       align: "center",
     };
     const newElements = [...elements, el];
@@ -1005,9 +1034,9 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
 
   function fitSelectedToText() {
     const newElements = elements.map((el) => {
-      if (!isSelected(el.id) || el.type !== 'text') return el;
+      if (!isSelected(el.id) || el.type !== 'text' || isPlaceholderElement(el)) return el;
       const newW = calculateTextWidth(el.content, el.fontSize, el.fontFamily, el.bold);
-      const newH = calculateTextHeight(el.content, el.fontSize, newW);
+      const newH = calculateTextHeight(el.content, el.fontSize, newW, el.lineHeight ?? 1.5, el.paragraphSpacing ?? 0);
       return { ...el, w: newW, h: newH };
     });
     saveToHistory(newElements);
@@ -1332,7 +1361,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                     onDragEnd={handleListDragEnd}
                     onDragLeave={() => { if (dragOverId === el.id) setDragOverId(null); }}
                     onClick={(e) => handleListItemClick(el.id, e)}
-                    onDoubleClick={() => openEditModal(el)}
+                    onDoubleClick={() => { if (!isPlaceholderElement(el)) openEditModal(el); }}
                     className={`flex items-center gap-1.5 px-2 py-1.5 text-xs cursor-pointer transition-all select-none ${el.hidden ? "opacity-40" : ""
                       } ${dragOverId === el.id && draggedId !== el.id
                         ? dropSide === "before"
@@ -1561,7 +1590,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
 
             {PLACEHOLDER_FIELDS.length > 0 && (
               <div className="flex items-center gap-1 border-t border-[var(--color-border)] px-1.5 py-1">
-                <span className="px-1 text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Fields</span>
+                <span className="px-1 text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Placeholders</span>
                 {PLACEHOLDER_FIELDS.map((f) => (
                   <button
                     key={f.key}
@@ -1662,9 +1691,50 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
 
             <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
 
+            <select
+              value={firstSel?.lineHeight ?? 1.5}
+              onChange={(e) => updateSelected({ lineHeight: parseFloat(e.target.value) })}
+              disabled={allSelectedLocked}
+              className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
+              title="Line height"
+            >
+              <option value={0.5}>0.5</option>
+              <option value={0.75}>0.75</option>
+              <option value={1}>1.0</option>
+              <option value={1.25}>1.25</option>
+              <option value={1.5}>1.5</option>
+              <option value={1.75}>1.75</option>
+              <option value={2}>2.0</option>
+              <option value={2.5}>2.5</option>
+              <option value={3}>3.0</option>
+            </select>
+
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
+            <select
+              value={firstSel?.paragraphSpacing ?? 0}
+              onChange={(e) => updateSelected({ paragraphSpacing: parseInt(e.target.value) })}
+              disabled={allSelectedLocked}
+              className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)] transition-all hover:border-[var(--color-brand-500)] focus:border-[var(--color-brand-500)] focus:outline-none disabled:opacity-40"
+              title="Paragraph spacing (px)"
+            >
+              <option value={0}>0px</option>
+              <option value={2}>2px</option>
+              <option value={4}>4px</option>
+              <option value={6}>6px</option>
+              <option value={8}>8px</option>
+              <option value={10}>10px</option>
+              <option value={12}>12px</option>
+              <option value={16}>16px</option>
+              <option value={20}>20px</option>
+              <option value={24}>24px</option>
+            </select>
+
+            <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+
             <button
               type="button"
-              disabled={selCount === 0 || allSelectedLocked || !elements.some((el) => isSelected(el.id) && el.type === "text")}
+              disabled={selCount === 0 || allSelectedLocked || !elements.some((el) => isSelected(el.id) && el.type === "text" && !isPlaceholderElement(el))}
               onClick={fitSelectedToText}
               className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-brand-100)] px-2 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] transition-all hover:bg-[var(--color-brand-200)] active:scale-[0.97] disabled:opacity-40"
               title="Fit bounding box to text content"
@@ -1871,7 +1941,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                       setActiveAlignGuides([]);
                       handleDragStop(el.id, d);
                     }}
-                    enableResizing={el.locked ? false : (el.type === 'text' || el.type === 'qr' ? {
+                    enableResizing={el.locked || isPlaceholderElement(el) ? false : (el.type === 'text' || el.type === 'qr' ? {
                       top: false,
                       right: true,
                       bottom: false,
@@ -1896,7 +1966,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                           y: snappedY,
                         } : e);
                       } else if (el.type === 'text') {
-                        const calculatedH = calculateTextHeight(el.content, el.fontSize, snappedW);
+                        const calculatedH = calculateTextHeight(el.content, el.fontSize, snappedW, el.lineHeight ?? 1.5, el.paragraphSpacing ?? 0);
                         newElements = elements.map(e => e.id === el.id ? {
                           ...e,
                           w: snappedW,
@@ -1979,11 +2049,11 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                         </div>
                       ) : (
                         <div
-                          contentEditable={!el.locked}
+                          contentEditable={!el.locked && !isPlaceholderElement(el)}
                           suppressContentEditableWarning
                           onBlur={(e) => {
                             const newContent = e.currentTarget.innerHTML;
-                            const newHeight = calculateTextHeight(newContent, el.fontSize, el.w);
+                            const newHeight = calculateTextHeight(newContent, el.fontSize, el.w, el.lineHeight ?? 1.5, el.paragraphSpacing ?? 0);
                             update(el.id, {
                               content: newContent,
                               h: newHeight
@@ -2000,10 +2070,18 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
                             color: el.color,
                             fontWeight: el.bold ? "bold" : "normal",
                             textAlign: el.align,
-                            lineHeight: "1.5",
+                            lineHeight: String(el.lineHeight ?? 1.5),
                             overflow: "hidden",
                             outline: "none",
                             cursor: "text",
+                            ...(isPlaceholderElement(el) ? {
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textAlign: "center" as const,
+                              whiteSpace: "normal",
+                              wordBreak: "break-word",
+                            } : {}),
                           }}
                           dangerouslySetInnerHTML={{ __html: el.content }}
                         />
@@ -2283,9 +2361,30 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     };
   }, []);
 
+  const defaultPreviewValues: Record<string, string> = useMemo(() => ({
+    recipient_name: "Juan Dela Cruz",
+    certificate_number: "CERT-000001",
+    issued_date: previewDates.issued,
+    organization_name: "Sample Organization",
+    event_name: "Sample Event",
+    event_date: new Date().toLocaleDateString(),
+    event_location: "Sample Location",
+    event_organizer: "Sample Organizer",
+    certificate_title: "Certificate of Achievement",
+    expiry_date: previewDates.expiry,
+  }), [previewDates]);
+
+  const mergedPreviewValues = useMemo(() => {
+    const merged = { ...defaultPreviewValues };
+    for (const [k, v] of Object.entries(previewValues)) {
+      if (v.trim()) merged[k] = v.trim();
+    }
+    return merged;
+  }, [defaultPreviewValues, previewValues]);
+
   const previewModal = showPreview ? (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center"
+      className="fixed inset-0 z-[200] flex items-center justify-center gap-4 p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
       onClick={() => setShowPreview(false)}
     >
@@ -2296,24 +2395,52 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
+
       <div
-        className="bg-white shadow-2xl rounded-lg overflow-hidden"
-        style={{ width: CANVAS_W, height: CANVAS_H, maxWidth: "90vw", maxHeight: "85vh" }}
+        className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl p-4 overflow-y-auto"
+        style={{ maxHeight: "85vh", width: 280, minWidth: 240 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">Preview Data</h3>
+          <button
+            type="button"
+            onClick={() => setPreviewValues({})}
+            className="text-[10px] font-medium text-[var(--color-brand-600)] hover:text-[var(--color-brand-700)] transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+        <p className="text-[10px] text-[var(--color-text-muted)] -mt-1 mb-1">
+          Leave empty to use default values.
+        </p>
+        <div className="space-y-2.5">
+          {PLACEHOLDER_FIELDS.map((f) => (
+            <div key={f.key}>
+              <label htmlFor={`preview-${f.key}`} className="block text-[10px] font-semibold text-[var(--color-text-secondary)] mb-0.5">
+                {f.label}
+              </label>
+              <input
+                id={`preview-${f.key}`}
+                type="text"
+                value={previewValues[f.key] ?? ""}
+                onChange={(e) => setPreviewValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                placeholder={defaultPreviewValues[f.key]}
+                className="w-full rounded-md border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-xs text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-brand-500)] focus:outline-none transition-colors"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div
+        className="bg-white shadow-2xl rounded-lg overflow-hidden flex-shrink-0"
+        style={{ width: CANVAS_W, height: CANVAS_H, maxWidth: "65vw", maxHeight: "85vh" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
           dangerouslySetInnerHTML={{
-            __html: elementsToHtml(elements, CANVAS_W, CANVAS_H)
-              .replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz")
-              .replace(/\{\{certificate_number\}\}/g, "CERT-000001")
-              .replace(/\{\{issued_date\}\}/g, previewDates.issued)
-              .replace(/\{\{organization_name\}\}/g, "Sample Organization")
-              .replace(/\{\{event_name\}\}/g, "Sample Event")
-              .replace(/\{\{event_date\}\}/g, new Date().toLocaleDateString())
-              .replace(/\{\{event_location\}\}/g, "Sample Location")
-              .replace(/\{\{event_organizer\}\}/g, "Sample Organizer")
-              .replace(/\{\{certificate_title\}\}/g, "Certificate of Achievement")
-              .replace(/\{\{expiry_date\}\}/g, previewDates.expiry)
+            __html: elementsToHtml(elements, CANVAS_W, CANVAS_H, mergedPreviewValues)
               .replace(/\{\{qr_code\}\}/g, qrDataUrl ? `<img src="${qrDataUrl}" style="width:100%;height:100%;object-fit:contain;" />` : '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#fff"/></svg>'),
           }}
           style={{
@@ -2371,7 +2498,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
           </Section>
           <Section title="Toolbar Tools">
             <Row keys={["Insert"]} desc="Add text, image, or QR code (centered on canvas)" />
-            <Row keys={["Fields"]} desc="Add placeholder fields ({{name}}, {{date}}, etc.)" />
+            <Row keys={["Placeholders"]} desc="Add placeholder fields ({{name}}, {{date}}, etc.)" />
             <Row keys={["Arrange"]} desc="Reorder layers (front, forward, backward, back)" />
             <Row keys={["Lock"]} desc="Lock/unlock selected elements" />
             <Row keys={["Hide"]} desc="Show/hide elements (hidden excluded from output)" />
