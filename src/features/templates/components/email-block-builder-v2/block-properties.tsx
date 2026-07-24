@@ -553,20 +553,31 @@ function TableProperties({
             onUpdate({ rows: newRows });
           }} type="number" min={1} max={10} />
         </div>
-        <label className="flex items-center gap-2 text-xs cursor-pointer">
-          <input
-            type="checkbox"
-            checked={p.rows[0]?.cells.every(c => c.isHeader) || false}
-            onChange={(e) => {
+        <label className="flex items-center justify-between cursor-pointer">
+          <span className="text-[var(--color-text-secondary)]">First row as header</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={p.rows[0]?.cells.every(c => c.isHeader) || false}
+            onClick={() => {
               const newRows = p.rows.map((row, ri) => ({
                 ...row,
-                cells: row.cells.map(c => ({ ...c, isHeader: ri === 0 && e.target.checked }))
+                cells: row.cells.map(c => ({ ...c, isHeader: ri === 0 && !p.rows[0]?.cells.every(c => c.isHeader) }))
               }));
               onUpdate({ rows: newRows });
             }}
-            className="rounded border-[var(--color-border)] text-[var(--color-brand-600)] focus:ring-[var(--color-brand-500)]"
-          />
-          <span className="text-[var(--color-text-secondary)]">First row as header</span>
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              p.rows[0]?.cells.every(c => c.isHeader)
+                ? "bg-[var(--color-brand-600)]"
+                : "bg-[var(--color-border)]"
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
+                p.rows[0]?.cells.every(c => c.isHeader) ? "translate-x-4" : "translate-x-0.5"
+              }`}
+            />
+          </button>
         </label>
       </Section>
       <Section label="Style">
