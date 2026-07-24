@@ -2,27 +2,35 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import {
-  getTemplateAction,
+  getEmailTemplateAction,
   updateTemplateAction,
-  isTemplateLockedAction,
+  isEmailTemplateLockedAction,
 } from "@/features/templates/server/template.actions";
 
-const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });
+const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
-export default function EditTemplateForm({ id }: { id: string }) {
+import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
+
+export default function EditEmailTemplateForm({ id }: { id: string }) {
+  const router = useRouter();
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewContent, setPreviewContent] = useState("");
+  const [previewName, setPreviewName] = useState("");
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const data = await getTemplateAction(id);
+      const data = await getEmailTemplateAction(id);
       if (!active) return;
       setTemplate(data);
-      const isLocked = await isTemplateLockedAction(id);
+      const isLocked = await isEmailTemplateLockedAction(id);
       if (!active) return;
       setLocked(isLocked);
       setLoading(false);
@@ -35,15 +43,15 @@ export default function EditTemplateForm({ id }: { id: string }) {
   }
 
   if (!template) {
-    return <p className="text-red-600">Template not found.</p>;
+    return <p className="text-red-600">Email template not found.</p>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">Edit Template</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">Edit Email Template</h1>
         <p className="text-tertiary text-sm mt-1">
-          {locked ? "This template is locked and cannot be edited." : "Customize your certificate design"}
+          {locked ? "This template is locked and cannot be edited." : "Customize your email template design"}
         </p>
       </div>
 
@@ -58,20 +66,33 @@ export default function EditTemplateForm({ id }: { id: string }) {
 
       <TemplateForm
         key={template.id}
-        templateType={template.type}
         initialData={{
           name: template.name,
           description: template.description ?? "",
-          type: template.type,
           html_content: template.html_content,
           css_content: template.css_content ?? "",
         }}
         disabled={locked}
         submitLabel="Save Changes"
+        fullscreen={fullscreen}
+        onFullscreenChange={setFullscreen}
+        onClose={() => router.push("/templates")}
+        onPreview={(html, name) => {
+          setPreviewContent(html);
+          setPreviewName(name);
+          setPreviewOpen(true);
+        }}
         onSubmit={async (data) => {
-          if (locked) return { template: null, error: "Template is locked." };
+          if (locked) return { error: "Template is locked." };
           return await updateTemplateAction(id, data);
         }}
+      />
+
+      <EmailTemplatePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        html={previewContent}
+        name={previewName}
       />
     </div>
   );

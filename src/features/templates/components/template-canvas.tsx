@@ -36,6 +36,8 @@ import {
   GripVerticalIcon,
   QrCodeIcon,
 } from "lucide-react";
+import TemplateSidebar from "./template-sidebar";
+import ComponentsSidebar, { ComponentsSidebarItem } from "./components-sidebar";
 import {
   Dialog,
   DialogContent,
@@ -129,6 +131,7 @@ interface TemplateCanvasProps {
   description?: string;
   onNameChange?: (name: string) => void;
   onDescriptionChange?: (description: string) => void;
+  onSave?: () => void;
 }
 
 export interface TemplateCanvasHandle {
@@ -483,6 +486,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   description = "",
   onNameChange,
   onDescriptionChange,
+  onSave,
 }, ref) {
   const parsed0 = parseHtmlToElements(value);
   const containerSize = extractContainerSize(value);
@@ -566,16 +570,15 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     }
   }
 
-  // Sync elements → parent during render (not useEffect) so it fires
-  // before the canvas can unmount on Design→Advanced switch.
+  // Sync elements → parent via useEffect
   const currentHtml = elementsToHtml(elements, CANVAS_W, CANVAS_H);
-  // eslint-disable-next-line react-hooks/refs
-  if (currentHtml !== lastCanvasHtml.current) {
-    // eslint-disable-next-line react-hooks/refs
-    lastCanvasHtml.current = currentHtml;
-    // Defer the parent update to after the current render commit
-    queueMicrotask(() => onChange(currentHtml));
-  }
+  const lastHtmlRef = useRef(currentHtml);
+  useEffect(() => {
+    if (currentHtml !== lastHtmlRef.current) {
+      lastHtmlRef.current = currentHtml;
+      onChange(currentHtml);
+    }
+  }, [currentHtml, onChange]);
 
   const snapValue = (value: number, orientation: 'horizontal' | 'vertical') => {
     if (!snapEnabled) return value;
@@ -833,6 +836,21 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   function handleListDragEnd() {
     setDraggedId(null);
     setDragOverId(null);
+  }
+
+  function handleListMove(fromIndex: number, toIndex: number) {
+    const sorted = [...elements].sort((a, b) => a.z - b.z);
+    const newSorted = moveArrayItem(sorted, fromIndex, toIndex);
+    const newElements = newSorted.map((el, i) => ({ ...el, z: i + 1 }));
+    saveToHistory(newElements);
+    setElements(newElements);
+  }
+
+  function moveArrayItem<T>(arr: T[], from: number, to: number): T[] {
+    const result = [...arr];
+    const [item] = result.splice(from, 1);
+    result.splice(to, 0, item);
+    return result;
   }
 
   function addText() {
@@ -1223,7 +1241,17 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const selCount = selectedIds.length;
   const allSelectedLocked = selCount > 0 && elements.filter((e) => isSelected(e.id)).every((e) => e.locked);
 
-  const content = (
+  const componentItems: ComponentsSidebarItem[] = [...elements].sort((a, b) => a.z - b.z).map((el) => ({
+    id: el.id,
+    type: el.type,
+    label: getElementLabel(el),
+    icon: el.type === "text" ? "T" : el.type === "image" ? "I" : "QR",
+    color: el.type === "text" ? "bg-blue-100 text-blue-700" : el.type === "image" ? "bg-emerald-100 text-emerald-700" : "bg-purple-100 text-purple-700",
+    hidden: el.hidden,
+    locked: el.locked,
+  }));
+
+const content = (
     <div className="flex gap-4">
       {onNameChange && onDescriptionChange && (
         <>
@@ -1236,195 +1264,52 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
             <ChevronDownIcon className={`size-4 transition-transform ${drawerOpen ? "" : "-rotate-90"}`} />
           </button>
           {drawerOpen && (
-            <div className="w-64 flex-shrink-0 flex flex-col gap-4 max-h-[calc(100vh-220px)] overflow-y-auto">
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setSidebarExpanded((v) => !v)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
-                >
-                  Template
-                  <ChevronDownIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${sidebarExpanded ? "rotate-180" : ""}`} />
-                </button>
-            {sidebarExpanded && (
-              <div className="px-4 pb-4 space-y-4">
-                <div>
-                  <label htmlFor="canvas-name" className="block text-xs font-semibold mb-1.5 text-[var(--color-text-secondary)]">
-                    Template Name
-                  </label>
-                  <input
-                    id="canvas-name"
-                    value={name}
-                    onChange={(e) => onNameChange?.(e.target.value)}
-                    required
-                    placeholder="e.g. Certificate of Completion"
-                    className="input text-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="canvas-description" className="block text-xs font-semibold mb-1.5 text-[var(--color-text-secondary)]">
-                    Description
-                  </label>
-                  <textarea
-                    id="canvas-description"
-                    value={description}
-                    onChange={(e) => onDescriptionChange?.(e.target.value)}
-                    placeholder="Optional description"
-                    rows={3}
-                    className="input text-sm resize-none"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowPreview(true)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
-                    title="Preview certificate with sample data"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
-                    Preview
-                  </button>
-                  {!fullscreen && (
-                    <button
-                      type="button"
-                      onClick={() => onFullscreenChange?.(true)}
-                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
-                      title="Enter fullscreen mode"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
-                      Fullscreen
-                    </button>
-                  )}
-                  {fullscreen && (
-                    <button
-                      type="button"
-                      onClick={() => onFullscreenChange?.(false)}
-                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
-                      title="Exit fullscreen (Esc)"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
-                      Exit Fullscreen
-                    </button>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={loading || disabled}
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-brand-600)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-[var(--color-brand-700)] active:scale-[0.97] disabled:opacity-50"
-                  >
-                    {loading ? "Saving..." : submitLabel}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
-                        window.location.href = "/templates";
-                      }
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-text-secondary)] shadow-sm transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] active:scale-[0.97]"
-                  >
-                    Close Editor
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0">
-            <button
-              type="button"
-              onClick={() => setComponentsExpanded((v) => !v)}
-              className="w-full border-b border-[var(--color-border)] px-4 py-2.5 flex items-center justify-between flex-shrink-0 transition-colors hover:bg-[var(--color-surface-hover)]"
-            >
-              <span className="text-sm font-semibold text-[var(--color-text)]">
-                Components
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  {elements.length}
-                </span>
-                <ChevronDownIcon className={`size-4 text-[var(--color-text-muted)] transition-transform ${componentsExpanded ? "rotate-180" : ""}`} />
-              </div>
-            </button>
-            {componentsExpanded && (
-              <div className="overflow-y-auto flex-1 min-h-0 divide-y divide-[var(--color-border)]">
-              {elements.length === 0 ? (
-                <p className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
-                  No components yet
-                </p>
-              ) : (
-                [...elements].sort((a, b) => a.z - b.z).map((el) => (
-                  <div
-                    key={el.id}
-                    draggable
-                    onDragStart={(e) => handleListDragStart(el.id, e)}
-                    onDragOver={(e) => handleListDragOver(el.id, e)}
-                    onDrop={() => handleListDrop(el.id)}
-                    onDragEnd={handleListDragEnd}
-                    onDragLeave={() => { if (dragOverId === el.id) setDragOverId(null); }}
-                    onClick={(e) => handleListItemClick(el.id, e)}
-                    onDoubleClick={() => { if (!isPlaceholderElement(el)) openEditModal(el); }}
-                    className={`flex items-center gap-1.5 px-2 py-1.5 text-xs cursor-pointer transition-all select-none ${el.hidden ? "opacity-40" : ""
-                      } ${dragOverId === el.id && draggedId !== el.id
-                        ? dropSide === "before"
-                          ? "border-t-2 border-t-[var(--color-brand-500)]"
-                          : "border-b-2 border-b-[var(--color-brand-500)]"
-                        : ""
-                      } ${draggedId === el.id ? "opacity-30" : ""
-                      } ${isSelected(el.id)
-                        ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]"
-                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
-                      }`}
-                  >
-                    <span className="flex-shrink-0 cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                      <GripVerticalIcon className="size-3" />
-                    </span>
-                    <span className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${el.type === "text"
-                        ? "bg-blue-100 text-blue-700"
-                        : el.type === "image"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-purple-100 text-purple-700"
-                      }`}>
-                      {el.type === "text" ? "T" : el.type === "image" ? "I" : "QR"}
-                    </span>
-                    <span className="truncate flex-1">{getElementLabel(el)}</span>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); toggleElementVisibility(el.id); }}
-                      className="flex-shrink-0 p-0.5 rounded hover:bg-[var(--color-surface-hover)] transition-colors"
-                      title={el.hidden ? "Show element" : "Hide element"}
-                    >
-                      {el.hidden
-                        ? <EyeOffIcon className="size-3 text-[var(--color-text-muted)]" />
-                        : <EyeIcon className="size-3 text-[var(--color-text-muted)]" />
-                      }
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); update(el.id, { locked: !el.locked }); }}
-                      className="flex-shrink-0 p-0.5 rounded hover:bg-[var(--color-surface-hover)] transition-colors"
-                      title={el.locked ? "Unlock element" : "Lock element"}
-                    >
-                      {el.locked
-                        ? <LockIcon className="size-3 text-amber-500" />
-                        : <LockOpenIcon className="size-3 text-[var(--color-text-muted)]" />
-                      }
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setDeletingId(el.id); }}
-                      className="flex-shrink-0 p-0.5 rounded hover:bg-[var(--color-danger-bg)] transition-colors"
-                      title="Delete element"
-                    >
-                      <Trash2Icon className="size-3 text-[var(--color-text-muted)] hover:text-[var(--color-danger-text)]" />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-            )}
-            </div>
+            <div className="w-64 flex-shrink-0 flex flex-col gap-4 h-[calc(100vh-220px)] overflow-hidden">
+<TemplateSidebar
+                name={name}
+                description={description}
+                onNameChange={onNameChange}
+                onDescriptionChange={onDescriptionChange}
+                onPreview={() => setShowPreview(true)}
+                fullscreen={fullscreen}
+                onFullscreenChange={onFullscreenChange}
+                onSave={onSave}
+                onClose={() => {
+                  if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
+                    window.location.href = "/templates";
+                  }
+                }}
+                loading={loading}
+                disabled={disabled}
+                submitLabel={submitLabel}
+                expanded={sidebarExpanded}
+                onExpandedChange={setSidebarExpanded}
+              />
+              <ComponentsSidebar
+              items={componentItems}
+              expanded={componentsExpanded}
+              onExpandedChange={() => setComponentsExpanded((v) => !v)}
+              selectedId={selectedIds.length === 1 ? selectedIds[0] : null}
+              onSelect={handleListItemClick}
+              onReorder={handleListMove}
+              onToggleHidden={toggleElementVisibility}
+              onToggleLocked={(id) => update(id, { locked: !elements.find(e => e.id === id)?.locked })}
+              onDelete={setDeletingId}
+              onDragStart={handleListDragStart}
+              onDragOver={handleListDragOver}
+              onDrop={handleListDrop}
+              onDragEnd={handleListDragEnd}
+              onDragLeave={() => { if (dragOverId) setDragOverId(null); }}
+              disabled={disabled}
+              dragOverId={dragOverId}
+              draggedId={draggedId}
+              dropSide={dropSide}
+              emptyMessage="No components yet"
+              title="Components"
+            />
           </div>
         )}
-        </>
+</>
       )}
       <div className="flex-1 min-w-0">
         {!preview && (

@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS certificate_templates (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
+  type TEXT NOT NULL DEFAULT 'certificate' CHECK (type IN ('certificate', 'email')),
   html_content TEXT NOT NULL DEFAULT '',
   css_content TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -54,6 +55,7 @@ CREATE TABLE IF NOT EXISTS events (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   template_id UUID REFERENCES certificate_templates(id),
+  email_template_id UUID REFERENCES certificate_templates(id),
   name TEXT NOT NULL,
   description TEXT,
   event_date DATE,
@@ -131,9 +133,11 @@ CREATE INDEX idx_user_memberships_user_id ON user_memberships(user_id);
 CREATE INDEX idx_user_memberships_org_id ON user_memberships(organization_id);
 CREATE INDEX idx_cert_templates_org ON certificate_templates(organization_id);
 CREATE INDEX idx_cert_templates_org_created ON certificate_templates(organization_id, created_at DESC);
+CREATE INDEX idx_cert_templates_type ON certificate_templates(type);
 CREATE INDEX idx_events_org ON events(organization_id);
 CREATE INDEX idx_events_org_created ON events(organization_id, created_at DESC);
 CREATE INDEX idx_events_status ON events(status);
+CREATE INDEX idx_events_email_template ON events(email_template_id);
 CREATE INDEX idx_attendees_event ON event_attendees(event_id);
 CREATE INDEX idx_attendees_org ON event_attendees(organization_id);
 CREATE INDEX idx_attendees_completed ON event_attendees(event_id, completed);

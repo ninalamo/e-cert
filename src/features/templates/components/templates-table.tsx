@@ -17,15 +17,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon, MailIcon, FileTextIcon } from "lucide-react";
 
-type FilterKey = "all" | "with-description" | "without-description";
+type FilterKey = "all" | "certificate" | "email";
 type SortKey = "name-asc" | "name-desc" | "created-desc" | "created-asc";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "with-description", label: "With description" },
-  { key: "without-description", label: "No description" },
+  { key: "certificate", label: "Certificates" },
+  { key: "email", label: "Emails" },
 ];
 
 interface TemplatesTableProps {
@@ -57,8 +57,8 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
         (t.description ?? "").toLowerCase().includes(q);
       const matchesFilter =
         filter === "all" ||
-        (filter === "with-description" && !!t.description) ||
-        (filter === "without-description" && !t.description);
+        (filter === "certificate" && t.type === "certificate") ||
+        (filter === "email" && t.type === "email");
       return matchesQuery && matchesFilter;
     });
 
@@ -135,10 +135,14 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <Link href="/templates/new" className="btn-brand">
+      <div className="flex items-center justify-end gap-2">
+        <Link href="/templates/new" className="btn-brand-soft">
           <PlusIcon className="size-4" />
-          New Template
+          New Certificate
+        </Link>
+        <Link href="/templates/email/new" className="btn-brand">
+          <MailIcon className="size-4" />
+          New Email
         </Link>
       </div>
 
@@ -210,12 +214,26 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
               className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
             >
               <div className="min-w-0 flex-1">
-                <Link
-                  href={`/templates/${t.id}`}
-                  className="font-medium text-[var(--color-text)] hover:underline"
-                >
-                  {t.name}
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/templates/${t.id}`}
+                    className="font-medium text-[var(--color-text)] hover:underline"
+                  >
+                    {t.name}
+                  </Link>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                    t.type === 'email'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {t.type === 'email' ? (
+                      <MailIcon className="size-2.5" />
+                    ) : (
+                      <FileTextIcon className="size-2.5" />
+                    )}
+                    {t.type === 'email' ? 'Email' : 'Certificate'}
+                  </span>
+                </div>
                 <p className="mt-0.5 truncate text-xs text-tertiary">
                   {t.description || "No description"}
                   {" · "}
@@ -248,7 +266,7 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
                     <SearchIcon className="size-4" />
                   </span>
                 ) : (
-                  <Link href={`/templates/${t.id}`} className="btn-disclosure">
+                  <Link href={t.type === 'email' ? `/templates/email/${t.id}` : `/templates/${t.id}`} className="btn-disclosure">
                     Edit
                   </Link>
                 )}
@@ -326,7 +344,7 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
                   {previewTemplate.description || "No description"}
                 </span>
                 <Link
-                  href={`/templates/${previewTemplate.id}`}
+                  href={previewTemplate.type === 'email' ? `/templates/email/${previewTemplate.id}` : `/templates/${previewTemplate.id}`}
                   className="btn-brand text-xs px-4 py-2"
                 >
                   Edit Template

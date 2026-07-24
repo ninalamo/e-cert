@@ -8,14 +8,34 @@ export async function getTemplatesAction(organizationId: string) {
   return templateService.getTemplatesWithLockState(organizationId);
 }
 
+export async function getCertificateTemplatesAction(organizationId: string) {
+  await requireRole(["admin", "staff"]);
+  return templateService.getCertificateTemplates(organizationId);
+}
+
+export async function getEmailTemplatesAction(organizationId: string) {
+  await requireRole(["admin", "staff"]);
+  return templateService.getEmailTemplates(organizationId);
+}
+
 export async function getTemplateAction(id: string) {
   await requireRole(["admin", "staff", "participant"]);
   return templateService.getTemplate(id);
 }
 
+export async function getEmailTemplateAction(id: string) {
+  await requireRole(["admin", "staff", "participant"]);
+  return templateService.getEmailTemplate(id);
+}
+
 export async function isTemplateLockedAction(id: string) {
   await requireRole(["admin", "staff"]);
   return templateService.isTemplateLocked(id);
+}
+
+export async function isEmailTemplateLockedAction(id: string) {
+  await requireRole(["admin", "staff"]);
+  return templateService.isEmailTemplateLocked(id);
 }
 
 export async function createTemplateAction(data: {
@@ -27,6 +47,21 @@ export async function createTemplateAction(data: {
 }) {
   await requireRole(["admin", "staff"]);
   return templateService.createTemplate({
+    ...data,
+    description: data.description ?? null,
+    css_content: data.css_content ?? null,
+  });
+}
+
+export async function createEmailTemplateAction(data: {
+  organization_id: string;
+  name: string;
+  description?: string;
+  html_content: string;
+  css_content?: string;
+}) {
+  await requireRole(["admin", "staff"]);
+  return templateService.createEmailTemplate({
     ...data,
     description: data.description ?? null,
     css_content: data.css_content ?? null,

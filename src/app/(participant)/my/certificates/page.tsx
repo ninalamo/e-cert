@@ -29,11 +29,12 @@ export default async function MyCertificatesPage() {
               <Card className="transition-colors hover:border-brand-600">
                 <CardContent className="flex items-center justify-between py-4">
                   <div className="space-y-1">
-                    <p className="font-mono text-sm font-medium text-primary">
-                      {cert.certificate_number}
+                    <p className="font-medium text-primary">
+                      {cert.events?.name ?? cert.certificate_number}
                     </p>
                     <p className="text-xs text-tertiary">
-                      Issued {new Date(cert.issued_at).toLocaleDateString()}
+                      {cert.certificate_number}
+                      · Issued {new Date(cert.issued_at).toLocaleDateString()}
                       {cert.expires_at &&
                         ` · Expires ${new Date(cert.expires_at).toLocaleDateString()}`}
                     </p>
