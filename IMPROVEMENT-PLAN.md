@@ -223,30 +223,28 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 
 ### Problems found
 
-| Severity | Issue | Location | Detail |
-|----------|-------|----------|--------|
-| **High** | XSS via template variables | `certificate-viewer.tsx:115` | `dangerouslySetInnerHTML={{ __html: certHtml }}` renders user-controlled data (recipient_name, event_name, etc.) without sanitization. A malicious template or recipient name could execute arbitrary JavaScript. |
-| **High** | Hardcoded health check password | `api/health/route.ts:4` | `HEALTH_PASSWORD = "admin@lyceumalabang.edu.ph"` is in source code. Anyone with repo access can use the health endpoint to reseed users or dump auth details. |
-| **High** | `.env` file committed to repo | Root `.env` and `.env.local` | Both contain production SMTP credentials and Supabase service role keys. `.gitignore` has `.env*` but these files exist — verify they are actually ignored. |
-| **Medium** | In-memory rate limiting is per-invocation | `rate-limit.ts` | On Vercel, each serverless function invocation has its own `Map`. Rate limiting is ineffective unless the function stays warm (which it won't on the free tier). |
-| **Medium** | Verify API returns full recipient details | `api/verify/[number]/route.ts:68-88` | The public verification endpoint returns `recipient_name`, `organization.name`, and event details. This is a privacy concern — anyone can enumerate certificates by number and see who they were issued to. |
-| **Medium** | `supabaseAdmin` imported alongside user client | `certificate-email.service.ts:10` | The email service imports both `createClient` (user-scoped) and `supabaseAdmin` (service role). It uses the user client for reads but `supabaseAdmin` for email logs. This mixed use can lead to RLS bypass if the wrong client is used accidentally. |
-| **Low** | Proxy header injection | `proxy.ts:90-93` | The middleware sets `x-user-role` from the database. If a user's membership record is manipulated (e.g., SQL injection via another vector), the role header could be spoofed for downstream server actions that trust it. |
-| **Low** | CSRF check doesn't cover GET with side effects | `proxy.ts:30-57` | The CSRF check only validates POST requests. Some GET endpoints (like `/api/health` PUT reseed) should also be CSRF-protected. |
+| Severity | Issue | Location | Detail | Status |
+|----------|-------|----------|--------|--------|
+| **High** | ~~XSS via template variables~~ | ~~`certificate-viewer.tsx:115`~~ | ~~`dangerouslySetInnerHTML={{ __html: certHtml }}` renders user-controlled data without sanitization~~ | **Resolved** |
+| **High** | ~~Hardcoded health check password~~ | ~~`api/health/route.ts:4`~~ | ~~`HEALTH_PASSWORD` was in source code~~ | **Resolved** |
+| **High** | `.env` file committed to repo | Root `.env` and `.env.local` | Both contain production SMTP credentials and Supabase service role keys. `.gitignore` has `.env*` but these files exist — verify they are actually ignored. | Open |
+| **Medium** | In-memory rate limiting is per-invocation | `rate-limit.ts` | On Vercel, each serverless function invocation has its own `Map`. Rate limiting is ineffective unless the function stays warm (which it won't on the free tier). | Open |
+| **Medium** | Verify API returns full recipient details | `api/verify/[number]/route.ts:68-88` | The public verification endpoint returns `recipient_name`, `organization.name`, and event details. This is a privacy concern — anyone can enumerate certificates by number and see who they were issued to. | Open |
+| **Medium** | `supabaseAdmin` imported alongside user client | `certificate-email.service.ts:10` | The email service imports both `createClient` (user-scoped) and `supabaseAdmin` (service role). It uses the user client for reads but `supabaseAdmin` for email logs. This mixed use can lead to RLS bypass if the wrong client is used accidentally. | Open |
+| **Low** | Proxy header injection | `proxy.ts:90-93` | The middleware sets `x-user-role` from the database. If a user's membership record is manipulated (e.g., SQL injection via another vector), the role header could be spoofed for downstream server actions that trust it. | Open |
+| **Low** | CSRF check doesn't cover GET with side effects | `proxy.ts:30-57` | The CSRF check only validates POST requests. Some GET endpoints (like `/api/health` PUT reseed) should also be CSRF-protected. | Open |
 
-### Recommended fixes
+### Resolved fixes
 
-1. **Sanitize template variables** before rendering:
-   ```typescript
-   function sanitizeHtml(str: string): string {
-     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-       .replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
-   }
-   ```
-   Apply this to all user-controlled variables before inserting into HTML templates.
+1. **Sanitize template variables** — Added `sanitizeHtml()` utility to `src/lib/utils.ts`. Applied in:
+   - `certificate-viewer.tsx` (client-side rendering)
+   - `certificate.service.ts` `renderTemplate` (server-side PDF generation)
+   - `download/route.ts` `renderTemplate` (server-side PDF generation)
+   - `email-template.ts` `certificateEmailHtml` and `renderEmailTemplate` (email templates)
 
-2. **Move the health check password to an environment variable:**
-   ```typescript
+2. **Health check password moved to environment variable** — `HEALTH_PASSWORD` now reads from `process.env.HEALTH_PASSWORD` with error logging if not set.
+
+### Remaining recommended fixes
    const HEALTH_PASSWORD = process.env.HEALTH_PASSWORD;
    ```
    And remove it from source code.
@@ -370,7 +368,7 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 | 2 | ~~Replace `LocalStorageProvider` with `SupabaseStorageProvider`~~ | ~~`src/lib/storage/`~~ | ~~File upload feature broken on Vercel~~ | **Done** |
 | 3 | ~~Fix email sending to include PDF attachment on issuance~~ | ~~`certificate.service.ts:158`~~ | ~~Users don't get their certificate PDF~~ | **Done** |
 | 4 | ~~Remove hardcoded credentials from source~~ | ~~`api/health/route.ts:4`~~ | ~~Security — credentials in repo~~ | **Done** |
-| 5 | Sanitize template variables (XSS fix) | `certificate-viewer.tsx`, `certificate.service.ts` | Security — XSS vulnerability | Pending |
+| 5 | ~~Sanitize template variables (XSS fix)~~ | ~~`certificate-viewer.tsx`, `certificate.service.ts`~~ | ~~Security — XSS vulnerability~~ | **Done** |
 
 ### Phase 2: Important (do next)
 
@@ -408,6 +406,7 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 | `1fb2b1c` | Replace `LocalStorageProvider` with `SupabaseStorageProvider` | `src/lib/storage/supabase.provider.ts` (new), `src/lib/storage/index.ts`, `src/features/certificates/server/certificate.service.ts`, `src/features/events/server/event.service.ts`, `src/app/api/storage/cleanup/route.ts` (new) |
 | `69913f1` | Include PDF attachment in certificate issuance emails | `src/features/certificates/server/certificate.service.ts` |
 | `33fbbc6` | Move health check password to environment variable | `src/app/api/health/route.ts` |
+| `c90def2` | Sanitize template variables to prevent XSS | `src/lib/utils.ts`, `src/app/view/[id]/certificate-viewer.tsx`, `src/features/certificates/server/certificate.service.ts`, `src/app/api/certificates/[id]/download/route.ts`, `src/features/certificates/server/email-template.ts` |
 
 **Summary of changes:**
 
@@ -422,3 +421,5 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 5. **Email PDF fix** — Removed `skip_pdf: true` from the `sendCertificateEmail` call in `issueCertificate`. Emails now include the PDF attachment when `send_email: true` is set during issuance.
 
 6. **Health check password** — Moved hardcoded `HEALTH_PASSWORD` from source code to `process.env.HEALTH_PASSWORD`. Added `HEALTH_PASSWORD` to `.env.example`.
+
+7. **XSS prevention** — Added `sanitizeHtml()` utility that escapes `&`, `<`, `>`, `"`, and `'`. Applied to all template variable substitutions across client and server rendering.
