@@ -36,6 +36,8 @@ interface TemplateFormProps {
   submitLabel: string;
   disabled?: boolean;
   templateType: 'certificate' | 'email';
+  fullscreen?: boolean;
+  onFullscreenChange?: (fullscreen: boolean) => void;
 }
 
 export default function TemplateForm({
