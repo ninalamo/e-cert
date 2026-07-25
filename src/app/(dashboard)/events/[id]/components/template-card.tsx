@@ -148,7 +148,8 @@ export default function TemplateCard({
         <select
           value={selectedEmail}
           onChange={(e) => setSelectedEmail(e.target.value)}
-          className="input mb-3"
+          disabled={event.status !== "draft"}
+          className="input mb-3 disabled:opacity-50"
         >
           <option value="">System default template</option>
           {emailTemplates.map((t) => (
@@ -161,7 +162,12 @@ export default function TemplateCard({
           <button
             type="button"
             onClick={handleEmailSave}
-            className="btn-brand-soft"
+            disabled={
+              savingEmail ||
+              selectedEmail === (event.email_template_id ?? "") ||
+              event.status !== "draft"
+            }
+            className="btn-brand-soft disabled:opacity-50"
           >
             {savingEmail ? "Saving..." : "Assign Email Template"}
           </button>
