@@ -284,6 +284,13 @@ max_frequency = "5s"
 # enabled = true
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
+# Send Email Hook: route Supabase auth emails (signup, recovery, magiclink, etc.)
+# to our Edge Function so we can render branded templates and send via Gmail SMTP.
+# See supabase/functions/send-email/index.ts and supabase/EMAIL_HOOK_PLAN.md.
+# [auth.hook.send_email]
+# enabled = true
+# uri = "http://host.docker.internal:54321/functions/v1/send-email"
+
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
 enabled = false
