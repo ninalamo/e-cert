@@ -30,13 +30,14 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 
 interface TemplatesTableProps {
   initialTemplates: TemplateRow[];
+  initialFilter?: FilterKey;
 }
 
-export default function TemplatesTable({ initialTemplates }: TemplatesTableProps) {
+export default function TemplatesTable({ initialTemplates, initialFilter }: TemplatesTableProps) {
   const [templates, setTemplates] = useState<TemplateRow[]>(initialTemplates);
 
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<FilterKey>("all");
+  const [filter, setFilter] = useState<FilterKey>(initialFilter ?? "all");
   const [sort] = useState<SortKey>("created-desc");
   const [previewTemplate, setPreviewTemplate] = useState<CertificateTemplate | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
