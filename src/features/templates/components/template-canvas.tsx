@@ -527,6 +527,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const clipboard = useRef<CanvasElement[]>([]);
   const [clipboardCount, setClipboardCount] = useState(0);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef<Record<string, { x: number; y: number }>>({});
   const [marquee, setMarquee] = useState<{
     x: number;
@@ -562,6 +563,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const [showPreview, setShowPreview] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
+  const [previewScale, setPreviewScale] = useState(1);
 
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
@@ -1566,6 +1568,7 @@ const content = (
         )}
 
         <div
+          ref={containerRef}
           className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3 relative"
           onKeyDown={handleKeyDown}
           tabIndex={0}
@@ -2234,6 +2237,25 @@ const content = (
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  // Auto-fit zoom: calculate initial zoom to fit canvas within available container
+  useEffect(() => {
+    function calcAutoFitZoom() {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const maxW = rect.width - 48;
+      const maxH = rect.height - 48;
+      if (maxW <= 0 || maxH <= 0) return;
+      const scale = Math.min(1, maxW / CANVAS_W, maxH / CANVAS_H);
+      setZoom(scale);
+    }
+    const timer = setTimeout(calcAutoFitZoom, 100);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [CANVAS_W, CANVAS_H]);
+
   const previewDates = useMemo(() => {
     const now = new Date();
     return {
@@ -2262,6 +2284,23 @@ const content = (
     }
     return merged;
   }, [defaultPreviewValues, previewValues]);
+
+  // Preview modal auto-fit scale
+  useEffect(() => {
+    function calcPreviewScale() {
+      const sidebarWidth = 312;
+      const padX = 48;
+      const padY = 160;
+      const maxW = window.innerWidth - sidebarWidth - padX;
+      const maxH = window.innerHeight - padY;
+      setPreviewScale(Math.min(1, maxW / CANVAS_W, maxH / CANVAS_H));
+    }
+    if (showPreview) {
+      calcPreviewScale();
+    }
+    window.addEventListener("resize", calcPreviewScale);
+    return () => window.removeEventListener("resize", calcPreviewScale);
+  }, [CANVAS_W, CANVAS_H, showPreview]);
 
   const previewModal = showPreview ? (
     <div
@@ -2316,7 +2355,12 @@ const content = (
 
       <div
         className="bg-white shadow-2xl rounded-lg overflow-hidden flex-shrink-0"
-        style={{ width: CANVAS_W, height: CANVAS_H, maxWidth: "65vw", maxHeight: "85vh" }}
+        style={{
+          width: CANVAS_W,
+          height: CANVAS_H,
+          transformOrigin: "center center",
+          transform: `scale(${previewScale})`,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
