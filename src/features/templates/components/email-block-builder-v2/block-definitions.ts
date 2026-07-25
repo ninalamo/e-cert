@@ -239,7 +239,12 @@ export function blockToHtml(block: AnyEmailBlock): string {
 }
 
 export function blocksToHtml(blocks: AnyEmailBlock[]): string {
-  return blocks.filter((b) => !b.hidden).map(blockToHtml).join("\n");
+  return blocks.map((b) => {
+    if (b.hidden) {
+      return `<!-- HIDDEN_BLOCK:${b.type}:${b.id} -->${blockToHtml(b)}<!-- /HIDDEN_BLOCK -->`;
+    }
+    return blockToHtml(b);
+  }).join("\n");
 }
 
 function decodeHtmlEntities(s: string): string {

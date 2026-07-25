@@ -35,6 +35,7 @@ export interface ImageBlockProps extends BaseBlockProps {
   alt: string;
   width: number;
   align: "left" | "center" | "right";
+  bgColor: string;
 }
 
 export interface ButtonBlockProps extends BaseBlockProps {
@@ -56,6 +57,7 @@ export interface DividerBlockProps extends BaseBlockProps {
 
 export interface SpacerBlockProps extends BaseBlockProps {
   height: number;
+  bgColor: string;
 }
 
 export interface TableCell {
@@ -90,6 +92,7 @@ export interface ColumnsBlockProps extends BaseBlockProps {
   columnCount: 2 | 3;
   gap: number;
   columns: ColumnBlock[];
+  bgColor: string;
 }
 
 export type BlockPropsMap = {
