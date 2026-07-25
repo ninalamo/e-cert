@@ -75,23 +75,23 @@ export default function EmailTemplateFormV2({
               Design your email template. Drag and drop blocks to build your layout, or switch to Editor mode for rich text editing.
             </p>
           </div>
-          <EmailBlockBuilderV2
-            ref={builderRef}
-            value={htmlContent}
-            onChange={setHtmlContent}
-            disabled={disabled}
-            name={name}
-            description={description}
-            onNameChange={setName}
-            onDescriptionChange={setDescription}
-            submitLabel={submitLabel}
-            loading={loading}
-            onSave={handleSave}
-            onPreview={() => onPreview?.(htmlContent, name)}
-            onFullscreenChange={onFullscreenChange}
-            onClose={onClose}
-            fullscreen={fullscreen}
-          />
+           <EmailBlockBuilderV2
+             ref={builderRef}
+             value={htmlContent}
+             onChange={setHtmlContent}
+             disabled={disabled}
+             name={name}
+             description={description}
+             onNameChange={setName}
+             onDescriptionChange={setDescription}
+             submitLabel={submitLabel}
+             loading={loading}
+             onSave={handleSave}
+             onPreview={() => onPreview?.(htmlContent, name)}
+             onFullscreenChange={onFullscreenChange}
+             onClose={onClose}
+             fullscreen={fullscreen}
+           />
         </div>
       </fieldset>
 
