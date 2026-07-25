@@ -68,8 +68,8 @@ export default function ComponentsSidebar({
   title = "Components",
 }: ComponentsSidebarProps) {
   return (
-    <div className="flex-shrink-0 flex flex-col">
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0 flex-shrink-0">
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-ios-sm)] flex flex-col min-h-0 h-full">
       <button
         type="button"
         onClick={() => onExpandedChange?.(!expanded)}
@@ -86,7 +86,7 @@ export default function ComponentsSidebar({
         </div>
       </button>
       {expanded && (
-        <div className="overflow-y-auto flex-1 min-h-0 divide-y divide-[var(--color-border)]">
+        <div className="overflow-y-auto flex-1 min-h-0 max-h-[400px] divide-y divide-[var(--color-border)]">
           {items.length === 0 ? (
             <p className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
               {emptyMessage}

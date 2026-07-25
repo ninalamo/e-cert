@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { XIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 interface EmailTemplatePreviewDialogProps {
   open: boolean;
@@ -67,21 +64,7 @@ export default function EmailTemplatePreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
         <DialogHeader className="p-4 border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-lg">Preview: {name}</DialogTitle>
-              
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8"
-              aria-label="Close preview"
-            >
-              <XIcon className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-lg">Preview: {name}</DialogTitle>
         </DialogHeader>
         <div className="h-[calc(90vh-140px)] overflow-auto">
           <iframe

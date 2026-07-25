@@ -309,6 +309,7 @@ function ImageProperties({
         <InputField label="Width %" value={p.width} onChange={(v) => onUpdate({ width: parseInt(v) || 100 })} type="number" min={10} max={100} />
       </Section>
       <Section label="Style">
+        <ColorField label="Background" value={p.bgColor} onChange={(v) => onUpdate({ bgColor: v })} />
         <SelectField
           label="Alignment"
           value={p.align}
@@ -434,16 +435,19 @@ function SpacerProperties({
   onUpdate: (props: Partial<SpacerBlockProps>) => void;
 }) {
   return (
-    <Section label="Spacer">
-      <InputField
-        label="Height"
-        value={block.props.height}
-        onChange={(v) => onUpdate({ height: parseInt(v) || 16 })}
-        type="number"
-        min={4}
-        max={200}
-      />
-    </Section>
+    <>
+      <Section label="Spacer">
+        <InputField
+          label="Height"
+          value={block.props.height}
+          onChange={(v) => onUpdate({ height: parseInt(v) || 16 })}
+          type="number"
+          min={4}
+          max={200}
+        />
+        <ColorField label="Background" value={block.props.bgColor} onChange={(v) => onUpdate({ bgColor: v })} />
+      </Section>
+    </>
   );
 }
 
@@ -481,6 +485,7 @@ function ColumnsProperties({
           ]}
         />
         <InputField label="Gap" value={p.gap} onChange={(v) => onUpdate({ gap: parseInt(v) || 0 })} type="number" min={0} max={48} />
+        <ColorField label="Background" value={p.bgColor} onChange={(v) => onUpdate({ bgColor: v })} />
       </Section>
       <Section label="Column Widths">
         {p.columns.map((col, i) => (

@@ -287,47 +287,53 @@ export function elementsToHtml(
   height = 794,
   placeholderOverrides?: Record<string, string>
 ): string {
-  const sorted = [...elements].filter((el) => !el.hidden).sort((a, b) => a.z - b.z);
+  const sorted = [...elements].sort((a, b) => a.z - b.z);
   const blocks = sorted
     .map((el) => {
       const lockAttr = el.locked ? " data-locked=\"true\"" : "";
+      const hiddenAttr = el.hidden ? " data-hidden=\"true\"" : "";
       const common = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;z-index:${el.z};`;
+      let block: string;
       if (el.type === "image") {
-        return `<div${lockAttr} style="${common}"><img src="${escapeAttr(
+        block = `<div${lockAttr}${hiddenAttr} style="${common}"><img src="${escapeAttr(
           el.src ?? ""
         )}" style="width:100%;height:100%;object-fit:contain;display:block;" /></div>`;
-      }
-      if (el.type === "qr") {
+      } else if (el.type === "qr") {
         const style = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;z-index:${el.z};font-size:${el.fontSize};font-family:${escapeAttr(
           el.fontFamily
         )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};overflow:hidden;`;
-        return `<div${lockAttr} style="${style}">{{qr_code}}</div>`;
-      }
-      const lh = el.lineHeight ?? 1.5;
-      const ps = el.paragraphSpacing ?? 0;
-      let innerContent = el.content;
-      if (placeholderOverrides) {
-        for (const [key, val] of Object.entries(placeholderOverrides)) {
-          if (val) innerContent = innerContent.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), val);
-        }
-      }
-      if (ps) {
-        innerContent = innerContent.replace(/<p(\s[^>]*)?>/gi, (match, attrs) => {
-          if (!attrs) return `<p style="margin:${ps}px 0;">`;
-          if (/style="/.test(attrs)) {
-            return `<p${attrs.replace(/style="/, `style="margin:${ps}px 0;`)}`;
+        block = `<div${lockAttr}${hiddenAttr} style="${style}">{{qr_code}}</div>`;
+      } else {
+        const lh = el.lineHeight ?? 1.5;
+        const ps = el.paragraphSpacing ?? 0;
+        let innerContent = el.content;
+        if (placeholderOverrides) {
+          for (const [key, val] of Object.entries(placeholderOverrides)) {
+            if (val) innerContent = innerContent.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), val);
           }
-          return `<p${attrs} style="margin:${ps}px 0;">`;
-        });
+        }
+        if (ps) {
+          innerContent = innerContent.replace(/<p(\s[^>]*)?>/gi, (match, attrs) => {
+            if (!attrs) return `<p style="margin:${ps}px 0;">`;
+            if (/style="/.test(attrs)) {
+              return `<p${attrs.replace(/style="/, `style="margin:${ps}px 0;`)}`;
+            }
+            return `<p${attrs} style="margin:${ps}px 0;">`;
+          });
+        }
+        const fitFontSize = el.fontSize;
+        const centerStyle = isPlaceholderElement(el)
+          ? "display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;word-break:break-word;"
+          : "";
+        const style = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;z-index:${el.z};font-size:${fitFontSize};font-family:${escapeAttr(
+          el.fontFamily
+        )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};line-height:${lh};overflow:hidden;${centerStyle}`;
+        block = `<div${lockAttr}${hiddenAttr} style="${style}">${innerContent}</div>`;
       }
-      const fitFontSize = el.fontSize;
-      const centerStyle = isPlaceholderElement(el)
-        ? "display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;word-break:break-word;"
-        : "";
-      const style = `position:absolute;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;z-index:${el.z};font-size:${fitFontSize};font-family:${escapeAttr(
-        el.fontFamily
-      )};color:${escapeAttr(el.color)};font-weight:${el.bold ? "bold" : "normal"};text-align:${el.align};line-height:${lh};overflow:hidden;${centerStyle}`;
-      return `<div${lockAttr} style="${style}">${innerContent}</div>`;
+      if (el.hidden) {
+        return `<!-- HIDDEN_ELEMENT:${el.type}:${el.id} -->${block}<!-- /HIDDEN_ELEMENT -->`;
+      }
+      return block;
     })
     .join("\n");
   return `<div class="certificate" style="position:relative;width:${width}px;height:${height}px;overflow:hidden;">\n${blocks}\n</div>`;

@@ -40,6 +40,7 @@ export const DEFAULT_IMAGE_PROPS: BlockPropsMap["image"] = {
   alt: "Image",
   width: 100,
   align: "center",
+  bgColor: "#ffffff",
   paddingTop: 8,
   paddingBottom: 8,
   paddingLeft: 24,
@@ -73,6 +74,7 @@ export const DEFAULT_DIVIDER_PROPS: BlockPropsMap["divider"] = {
 
 export const DEFAULT_SPACER_PROPS: BlockPropsMap["spacer"] = {
   height: 32,
+  bgColor: "#ffffff",
   paddingTop: 0,
   paddingRight: 0,
   paddingBottom: 0,
@@ -110,6 +112,7 @@ export function defaultColumnsProps(): BlockPropsMap["columns"] {
       { id: col1Id, widthPercent: 50, blocks: [] },
       { id: col2Id, widthPercent: 50, blocks: [] },
     ],
+    bgColor: "#ffffff",
     paddingTop: 8,
     paddingBottom: 8,
     paddingLeft: 24,
@@ -158,7 +161,8 @@ function imageToHtml(block: EmailBlock<"image">): string {
   const p = block.props;
   if (!p.src) return "";
   const displayStyle = p.align === "center" ? "margin:0 auto;" : p.align === "right" ? "margin:0 0 0 auto;" : "margin:0;";
-  return `<div style="text-align:${p.align};${padStyle(p.paddingTop, p.paddingRight, p.paddingBottom, p.paddingLeft)}"><img src="${esc(p.src)}" alt="${esc(p.alt)}" style="width:${p.width}%;max-width:100%;display:inline-block;${displayStyle}" /></div>`;
+  const bgStyle = p.bgColor && p.bgColor !== "#ffffff" ? `background-color:${esc(p.bgColor)};` : "";
+  return `<div style="text-align:${p.align};${bgStyle}${padStyle(p.paddingTop, p.paddingRight, p.paddingBottom, p.paddingLeft)}"><img src="${esc(p.src)}" alt="${esc(p.alt)}" style="width:${p.width}%;max-width:100%;display:inline-block;${displayStyle}" /></div>`;
 }
 
 function buttonToHtml(block: EmailBlock<"button">): string {
@@ -174,12 +178,14 @@ function dividerToHtml(block: EmailBlock<"divider">): string {
 }
 
 function spacerToHtml(block: EmailBlock<"spacer">): string {
-  const h = block.props.height;
-  return `<div style="height:${h}px;line-height:${h}px;font-size:1px;">&nbsp;</div>`;
+  const p = block.props;
+  const bgStyle = p.bgColor && p.bgColor !== "#ffffff" ? `background-color:${esc(p.bgColor)};` : "";
+  return `<div style="height:${p.height}px;line-height:${p.height}px;font-size:1px;${bgStyle}">&nbsp;</div>`;
 }
 
 function columnsToHtml(block: EmailBlock<"columns">): string {
   const p = block.props;
+  const bgStyle = p.bgColor && p.bgColor !== "#ffffff" ? `background-color:${esc(p.bgColor)};` : "";
   const colTds = p.columns
     .map((col) => {
       const inner = col.blocks.map((b) => blockToHtml(b)).join("\n");
@@ -187,7 +193,7 @@ function columnsToHtml(block: EmailBlock<"columns">): string {
     })
     .join("\n");
 
-  return `<table role="presentation" style="width:100%;border-collapse:collapse;${padStyle(p.paddingTop, p.paddingRight, p.paddingBottom, p.paddingLeft)}"><tr>${colTds}</tr></table>`;
+  return `<table role="presentation" style="width:100%;border-collapse:collapse;${bgStyle}${padStyle(p.paddingTop, p.paddingRight, p.paddingBottom, p.paddingLeft)}"><tr>${colTds}</tr></table>`;
 }
 
 function tableToHtml(block: EmailBlock<"table">): string {
@@ -239,7 +245,12 @@ export function blockToHtml(block: AnyEmailBlock): string {
 }
 
 export function blocksToHtml(blocks: AnyEmailBlock[]): string {
-  return blocks.filter((b) => !b.hidden).map(blockToHtml).join("\n");
+  return blocks.map((b) => {
+    if (b.hidden) {
+      return `<!-- HIDDEN_BLOCK:${b.type}:${b.id} -->${blockToHtml(b)}<!-- /HIDDEN_BLOCK -->`;
+    }
+    return blockToHtml(b);
+  }).join("\n");
 }
 
 function decodeHtmlEntities(s: string): string {
@@ -312,6 +323,7 @@ function parseImageBlock(el: HTMLElement): AnyEmailBlock {
       alt: img?.getAttribute("alt") ?? "",
       width: parseNumber(imgStyle, "width", 100),
       align: parseAlign(style),
+      bgColor: parseColor(style, "background-color"),
       ...parsePadding(style),
     },
   };
@@ -362,6 +374,7 @@ function parseSpacerBlock(el: HTMLElement): AnyEmailBlock {
     type: "spacer",
     props: {
       height: parseNumber(style, "height", 32),
+      bgColor: parseColor(style, "background-color"),
       paddingTop: 0,
       paddingRight: 0,
       paddingBottom: 0,
@@ -396,6 +409,7 @@ function parseColumnsBlock(el: HTMLElement): AnyEmailBlock {
       columnCount: Math.min(columns.length, 3) as 2 | 3,
       gap,
       columns,
+      bgColor: parseColor(style, "background-color"),
       ...parsePadding(style),
     },
   };
