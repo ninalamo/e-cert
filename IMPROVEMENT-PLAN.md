@@ -369,7 +369,7 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 | 1 | Consolidate migration files into `migrations/` | `supabase/migrations/` | Database portability — the core requirement | Pending |
 | 2 | ~~Replace `LocalStorageProvider` with `SupabaseStorageProvider`~~ | ~~`src/lib/storage/`~~ | ~~File upload feature broken on Vercel~~ | **Done** |
 | 3 | ~~Fix email sending to include PDF attachment on issuance~~ | ~~`certificate.service.ts:158`~~ | ~~Users don't get their certificate PDF~~ | **Done** |
-| 4 | Remove hardcoded credentials from source | `api/health/route.ts:4`, `.env*` | Security — credentials in repo | Pending |
+| 4 | ~~Remove hardcoded credentials from source~~ | ~~`api/health/route.ts:4`~~ | ~~Security — credentials in repo~~ | **Done** |
 | 5 | Sanitize template variables (XSS fix) | `certificate-viewer.tsx`, `certificate.service.ts` | Security — XSS vulnerability | Pending |
 
 ### Phase 2: Important (do next)
@@ -407,6 +407,7 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 |--------|--------|-------|
 | `1fb2b1c` | Replace `LocalStorageProvider` with `SupabaseStorageProvider` | `src/lib/storage/supabase.provider.ts` (new), `src/lib/storage/index.ts`, `src/features/certificates/server/certificate.service.ts`, `src/features/events/server/event.service.ts`, `src/app/api/storage/cleanup/route.ts` (new) |
 | `69913f1` | Include PDF attachment in certificate issuance emails | `src/features/certificates/server/certificate.service.ts` |
+| `33fbbc6` | Move health check password to environment variable | `src/app/api/health/route.ts` |
 
 **Summary of changes:**
 
@@ -419,3 +420,5 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 4. **Manual orphan cleanup** — `DELETE /api/storage/cleanup` endpoint lists all objects in the `certificates` bucket, cross-references with `certificates.file_path` in the DB, and removes any files with no matching certificate record. Admin-only.
 
 5. **Email PDF fix** — Removed `skip_pdf: true` from the `sendCertificateEmail` call in `issueCertificate`. Emails now include the PDF attachment when `send_email: true` is set during issuance.
+
+6. **Health check password** — Moved hardcoded `HEALTH_PASSWORD` from source code to `process.env.HEALTH_PASSWORD`. Added `HEALTH_PASSWORD` to `.env.example`.
