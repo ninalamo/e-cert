@@ -242,6 +242,257 @@ export function blocksToHtml(blocks: AnyEmailBlock[]): string {
   return blocks.filter((b) => !b.hidden).map(blockToHtml).join("\n");
 }
 
+function decodeHtmlEntities(s: string): string {
+  return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+}
+
+function parsePadding(style: string): { paddingTop: number; paddingRight: number; paddingBottom: number; paddingLeft: number } {
+  const m = style.match(/padding:\s*([\d.]+)px\s+([\d.]+)px\s+([\d.]+)px\s+([\d.]+)px/);
+  return m
+    ? { paddingTop: +m[1], paddingRight: +m[2], paddingBottom: +m[3], paddingLeft: +m[4] }
+    : { paddingTop: 0, paddingRight: 0, paddingBottom: 0, paddingLeft: 0 };
+}
+
+function parseColor(style: string, prop: string): string {
+  const m = style.match(new RegExp(`${prop}:\\s*([^;]+)`));
+  return m ? m[1].trim() : "#000000";
+}
+
+function parseNumber(style: string, prop: string, fallback: number): number {
+  const m = style.match(new RegExp(`${prop}:\\s*([\\d.]+)`));
+  return m ? parseFloat(m[1]) : fallback;
+}
+
+function parseAlign(style: string): "left" | "center" | "right" {
+  const m = style.match(/text-align:\s*(left|center|right)/);
+  return (m?.[1] as "left" | "center" | "right") ?? "left";
+}
+
+function parseHeaderBlock(el: HTMLElement): AnyEmailBlock {
+  const level = (el.tagName.toLowerCase() as "h1" | "h2" | "h3");
+  const style = el.getAttribute("style") ?? "";
+  return {
+    id: uid(),
+    type: "header",
+    props: {
+      text: decodeHtmlEntities(el.innerHTML),
+      level,
+      color: parseColor(style, "color"),
+      align: parseAlign(style),
+      ...parsePadding(style),
+    },
+  };
+}
+
+function parseTextBlock(el: HTMLElement): AnyEmailBlock {
+  const style = el.getAttribute("style") ?? "";
+  return {
+    id: uid(),
+    type: "text",
+    props: {
+      content: el.innerHTML,
+      color: parseColor(style, "color"),
+      fontSize: parseNumber(style, "font-size", 16),
+      align: parseAlign(style),
+      lineHeight: parseNumber(style, "line-height", 1.6),
+      ...parsePadding(style),
+    },
+  };
+}
+
+function parseImageBlock(el: HTMLElement): AnyEmailBlock {
+  const img = el.querySelector("img");
+  const style = el.getAttribute("style") ?? "";
+  const imgStyle = img?.getAttribute("style") ?? "";
+  return {
+    id: uid(),
+    type: "image",
+    props: {
+      src: img?.getAttribute("src") ?? "",
+      alt: img?.getAttribute("alt") ?? "",
+      width: parseNumber(imgStyle, "width", 100),
+      align: parseAlign(style),
+      ...parsePadding(style),
+    },
+  };
+}
+
+function parseButtonBlock(el: HTMLElement): AnyEmailBlock {
+  const a = el.querySelector("a");
+  const style = el.getAttribute("style") ?? "";
+  const aStyle = a?.getAttribute("style") ?? "";
+  return {
+    id: uid(),
+    type: "button",
+    props: {
+      text: decodeHtmlEntities(a?.innerHTML ?? ""),
+      href: a?.getAttribute("href") ?? "",
+      bgColor: parseColor(aStyle, "background-color"),
+      textColor: parseColor(aStyle, "color"),
+      borderRadius: parseNumber(aStyle, "border-radius", 0),
+      align: parseAlign(style),
+      ...parsePadding(style),
+    },
+  };
+}
+
+function parseDividerBlock(el: HTMLElement): AnyEmailBlock {
+  const hr = el.querySelector("hr");
+  const style = el.getAttribute("style") ?? "";
+  const hrStyle = hr?.getAttribute("style") ?? "";
+  const borderMatch = hrStyle.match(/border-top:\s*([\d.]+)px\s+(\w+)\s+([^;]+)/);
+  return {
+    id: uid(),
+    type: "divider",
+    props: {
+      color: borderMatch?.[3]?.trim() ?? "#e4e4e7",
+      thickness: borderMatch ? parseFloat(borderMatch[1]) : 1,
+      style: (borderMatch?.[2] as "solid" | "dashed" | "dotted") ?? "solid",
+      widthPercent: parseNumber(hrStyle, "width", 100),
+      align: parseAlign(style),
+      ...parsePadding(style),
+    },
+  };
+}
+
+function parseSpacerBlock(el: HTMLElement): AnyEmailBlock {
+  const style = el.getAttribute("style") ?? "";
+  return {
+    id: uid(),
+    type: "spacer",
+    props: {
+      height: parseNumber(style, "height", 32),
+      paddingTop: 0,
+      paddingRight: 0,
+      paddingBottom: 0,
+      paddingLeft: 0,
+    },
+  };
+}
+
+function parseColumnsBlock(el: HTMLElement): AnyEmailBlock {
+  const style = el.getAttribute("style") ?? "";
+  const tds = el.querySelectorAll("td");
+  const columns = Array.from(tds).map((td) => {
+    const tdStyle = td.getAttribute("style") ?? "";
+    const widthMatch = tdStyle.match(/width:\s*([\d.]+)%/);
+    const innerBlocks: AnyEmailBlock[] = [];
+    for (const child of Array.from(td.children)) {
+      const block = parseElementToBlock(child as HTMLElement);
+      if (block) innerBlocks.push(block);
+    }
+    return {
+      id: uid(),
+      widthPercent: widthMatch ? parseFloat(widthMatch[1]) : 50,
+      blocks: innerBlocks,
+    };
+  });
+  const gapMatch = style.match(/padding:\s*[\d.]+px\s+([\d.]+)px/);
+  const gap = gapMatch ? parseFloat(gapMatch[1]) * 2 : 16;
+  return {
+    id: uid(),
+    type: "columns",
+    props: {
+      columnCount: Math.min(columns.length, 3) as 2 | 3,
+      gap,
+      columns,
+      ...parsePadding(style),
+    },
+  };
+}
+
+function parseTableBlock(el: HTMLElement): AnyEmailBlock {
+  const table = el.querySelector("table");
+  const trs = table?.querySelectorAll("tr") ?? [];
+  const tdSample = table?.querySelector("td, th");
+  const tdStyle = tdSample?.getAttribute("style") ?? "";
+  const borderWidth = parseNumber(tdStyle, "border", 1);
+  const borderColor = (tdStyle.match(/border:\s*[\d.]+px\s+\w+\s+([^;]+)/)?.[1]?.trim()) ?? "#e4e4e7";
+  const cellPadding = parseNumber(tdStyle, "padding", 12);
+
+  const rows: TableRow[] = [];
+  trs.forEach((tr) => {
+    const cells: TableCell[] = [];
+    tr.querySelectorAll("td, th").forEach((cell) => {
+      const isHeader = cell.tagName.toLowerCase() === "th";
+      cells.push({
+        content: decodeHtmlEntities(cell.innerHTML),
+        isHeader,
+      });
+    });
+    if (cells.length > 0) rows.push({ cells });
+  });
+
+  return {
+    id: uid(),
+    type: "table",
+    props: {
+      rows,
+      headerColor: "#ffffff",
+      headerBgColor: "#18181b",
+      rowColor: parseColor(tdStyle, "color"),
+      rowBgColor: parseColor(tdStyle, "background-color"),
+      borderColor,
+      borderWidth,
+      cellPadding,
+      align: parseAlign(tdStyle),
+      showHeader: rows.length === 0 || rows[0].cells.some((c) => c.isHeader),
+      ...parsePadding(el.getAttribute("style") ?? ""),
+    },
+  };
+}
+
+function parseElementToBlock(el: HTMLElement): AnyEmailBlock | null {
+  const tag = el.tagName.toLowerCase();
+  if (tag === "h1" || tag === "h2" || tag === "h3") return parseHeaderBlock(el);
+  if (tag === "p") return parseTextBlock(el);
+  if (tag === "img") return parseImageBlock(el);
+  if (tag === "hr") return parseDividerBlock(el);
+  if (el.children.length === 0 && /height:\s*\d+px/.test(el.getAttribute("style") ?? "")) return parseSpacerBlock(el);
+  if (tag === "a") return parseButtonBlock(el);
+  if (tag === "div") {
+    const img = el.querySelector("img");
+    if (img) return parseImageBlock(el);
+    const a = el.querySelector("a");
+    if (a) return parseButtonBlock(el);
+    const hr = el.querySelector("hr");
+    if (hr) return parseDividerBlock(el);
+    const innerTable = el.querySelector("table[role='presentation']");
+    if (innerTable && innerTable.parentElement === el) {
+      const hasTd = el.querySelectorAll("td").length;
+      const hasTr = el.querySelectorAll("tr").length;
+      if (hasTr > 0 && hasTd > 0 && !el.querySelector("table table")) {
+        const tds = innerTable.querySelectorAll("td");
+        if (tds.length > 1 && innerTable.querySelector("tr")?.parentElement === innerTable) {
+          return parseColumnsBlock(el);
+        }
+        return parseTableBlock(el);
+      }
+    }
+    if (innerTable && innerTable !== el) return parseTableBlock(el);
+    const colCount = el.querySelectorAll("td").length;
+    if (colCount > 1 && el.querySelector("table[role='presentation']") && el.querySelector("tr")?.parentElement === el.querySelector("table[role='presentation']")) {
+      return parseColumnsBlock(el);
+    }
+  }
+  return null;
+}
+
+export function htmlToBlocks(html: string): AnyEmailBlock[] {
+  if (!html || !html.trim()) return [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+  const container = doc.body.firstElementChild;
+  if (!container) return [];
+
+  const blocks: AnyEmailBlock[] = [];
+  for (const child of Array.from(container.children)) {
+    const block = parseElementToBlock(child as HTMLElement);
+    if (block) blocks.push(block);
+  }
+  return blocks;
+}
+
 export function getBlockLabel(block: AnyEmailBlock): string {
   switch (block.type) {
     case "header":

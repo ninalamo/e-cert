@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useMemo, forwardRef, useImperativeHandle } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import type { EmailBlockType, AnyEmailBlock } from "./types";
 import {
   uid,
   createBlock,
   blocksToHtml,
+  htmlToBlocks,
 } from "./block-definitions";
 import BlockCanvas from "./block-canvas";
 import BlockProperties from "./block-properties";
@@ -127,7 +128,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
   ) {
     const [blocks, setBlocks] = useState<AnyEmailBlock[]>(() => {
       if (!value || !value.trim()) return [];
-      return [];
+      return htmlToBlocks(value);
     });
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [history, setHistory] = useState<AnyEmailBlock[][]>([[]]);
@@ -138,6 +139,24 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
     const [dragOverId, setDragOverId] = useState<string | null>(null);
     const [draggedId, setDraggedId] = useState<string | null>(null);
     const [dropSide, setDropSide] = useState<"before" | "after">("before");
+
+    const internalUpdateRef = useRef(false);
+    const blocksRef = useRef(blocks);
+    blocksRef.current = blocks;
+
+    useEffect(() => {
+      if (internalUpdateRef.current) {
+        internalUpdateRef.current = false;
+        return;
+      }
+      if (!value || !value.trim()) {
+        setBlocks([]);
+        return;
+      }
+      const currentHtml = blocksToHtml(blocksRef.current);
+      if (currentHtml.trim() === value.trim()) return;
+      setBlocks(htmlToBlocks(value));
+    }, [value]);
 
     const pushHistory = useCallback(
       (newBlocks: AnyEmailBlock[]) => {
@@ -156,6 +175,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       (newBlocks: AnyEmailBlock[], recordHistory = true) => {
         setBlocks(newBlocks);
         if (recordHistory) pushHistory(newBlocks);
+        internalUpdateRef.current = true;
         onChange(blocksToHtml(newBlocks));
       },
       [onChange, pushHistory]
@@ -166,6 +186,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       const prev = history[historyIndex - 1];
       setBlocks(prev);
       setHistoryIndex((i) => i - 1);
+      internalUpdateRef.current = true;
       onChange(blocksToHtml(prev));
     }, [history, historyIndex, onChange]);
 
@@ -174,6 +195,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       const next = history[historyIndex + 1];
       setBlocks(next);
       setHistoryIndex((i) => i + 1);
+      internalUpdateRef.current = true;
       onChange(blocksToHtml(next));
     }, [history, historyIndex, onChange]);
 
