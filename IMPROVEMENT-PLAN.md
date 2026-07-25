@@ -394,7 +394,7 @@ The standalone `sendCertificateEmailAction` (called from the email history UI) d
 |---|------|-------|--------|--------|
 | 1 | Consolidate migration files into `migrations/` | `supabase/migrations/` | Database portability — the core requirement | Pending |
 | 2 | ~~Replace `LocalStorageProvider` with `SupabaseStorageProvider`~~ | ~~`src/lib/storage/`~~ | ~~File upload feature broken on Vercel~~ | **Done** |
-| 3 | Fix email sending to include PDF attachment on issuance | `certificate.service.ts:158` | Users don't get their certificate PDF | Pending |
+| 3 | ~~Fix email sending to include PDF attachment on issuance~~ | ~~`certificate.service.ts:158`~~ | ~~Users don't get their certificate PDF~~ | **Done** |
 | 4 | Remove hardcoded credentials from source | `api/health/route.ts:4`, `.env*` | Security — credentials in repo | Pending |
 | 5 | Sanitize template variables (XSS fix) | `certificate-viewer.tsx`, `certificate.service.ts` | Security — XSS vulnerability | Pending |
 

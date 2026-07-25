@@ -155,7 +155,7 @@ export async function issueCertificate(
 
   if (data.send_email && data.user_id) {
     const { sendCertificateEmail } = await import("./certificate-email.service");
-    const emailResult = await sendCertificateEmail(certificate.id, data.user_id, undefined, { skip_pdf: true });
+    const emailResult = await sendCertificateEmail(certificate.id, data.user_id);
     return { certificate, emailSent: emailResult.success, error: emailResult.error };
   }
 
