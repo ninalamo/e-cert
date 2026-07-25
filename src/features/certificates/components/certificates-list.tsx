@@ -41,7 +41,7 @@ export default function CertificatesList({
   initialCertificates,
   initialQuery = "",
 }: CertificatesListProps) {
-  const [certificates] = useState<CertificateWithEvent[]>(initialCertificates);
+  const [certificates, setCertificates] = useState<CertificateWithEvent[]>(initialCertificates);
   const [search, setSearch] = useState(initialQuery);
   const [eventFilter, setEventFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -75,6 +75,10 @@ export default function CertificatesList({
     setRevokeDialogOpen(false);
     setRevokeReason("");
     setRevokeTarget(null);
+    const updated = await loadCertificates();
+    if (updated.length > 0) {
+      setCertificates(updated);
+    }
   }
 
   const openRevokeDialog = (cert: CertificateWithEvent) => {
