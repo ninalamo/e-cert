@@ -132,9 +132,6 @@ export default function TemplateCard({
         <div className="mb-3 flex items-center gap-2">
           <MailIcon className="size-4 text-[var(--color-text-muted)]" />
           <p className="section-title mb-0">Email Template</p>
-          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
-            Coming soon
-          </span>
         </div>
         <div className="mb-2 text-sm">
           <span className="text-tertiary">Current: </span>
@@ -151,8 +148,7 @@ export default function TemplateCard({
         <select
           value={selectedEmail}
           onChange={(e) => setSelectedEmail(e.target.value)}
-          disabled
-          className="input mb-3 disabled:opacity-50"
+          className="input mb-3"
         >
           <option value="">System default template</option>
           {emailTemplates.map((t) => (
@@ -165,14 +161,13 @@ export default function TemplateCard({
           <button
             type="button"
             onClick={handleEmailSave}
-            disabled
-            className="btn-brand-soft disabled:opacity-50"
+            className="btn-brand-soft"
           >
             {savingEmail ? "Saving..." : "Assign Email Template"}
           </button>
           {(selectedEmail || event.email_template_id) && (
             <Link
-              href={`/templates/${selectedEmail || event.email_template_id}`}
+              href={`/templates/email/${selectedEmail || event.email_template_id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-brand-soft"
