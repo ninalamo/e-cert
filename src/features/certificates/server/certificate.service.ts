@@ -5,6 +5,7 @@ import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { createClient } from "@/lib/supabase/server";
 import { ORG_NAME } from "@/lib/org";
+import { sanitizeHtml } from "@/lib/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function repo(client: SupabaseClient) {
@@ -14,7 +15,7 @@ function repo(client: SupabaseClient) {
 function renderTemplate(html: string, css: string, variables: Record<string, string>): string {
   let rendered = html;
   for (const [key, value] of Object.entries(variables)) {
-    rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+    rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), sanitizeHtml(value));
   }
 
   return `<!DOCTYPE html>

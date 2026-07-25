@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
+import { sanitizeHtml } from "@/lib/utils";
 
 interface Props {
   certificate: Certificate;
@@ -36,16 +37,16 @@ export default function CertificateViewer({
 
   const certHtml = template
     ? template.html_content
-        .replace(/\{\{recipient_name\}\}/g, certificate.recipient_name)
-        .replace(/\{\{certificate_number\}\}/g, certificate.certificate_number)
-        .replace(/\{\{issued_date\}\}/g, new Date(certificate.issued_at).toLocaleDateString())
-        .replace(/\{\{organization_name\}\}/g, orgName)
-        .replace(/\{\{event_name\}\}/g, event?.name ?? "")
-        .replace(/\{\{event_date\}\}/g, event?.event_date ? new Date(event.event_date).toLocaleDateString() : "")
-        .replace(/\{\{event_location\}\}/g, event?.location ?? "")
-        .replace(/\{\{event_organizer\}\}/g, event?.organizer ?? "")
-        .replace(/\{\{certificate_title\}\}/g, event?.certificate_title ?? "")
-        .replace(/\{\{expiry_date\}\}/g, certificate.expires_at ? new Date(certificate.expires_at).toLocaleDateString() : "")
+        .replace(/\{\{recipient_name\}\}/g, sanitizeHtml(certificate.recipient_name))
+        .replace(/\{\{certificate_number\}\}/g, sanitizeHtml(certificate.certificate_number))
+        .replace(/\{\{issued_date\}\}/g, sanitizeHtml(new Date(certificate.issued_at).toLocaleDateString()))
+        .replace(/\{\{organization_name\}\}/g, sanitizeHtml(orgName))
+        .replace(/\{\{event_name\}\}/g, sanitizeHtml(event?.name ?? ""))
+        .replace(/\{\{event_date\}\}/g, sanitizeHtml(event?.event_date ? new Date(event.event_date).toLocaleDateString() : ""))
+        .replace(/\{\{event_location\}\}/g, sanitizeHtml(event?.location ?? ""))
+        .replace(/\{\{event_organizer\}\}/g, sanitizeHtml(event?.organizer ?? ""))
+        .replace(/\{\{certificate_title\}\}/g, sanitizeHtml(event?.certificate_title ?? ""))
+        .replace(/\{\{expiry_date\}\}/g, sanitizeHtml(certificate.expires_at ? new Date(certificate.expires_at).toLocaleDateString() : ""))
         .replace(/\{\{qr_code\}\}/g, `<img src="${qrDataUrl}" width="128" height="128" />`)
     : cachedHtml;
 
