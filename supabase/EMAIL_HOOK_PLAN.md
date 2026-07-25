@@ -214,28 +214,28 @@ In `supabase/config.toml:225` change `enable_confirmations = false` to `true`. I
    ```
    Note the printed function URL: `https://odujtmhhguezexkpbhrw.supabase.co/functions/v1/send-email`.
 
-4. **Set the secrets** on the deployed function (use the real App Password, not your Gmail login):
+4. **Set the SMTP secrets** on the deployed function (use the real App Password, not your Gmail login). Note: `SUPABASE_URL` is reserved and injected by Supabase automatically, so don't include it.
    ```bash
    supabase secrets set \
+     --project-ref odujtmhhguezexkpbhrw \
      SMTP_HOST=smtp.gmail.com \
      SMTP_PORT=587 \
      SMTP_USER=noreply.loa.econsultation@gmail.com \
      SMTP_PASS=<gmail-app-password> \
-     "SMTP_FROM=Certifire Admin" \
-     SUPABASE_URL=https://odujtmhhguezexkpbhrw.supabase.co
+     "SMTP_FROM=Certifire Admin"
    ```
-   `SEND_EMAIL_HOOK_SECRET` is set in step 6, after Supabase generates it.
 
 5. **Enable the hook** in the Dashboard:
-   - Go to **Auth → Hooks → Send Email**
-   - Select type **HTTPS** and choose the `send-email` function
-   - Supabase fills in the URL automatically and shows a **Hook secret** — copy it
+   - Go to **Auth → Hooks → Add New Hook** (or open the Send Email card)
+   - Type: **HTTPS** (not Postgres)
+   - URL: `https://odujtmhhguezexkpbhrw.supabase.co/functions/v1/send-email`
+   - Save — the page will show a **Hook secret**. Copy it.
 
-6. **Set the hook secret** returned by the Dashboard:
+6. **Set the hook secret** returned by the Dashboard (use the full value including the `v1,whsec_` prefix):
    ```bash
-   supabase secrets set SEND_EMAIL_HOOK_SECRET=<secret-from-dashboard>
+   supabase secrets set --project-ref odujtmhhguezexkpbhrw SEND_EMAIL_HOOK_SECRET=<secret-from-dashboard>
    ```
-   Also paste it into `.env` as `SEND_EMAIL_HOOK_SECRET="..."` for local dev parity.
+   Also paste the same value into `.env` as `SEND_EMAIL_HOOK_SECRET="<secret>"` for local dev parity.
 
 7. **Enable email confirmations**:
    - Dashboard → Auth → Providers → Email → toggle **Confirm email** on
@@ -243,6 +243,11 @@ In `supabase/config.toml:225` change `enable_confirmations = false` to `true`. I
 
 8. **Test**:
    ```bash
-   supabase functions logs send-email --tail
+   supabase functions logs send-email --project-ref odujtmhhguezexkpbhrw --tail
    ```
    Then sign up a fresh user; verify the branded email arrives and the link confirms the account.
+
+9. **Re-deploy after edits** (if you change `supabase/functions/send-email/*`):
+   ```bash
+   supabase functions deploy send-email --no-verify-jwt
+   ```
