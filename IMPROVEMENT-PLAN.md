@@ -80,39 +80,19 @@ This means:
 
 For **template-generated** certificates, the PDF is rendered at issuance time and stored as `rendered_pdf` in `metadata` JSONB. The `getCertificatePdfBuffer` function checks `file_path` first, then falls back to `metadata.rendered_pdf`, then to `metadata.rendered_html` (re-render on demand). So system-generated certs work fine — the `file_path` path is only relevant for user-uploaded PDFs.
 
-### Recommended fixes
+### Status: RESOLVED
 
-1. **Replace `LocalStorageProvider` with `SupabaseStorageProvider`** using `@supabase/supabase-js` storage API. The bucket name should be `certificates`. Create it via the Supabase dashboard or a migration script.
+Replaced `LocalStorageProvider` with `SupabaseStorageProvider`. See [Changelog](#10-changelog) for details.
 
-2. **SupabaseStorageProvider implementation:**
-   ```typescript
-   // src/lib/storage/supabase.provider.ts
-   // - writeFile: supabaseAdmin.storage.from('certificates').upload(path, buffer)
-   // - readFile: supabaseAdmin.storage.from('certificates').download(path)
-   //   → returns Buffer.from(await file.arrayBuffer())
-   // - deleteFile: supabaseAdmin.storage.from('certificates').remove([path])
-   // - getSignedUrl: supabaseAdmin.storage.from('certificates').createSignedUrl(path, 604800)
-   //   → returns signed URL (7-day expiry)
-   // - fileExists: supabaseAdmin.storage.from('certificates').getMetadata(path)
-   ```
+### Remaining work
 
-3. **Update `src/lib/storage/index.ts`** to use `SupabaseStorageProvider` instead of `LocalStorageProvider`.
+1. **Create the `certificates` bucket** in Supabase Dashboard → Storage → New Bucket:
+   - Name: `certificates`
+   - Public: **false**
+   - File size limit: 5MB
+   - Allowed MIME types: `application/pdf`
 
-4. **Add cleanup mechanism:**
-   - Hook into `revokeCertificate` to also delete the stored file.
-   - Hook into `deleteEvent` cascade cleanup to remove files.
-   - Create `DELETE /api/storage/cleanup` endpoint for manual orphan cleanup (lists bucket objects, cross-references `certificates.file_path`).
-
-5. **Document required bucket creation** in the migration/setup docs:
-   ```sql
-   -- Via Supabase Dashboard > Storage > New Bucket
-   -- Name: certificates
-   -- Public: false
-   -- File size limit: 5MB
-   -- Allowed MIME types: application/pdf
-   ```
-
-6. **The `metadata.rendered_pdf` base64 storage pattern should remain as a fallback** but should not be the primary storage mechanism. Consider moving rendered PDFs to storage on-demand (lazy migration) when serving them.
+2. **The `metadata.rendered_pdf` base64 storage pattern should remain as a fallback** but should not be the primary storage mechanism. Consider moving rendered PDFs to storage on-demand (lazy migration) when serving them.
 
 ---
 
@@ -212,7 +192,11 @@ The standalone `sendCertificateEmailAction` (called from the email history UI) d
 - Issuing a cert with "send email" → email without PDF
 - Manually resending from the detail page → email with PDF
 
-### Additional email issues
+### Status: PARTIALLY RESOLVED
+
+The primary issue (missing PDF attachment on issuance) has been fixed. See [Changelog](#10-changelog) for details.
+
+### Remaining issues
 
 | Issue | Location | Detail |
 |-------|----------|--------|
@@ -222,26 +206,16 @@ The standalone `sendCertificateEmailAction` (called from the email history UI) d
 
 ### Recommended fixes
 
-1. **Remove `skip_pdf: true` from `issueCertificate` when `send_email` is true** (`certificate.service.ts:158`). Change:
-   ```typescript
-   const emailResult = await sendCertificateEmail(certificate.id, data.user_id, undefined, { skip_pdf: true });
-   ```
-   to:
-   ```typescript
-   const emailResult = await sendCertificateEmail(certificate.id, data.user_id);
-   ```
-   Only pass `skip_pdf: true` when explicitly requesting a no-attachment email.
-
-2. **Fix the `isLocalhost` check** — move it to a utility that checks the actual server environment rather than `window`:
+1. **Fix the `isLocalhost` check** — move it to a utility that checks the actual server environment rather than `window`:
 
    ```typescript
    // Use process.env.NODE_ENV or process.env.VERCEL instead of window check
    const isDev = process.env.NODE_ENV === 'development' || process.env.VERCEL !== '1';
    ```
 
-3. **Display the full email history** in the `EmailHistory` component — show all logs, not just the latest.
+2. **Display the full email history** in the `EmailHistory` component — show all logs, not just the latest.
 
-4. **Separate certificate_issued and email_sent in the activity feed** — use distinct icons/labels, or only show certificate issuances as activity items and keep email logs in a separate tab.
+3. **Separate certificate_issued and email_sent in the activity feed** — use distinct icons/labels, or only show certificate issuances as activity items and keep email logs in a separate tab.
 
 ---
 
@@ -420,3 +394,28 @@ The standalone `sendCertificateEmailAction` (called from the email history UI) d
 | 16 | Add confirmation dialogs for destructive actions | UI components | UX safety |
 | 17 | Reduce public verify API data exposure | `api/verify/[number]/route.ts` | Privacy |
 | 18 | Separate dashboard activity feed event types | `dashboard.service.ts` | UX clarity |
+
+---
+
+## 10. Changelog
+
+### 2026-07-25
+
+**Branch:** `fix/supabase-storage-provider`
+
+| Commit | Change | Files |
+|--------|--------|-------|
+| `1fb2b1c` | Replace `LocalStorageProvider` with `SupabaseStorageProvider` | `src/lib/storage/supabase.provider.ts` (new), `src/lib/storage/index.ts`, `src/features/certificates/server/certificate.service.ts`, `src/features/events/server/event.service.ts`, `src/app/api/storage/cleanup/route.ts` (new) |
+| `69913f1` | Include PDF attachment in certificate issuance emails | `src/features/certificates/server/certificate.service.ts` |
+
+**Summary of changes:**
+
+1. **Storage provider swap** — `LocalStorageProvider` (filesystem) replaced with `SupabaseStorageProvider` (Supabase Storage API). Uses `supabaseAdmin` for all operations. Bucket: `certificates`.
+
+2. **Cleanup on revocation** — `revokeCertificate` now deletes the stored file from Supabase Storage after marking the certificate as revoked.
+
+3. **Cleanup on event deletion** — `deleteEvent` now fetches all certificate `file_path` values for the event, deletes them from storage, then proceeds with the DB cascade delete.
+
+4. **Manual orphan cleanup** — `DELETE /api/storage/cleanup` endpoint lists all objects in the `certificates` bucket, cross-references with `certificates.file_path` in the DB, and removes any files with no matching certificate record. Admin-only.
+
+5. **Email PDF fix** — Removed `skip_pdf: true` from the `sendCertificateEmail` call in `issueCertificate`. Emails now include the PDF attachment when `send_email: true` is set during issuance.
