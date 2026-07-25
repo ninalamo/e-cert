@@ -119,6 +119,20 @@ export async function deleteEvent(
   if (!existing) {
     return { error: "Event not found" };
   }
+
+  const certs = await certRepo.findByEventId(id);
+  const filePaths = certs.map((c) => c.file_path).filter(Boolean) as string[];
+
+  if (filePaths.length > 0) {
+    try {
+      const { getStorageProvider } = await import("@/lib/storage");
+      const storage = getStorageProvider();
+      await Promise.all(filePaths.map((p) => storage.deleteFile(p)));
+    } catch (err) {
+      console.error(`[deleteEvent] Failed to delete stored files for event ${id}:`, err);
+    }
+  }
+
   await certRepo.deleteByEventId(id);
   const deleted = await eventRepo.delete(id);
   if (!deleted) {

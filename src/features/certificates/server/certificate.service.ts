@@ -249,6 +249,16 @@ export async function revokeCertificate(
     return { certificate: null, error: "Failed to revoke certificate" };
   }
 
+  if (existing.file_path) {
+    try {
+      const { getStorageProvider } = await import("@/lib/storage");
+      const storage = getStorageProvider();
+      await storage.deleteFile(existing.file_path);
+    } catch (err) {
+      console.error(`[revokeCertificate] Failed to delete stored file for ${id}:`, err);
+    }
+  }
+
   return { certificate };
 }
 
