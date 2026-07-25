@@ -70,9 +70,7 @@ export default function EmailTemplatePreviewDialog({
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-lg">Preview: {name}</DialogTitle>
-              <DialogDescription>
-                This is a preview with sample data. Placeholders have been replaced with example values.
-              </DialogDescription>
+              
             </div>
             <Button
               variant="ghost"
