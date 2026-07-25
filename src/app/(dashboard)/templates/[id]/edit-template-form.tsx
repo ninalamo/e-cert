@@ -15,6 +15,7 @@ export default function EditTemplateForm({ id }: { id: string }) {
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -56,23 +57,25 @@ export default function EditTemplateForm({ id }: { id: string }) {
         </div>
       )}
 
-      <TemplateForm
-        key={template.id}
-        templateType={template.type}
-        initialData={{
-          name: template.name,
-          description: template.description ?? "",
-          type: template.type,
-          html_content: template.html_content,
-          css_content: template.css_content ?? "",
-        }}
-        disabled={locked}
-        submitLabel="Save Changes"
-        onSubmit={async (data) => {
-          if (locked) return { template: null, error: "Template is locked." };
-          return await updateTemplateAction(id, data);
-        }}
-      />
+       <TemplateForm
+         key={template.id}
+         templateType={template.type}
+         initialData={{
+           name: template.name,
+           description: template.description ?? "",
+           type: template.type,
+           html_content: template.html_content,
+           css_content: template.css_content ?? "",
+         }}
+         disabled={locked}
+         submitLabel="Save Changes"
+         fullscreen={fullscreen}
+         onFullscreenChange={setFullscreen}
+         onSubmit={async (data) => {
+           if (locked) return { template: null, error: "Template is locked." };
+           return await updateTemplateAction(id, data);
+         }}
+       />
     </div>
   );
 }
