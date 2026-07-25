@@ -434,7 +434,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
     );
 
     return (
-      <div className={`flex gap-4 ${fullscreen ? "h-screen" : "h-[calc(100vh-200px)] min-h-[600px]"} `}>
+      <div className={`flex gap-4 ${fullscreen ? "fixed inset-0 z-50 bg-[var(--color-surface)] p-4" : "h-[calc(100vh-200px)] min-h-[600px]"}`}>
         {/* Sidebar collapse toggle */}
         <button
           type="button"
