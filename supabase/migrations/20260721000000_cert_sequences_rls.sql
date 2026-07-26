@@ -5,6 +5,7 @@
 ALTER TABLE certificate_sequences ENABLE ROW LEVEL SECURITY;
 
 -- Staff and admins can increment sequences (INSERT/UPDATE via the RPC)
+DROP POLICY IF EXISTS "Staff and admins manage certificate sequences" ON certificate_sequences;
 CREATE POLICY "Staff and admins manage certificate sequences" ON certificate_sequences
   FOR ALL USING (
     organization_id IN (
