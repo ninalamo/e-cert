@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
-import type { EmailBlock, EmailBlockType, AnyEmailBlock, HeaderBlockProps, TextBlockProps, ImageBlockProps, ButtonBlockProps, DividerBlockProps, SpacerBlockProps, ColumnsBlockProps, TableBlockProps } from "./types";
-import { blockToHtml, getBlockLabel, BLOCK_TYPE_ICONS, BLOCK_COLORS, BLOCK_TYPE_LABELS } from "./block-definitions";
+import Image from "next/image";
+import type { AnyEmailBlock, HeaderBlockProps, TextBlockProps, ImageBlockProps, ButtonBlockProps, DividerBlockProps, SpacerBlockProps, ColumnsBlockProps } from "./types";
+import { getBlockLabel, BLOCK_TYPE_ICONS, BLOCK_COLORS, BLOCK_TYPE_LABELS } from "./block-definitions";
 import {
   GripVerticalIcon,
   Trash2Icon,
@@ -12,7 +13,6 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   PlusIcon,
-  ChevronDownIcon,
 } from "lucide-react";
 
 interface BlockCanvasProps {
@@ -26,13 +26,6 @@ interface BlockCanvasProps {
   onToggleHidden: (id: string) => void;
   onToggleLocked: (id: string) => void;
   disabled?: boolean;
-}
-
-function moveArrayItem<T>(arr: T[], from: number, to: number): T[] {
-  const result = [...arr];
-  const [item] = result.splice(from, 1);
-  result.splice(to, 0, item);
-  return result;
 }
 
 export default function BlockCanvas({
@@ -331,7 +324,7 @@ function BlockPreview({ block }: { block: AnyEmailBlock }) {
       }
       return (
         <div style={{ textAlign: p.align }}>
-          <img
+          <Image
             src={p.src}
             alt={p.alt}
             style={{ maxWidth: `${p.width}%`, maxHeight: 60, objectFit: "contain" }}

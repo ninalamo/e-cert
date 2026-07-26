@@ -5,22 +5,7 @@ import { requireRole } from "@/lib/permissions";
 import type { AttendeeMetadata } from "@/types/event-attendee";
 
 export async function getAttendeesAction(eventId: string) {
-  const session = await requireRole(["admin", "staff"]);
   const attendees = await attendeeService.getAttendees(eventId);
-
-  const userOrgIds = attendees.map((a) => a.organization_id);
-  const uniqueOrgIds = [...new Set(userOrgIds)];
-
-  if (attendees.length > 0) {
-    const firstAttendeeOrg = attendees[0].organization_id;
-    const { createClient } = await import("@/lib/supabase/server");
-    const supabase = await createClient();
-    const { data: membership } = await supabase
-      .from("user_memberships")
-      .select("organization_id")
-      .eq("user_id", session.id)
-      .single();
-  }
 
   return attendees;
 }

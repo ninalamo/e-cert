@@ -13,14 +13,6 @@ import BlockProperties from "./block-properties";
 import { BLOCK_TYPE_ICONS, BLOCK_COLORS } from "./block-definitions";
 import { EMAIL_PLACEHOLDER_FIELDS } from "./types";
 import {
-  GripVerticalIcon,
-  Trash2Icon,
-  EyeIcon,
-  EyeOffIcon,
-  LockIcon,
-  LockOpenIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
   ChevronDownIcon,
   Undo2Icon,
   Redo2Icon,
@@ -92,16 +84,6 @@ function toggleBlockLocked(blocks: AnyEmailBlock[], id: string): AnyEmailBlock[]
 
 function updateBlockProps(blocks: AnyEmailBlock[], id: string, props: Record<string, unknown>): AnyEmailBlock[] {
   return blocks.map((b) => (b.id === id ? { ...b, props: { ...b.props, ...props } } : b));
-}
-
-function moveBlockUp(blocks: AnyEmailBlock[], index: number): AnyEmailBlock[] {
-  if (index <= 0) return blocks;
-  return moveArrayItem(blocks, index, index - 1);
-}
-
-function moveBlockDown(blocks: AnyEmailBlock[], index: number): AnyEmailBlock[] {
-  if (index >= blocks.length - 1) return blocks;
-  return moveArrayItem(blocks, index, index + 1);
 }
 
 const MAX_HISTORY = 50;
@@ -266,22 +248,6 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       [blocks, updateBlocks]
     );
 
-    const handleListMoveUp = useCallback(
-      (index: number) => {
-        const newBlocks = moveBlockUp(blocks, index);
-        updateBlocks(newBlocks);
-      },
-      [blocks, updateBlocks]
-    );
-
-    const handleListMoveDown = useCallback(
-      (index: number) => {
-        const newBlocks = moveBlockDown(blocks, index);
-        updateBlocks(newBlocks);
-      },
-      [blocks, updateBlocks]
-    );
-
     const handleListDragStart = useCallback((id: string, e: React.DragEvent) => {
       e.dataTransfer.setData("text/plain", id);
       e.dataTransfer.effectAllowed = "move";
@@ -334,98 +300,12 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
       [selectedId]
     );
 
-    const handleBlockDragStart = useCallback(
-      (index: number, e: React.DragEvent) => {
-        if (disabled) return;
-        e.dataTransfer.setData("application/email-block-reorder", String(index));
-        e.dataTransfer.effectAllowed = "move";
-        setDraggedId(blocks[index].id);
-      },
-      [disabled, blocks]
-    );
-
-    const handleBlockDragOver = useCallback(
-      (index: number, e: React.DragEvent) => {
-        if (disabled) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = draggedId ? "move" : "copy";
-        setDragOverId(blocks[index].id);
-      },
-      [disabled, draggedId, blocks]
-    );
-
-    const handleBlockDrop = useCallback(
-      (index: number, e: React.DragEvent) => {
-        e.preventDefault();
-        if (disabled) return;
-
-        const reorderIndex = e.dataTransfer.getData("application/email-block-reorder");
-        const newBlockType = e.dataTransfer.getData("application/email-block-type") as EmailBlockType;
-
-        if (reorderIndex !== "") {
-          const from = parseInt(reorderIndex, 10);
-          if (!isNaN(from) && from !== index) {
-            handleMoveBlock(from, index > from ? index - 1 : index);
-          }
-        } else if (newBlockType) {
-          handleInsertBlock(newBlockType, index);
-        }
-
-        setDragOverId(null);
-        setDraggedId(null);
-      },
-      [disabled, handleMoveBlock, handleInsertBlock]
-    );
-
-    const handleBlockDragEnd = useCallback(() => {
-      setDragOverId(null);
-      setDraggedId(null);
-    }, []);
-
-    const handleCanvasDrop = useCallback(
-      (e: React.DragEvent) => {
-        e.preventDefault();
-        if (disabled) return;
-
-        const newBlockType = e.dataTransfer.getData("application/email-block-type") as EmailBlockType;
-        if (newBlockType) {
-          handleInsertBlock(newBlockType, blocks.length);
-        }
-        setDragOverId(null);
-        setDraggedId(null);
-      },
-      [disabled, blocks.length, handleInsertBlock]
-    );
-
-    const handleCanvasDragOver = useCallback(
-      (e: React.DragEvent) => {
-        if (disabled) return;
-        e.preventDefault();
-        if (draggedId === null) {
-          setDragOverId("canvas-end");
-        }
-      },
-      [disabled, draggedId]
-    );
-
-    const handleSidebarDrop = useCallback(
-      (e: React.DragEvent) => {
-        e.preventDefault();
-        if (disabled) return;
-        const newBlockType = e.dataTransfer.getData("application/email-block-type") as EmailBlockType;
-        if (newBlockType) {
-          handleInsertBlock(newBlockType, blocks.length);
-        }
-      },
-      [disabled, blocks.length, handleInsertBlock]
-    );
-
     const selectedBlock = useMemo(
       () => blocks.find((b) => b.id === selectedId) ?? null,
       [blocks, selectedId]
     );
 
-    const componentItems: ComponentsSidebarItem[] = blocks.map((block, index) => ({
+    const componentItems: ComponentsSidebarItem[] = blocks.map((block) => ({
       id: block.id,
       type: block.type,
       label: getBlockLabel(block),
@@ -614,12 +494,6 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
     );
   }
 );
-
-function isPlaceholderBlock(block: AnyEmailBlock): boolean {
-  if (block.type !== "text") return false;
-  const text = (block.props as { content: string }).content.replace(/<[^>]*>/g, "").trim();
-  return /^\{\{.+\}\}$/.test(text);
-}
 
 function getBlockLabel(block: AnyEmailBlock): string {
   switch (block.type) {

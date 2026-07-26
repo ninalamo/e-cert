@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { AUTH_PROCESS_LABELS, AUTH_PROCESS_PLACEHOLDERS } from "./email-placeholder-field";
 import type { AuthProcess } from "@/types/template";
@@ -18,7 +18,6 @@ interface AuthEmailEditorProps {
     html_content: string;
     auth_process: AuthProcess | null;
   }) => Promise<{ error?: string }>;
-  submitLabel: string;
   disabled?: boolean;
   lockProcess?: boolean;
   onPreview?: (html: string, name: string) => void;
@@ -134,13 +133,13 @@ function parseAuthTemplate(html: string): { title: string; message: string; butt
 export default function AuthEmailEditor({
   initialData,
   onSubmit,
-  submitLabel,
   disabled = false,
   lockProcess = false,
   onPreview,
 }: AuthEmailEditorProps) {
+  const description = initialData?.description ?? "";
+
   const [name, setName] = useState(initialData?.name ?? "");
-  const [description, setDescription] = useState(initialData?.description ?? "");
   const [authProcess, setAuthProcess] = useState<AuthProcess | null>(initialData?.auth_process ?? null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

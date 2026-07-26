@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import {
   getTemplateAction,
   updateTemplateAction,
@@ -16,7 +15,6 @@ import { SkeletonForm } from "@/components/ui/skeleton";
 import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
 
 export default function EditAuthEmailForm({ id }: { id: string }) {
-  const router = useRouter();
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -82,7 +80,6 @@ export default function EditAuthEmailForm({ id }: { id: string }) {
           auth_process: template.auth_process,
         }}
         lockProcess={true}
-        submitLabel="Save Changes"
         onPreview={(html, name) => {
           setPreviewContent(html);
           setPreviewName(name);

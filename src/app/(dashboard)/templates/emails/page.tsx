@@ -4,7 +4,7 @@ import TemplatesTable from "@/features/templates/components/templates-table";
 import { getEmailTemplatesWithLockStateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import { PlusIcon } from "lucide-react";
-import { SkeletonTemplateCard, SkeletonTable } from "@/components/ui/skeleton";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 async function EmailTemplatesContent() {
   const templates = await getEmailTemplatesWithLockStateAction(ORG_ID);

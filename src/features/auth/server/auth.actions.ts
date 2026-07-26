@@ -11,7 +11,6 @@ import {
   setSession,
   clearSession,
   createRefreshToken,
-  deleteRefreshToken,
   createResetToken,
   verifyResetToken,
   deleteResetToken,

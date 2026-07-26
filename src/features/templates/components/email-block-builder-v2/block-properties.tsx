@@ -13,7 +13,7 @@ import type {
   TableBlockProps,
 } from "./types";
 import { BLOCK_TYPE_LABELS } from "./block-definitions";
-import { EMAIL_PLACEHOLDER_FIELDS, PlaceholderKey } from "./types";
+import { EMAIL_PLACEHOLDER_FIELDS } from "./types";
 import { XIcon, ChevronDownIcon } from "lucide-react";
 
 interface BlockPropertiesProps {

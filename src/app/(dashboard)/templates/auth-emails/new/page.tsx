@@ -44,7 +44,7 @@ export default function NewAuthEmailPage() {
         <div>
           <h1 className="text-2xl font-bold text-red-600">Invalid Request</h1>
           <p className="text-muted-foreground text-sm">
-            No auth process specified. Please go back and click "Configure" on a process.
+            No auth process specified. Please go back and click &quot;Configure&quot; on a process.
           </p>
         </div>
       </div>
@@ -64,7 +64,6 @@ export default function NewAuthEmailPage() {
       <AuthEmailEditor
         initialData={{ name: "", description: "", html_content: "", auth_process: initialProcess }}
         lockProcess={true}
-        submitLabel="Save Template"
         onPreview={(html, name) => {
           setPreviewHtml(html);
           setPreviewName(name);

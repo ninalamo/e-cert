@@ -25,14 +25,12 @@ function VerifySearchInner() {
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setResult(null);
-    setSubmitted(true);
 
     try {
       const res = await fetch(`/api/verify/${encodeURIComponent(number)}`);
