@@ -62,17 +62,19 @@ export default function EmailTemplatePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-9xl max-h-[90vh] p-0">
         <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-lg">Preview: {name}</DialogTitle>
         </DialogHeader>
-        <div className="h-[calc(90vh-140px)] overflow-auto">
-          <iframe
-            srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{margin:0;padding:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f4f5;}table{max-width:100%;}img{max-width:100%;height:auto;}</style></head><body>${processedHtml}</body></html>`}
-            className="w-full h-full border-0 bg-white"
-            title={`Preview: ${name}`}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-          />
+        <div className="h-[calc(90vh-140px)] overflow-auto p-10 bg-gray-50 flex items-center justify-center">
+          <div className="w-full max-w-5xl bg-white rounded-lg shadow-lg">
+            <iframe
+              srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 64px; } table{max-width:100%;} img{max-width:100%;height:auto;} .email-container { max-width: 640px; width: 100%; margin: 0 auto; } @media (max-width: 640px) { .email-container { max-width: 100%; } }</style></head><body><div class="email-container">${processedHtml}</div></body></html>`}
+              className="w-full h-[800px] border-0 bg-white"
+              title={`Preview: ${name}`}
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            />
+          </div>
         </div>
       </DialogContent>
     </Dialog>
