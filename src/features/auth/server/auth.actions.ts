@@ -120,7 +120,6 @@ export async function register(data: RegisterInput) {
 
   const confirmToken = await createConfirmToken(user.id);
   await sendConfirmationEmail(data.email, confirmToken);
-  await sendWelcomeEmail(data.email, data.name);
 
   return { success: true };
 }
@@ -222,6 +221,7 @@ export async function confirmEmail(token: string) {
 
   if (user) {
     await sendEmailConfirmedEmail(user.email, user.name);
+    await sendWelcomeEmail(user.email, user.name);
   }
 
   return { success: true };
