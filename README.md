@@ -93,7 +93,44 @@ All authenticated users (any role) can access:
 | staff@lyceumalabang.edu.ph | password123 | staff |
 | participant@lyceumalabang.edu.ph | password123 | participant |
 
-Reseed via `PUT http://localhost:3000/api/health` (localhost only).
+Reseed via `PUT http://localhost:3000/api/health` (see [Health API](#health-api) below).
+
+---
+
+## Health API
+
+The health endpoint (`/api/health`) provides system status and seed user management.
+
+### Authentication
+
+All requests require the `x-health-password` header matching the `HEALTH_PASSWORD` environment variable.
+
+```bash
+curl -X GET http://localhost:3000/api/health -H "x-health-password: YOUR_PASSWORD"
+```
+
+### Endpoints
+
+| Method | Description | Response |
+|--------|-------------|----------|
+| `GET /api/health` | Returns system status and seed user details | `{ status, auth, users, missing }` |
+| `PUT /api/health` | Deletes then recreates seed users and memberships | `{ status, message, users }` |
+
+### Response Fields
+
+| Field | Description |
+|-------|-------------|
+| `status` | `"ok"` or `"degraded"` |
+| `auth` | `"up"` if Supabase Auth is reachable |
+| `users` | Array of seeded user details (email, name, role, timestamps) |
+| `missing` | Array of seed emails not found in Auth |
+
+### Errors
+
+| Status | Cause |
+|--------|-------|
+| `403` | Missing or invalid `x-health-password` header, or `HEALTH_PASSWORD` env var not set |
+| `500` | Supabase or database error |
 
 ---
 
