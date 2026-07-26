@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
 import { getCertificatePdfBuffer } from "@/features/certificates/server/certificate.service";
+import { getCurrentSession } from "@/lib/permissions";
 
 export async function GET(
   _request: NextRequest,
@@ -9,13 +10,12 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
+  const session = await getCurrentSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const supabase = await createClient();
   const certRepo = new CertificateRepository(supabase);
   const certificate = await certRepo.findById(id);
   if (!certificate) {

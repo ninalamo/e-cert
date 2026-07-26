@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { hashPassword } from "@/lib/auth";
 
 export const ORG_ID = "d4444444-4444-4444-4444-444444444444";
 export const SEED_PASSWORD = "password123";
@@ -15,44 +16,44 @@ export function getSeedAdmin() {
   if (!url || !key) {
     throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
   }
-  return createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  return createClient(url, key);
 }
 
 export async function deleteSeededUsers(admin = getSeedAdmin()) {
-  const { data } = await admin.auth.admin.listUsers();
-  const seededEmails = new Set(SEED_USERS.map((u) => u.email));
+  const seededEmails = SEED_USERS.map((u) => u.email);
 
-  for (const user of data.users) {
-    if (user.email && seededEmails.has(user.email)) {
-      await admin.auth.admin.deleteUser(user.id);
-    }
-  }
-
-  // Remove any leftover memberships for the fixed seed ids.
   await admin
     .from("user_memberships")
     .delete()
     .in("user_id", SEED_USERS.map((u) => u.id));
+
+  await admin
+    .from("users")
+    .delete()
+    .in("email", seededEmails);
 }
 
 export async function seedUsers(admin = getSeedAdmin()) {
+  const passwordHash = await hashPassword(SEED_PASSWORD);
+
   for (const user of SEED_USERS) {
-    const { data: list } = await admin.auth.admin.listUsers();
-    const existing = list.users.find((u) => u.email === user.email);
+    const { data: existing } = await admin
+      .from("users")
+      .select("id")
+      .eq("email", user.email)
+      .single();
+
     const userId = existing?.id ?? user.id;
 
     if (!existing) {
-      const { data, error } = await admin.auth.admin.createUser({
+      const { error } = await admin.from("users").insert({
         id: user.id,
         email: user.email,
-        password: SEED_PASSWORD,
-        email_confirm: true,
-        user_metadata: { name: user.name },
+        password_hash: passwordHash,
+        name: user.name,
+        email_confirmed_at: new Date().toISOString(),
       });
       if (error) throw new Error(`createUser ${user.email}: ${error.message}`);
-      void data;
     }
 
     const { error } = await admin.from("user_memberships").upsert(
