@@ -8,6 +8,41 @@
 -- 1. TABLES
 -- ============================================================
 
+CREATE TABLE IF NOT EXISTS users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  name TEXT,
+  email_confirmed_at TIMESTAMPTZ,
+  banned_until TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS email_confirmations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS organizations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -18,7 +53,7 @@ CREATE TABLE IF NOT EXISTS organizations (
 
 CREATE TABLE IF NOT EXISTS user_memberships (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   role TEXT NOT NULL DEFAULT 'participant' CHECK (role IN ('admin', 'staff', 'participant')),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -98,7 +133,7 @@ CREATE TABLE IF NOT EXISTS certificate_emails (
   sent_to TEXT NOT NULL,
   subject TEXT NOT NULL,
   sent_at TIMESTAMPTZ DEFAULT now(),
-  sent_by UUID REFERENCES auth.users(id),
+  sent_by UUID REFERENCES users(id),
   status TEXT DEFAULT 'sent',
   error_message TEXT
 );
@@ -117,6 +152,13 @@ CREATE TABLE IF NOT EXISTS certificate_sequences (
 -- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_resets_hash ON password_resets(token_hash);
+CREATE INDEX IF NOT EXISTS idx_email_confirmations_user ON email_confirmations(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_confirmations_hash ON email_confirmations(token_hash);
 CREATE INDEX IF NOT EXISTS idx_user_memberships_user_id ON user_memberships(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_memberships_org_id ON user_memberships(organization_id);
 CREATE INDEX IF NOT EXISTS idx_cert_templates_org ON certificate_templates(organization_id);
@@ -289,6 +331,12 @@ BEGIN
       BEFORE UPDATE ON event_attendees
       FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_users_updated_at') THEN
+    CREATE TRIGGER trg_users_updated_at
+      BEFORE UPDATE ON users
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
 END $$;
 
 -- ============================================================
@@ -296,6 +344,7 @@ END $$;
 -- ============================================================
 
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE certificate_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
@@ -311,7 +360,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read org' AND tablename = 'organizations') THEN
     CREATE POLICY "Members can read org" ON organizations
       FOR SELECT USING (
-        id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+        id IN (SELECT organization_id FROM user_memberships WHERE user_id = current_user_id())
       );
   END IF;
 
@@ -319,7 +368,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can read memberships' AND tablename = 'user_memberships') THEN
     CREATE POLICY "Users can read memberships" ON user_memberships
       FOR SELECT USING (
-        user_id = auth.uid()
+        user_id = current_user_id()
       );
   END IF;
 
@@ -328,7 +377,7 @@ BEGIN
       FOR INSERT WITH CHECK (
         organization_id IN (
           SELECT organization_id FROM user_memberships
-          WHERE user_id = auth.uid() AND role = 'admin'
+          WHERE user_id = current_user_id() AND role = 'admin'
         )
       );
   END IF;
@@ -338,9 +387,9 @@ BEGIN
       FOR DELETE USING (
         organization_id IN (
           SELECT organization_id FROM user_memberships
-          WHERE user_id = auth.uid() AND role = 'admin'
+          WHERE user_id = current_user_id() AND role = 'admin'
         )
-        AND user_id <> auth.uid()
+        AND user_id <> current_user_id()
       );
   END IF;
 
@@ -348,7 +397,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read templates' AND tablename = 'certificate_templates') THEN
     CREATE POLICY "Members can read templates" ON certificate_templates
       FOR SELECT USING (
-        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = current_user_id())
       );
   END IF;
 
@@ -357,7 +406,7 @@ BEGIN
       FOR ALL USING (
         organization_id IN (
           SELECT organization_id FROM user_memberships
-          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+          WHERE user_id = current_user_id() AND role IN ('admin', 'staff')
         )
       );
   END IF;
@@ -366,7 +415,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read events' AND tablename = 'events') THEN
     CREATE POLICY "Members can read events" ON events
       FOR SELECT USING (
-        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = current_user_id())
       );
   END IF;
 
@@ -375,7 +424,7 @@ BEGIN
       FOR ALL USING (
         organization_id IN (
           SELECT organization_id FROM user_memberships
-          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+          WHERE user_id = current_user_id() AND role IN ('admin', 'staff')
         )
       );
   END IF;
@@ -384,7 +433,7 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read attendees' AND tablename = 'event_attendees') THEN
     CREATE POLICY "Members can read attendees" ON event_attendees
       FOR SELECT USING (
-        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = current_user_id())
       );
   END IF;
 
@@ -393,7 +442,7 @@ BEGIN
       FOR ALL USING (
         organization_id IN (
           SELECT organization_id FROM user_memberships
-          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+          WHERE user_id = current_user_id() AND role IN ('admin', 'staff')
         )
       );
   END IF;
@@ -402,8 +451,8 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read org certificates' AND tablename = 'certificates') THEN
     CREATE POLICY "Members can read org certificates" ON certificates
       FOR SELECT USING (
-        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
-        OR recipient_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = current_user_id())
+        OR recipient_email = (SELECT email FROM users WHERE id = current_user_id())
       );
   END IF;
 
@@ -412,7 +461,7 @@ BEGIN
       FOR ALL USING (
         organization_id IN (
           SELECT organization_id FROM user_memberships
-          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+          WHERE user_id = current_user_id() AND role IN ('admin', 'staff')
         )
       );
   END IF;
@@ -423,7 +472,7 @@ BEGIN
       FOR ALL USING (
         organization_id IN (
           SELECT organization_id FROM user_memberships
-          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+          WHERE user_id = current_user_id() AND role IN ('admin', 'staff')
         )
       );
   END IF;
@@ -435,7 +484,7 @@ BEGIN
         certificate_id IN (
           SELECT id FROM certificates WHERE organization_id IN (
             SELECT organization_id FROM user_memberships
-            WHERE user_id = auth.uid() AND role = 'admin'
+            WHERE user_id = current_user_id() AND role = 'admin'
           )
         )
       );
@@ -445,8 +494,6 @@ END $$;
 -- ============================================================
 -- 6. GRANTS
 -- ============================================================
-
-GRANT SELECT ON auth.users TO authenticated;
 
 -- ============================================================
 -- 7. SEED DATA (idempotent)

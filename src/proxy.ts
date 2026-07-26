@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { ORG_ID } from "@/lib/org";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { verifyToken } from "@/lib/auth";
 
 const RATE_LIMITS: { pattern: RegExp; maxRequests: number; windowMs: number }[] = [
   { pattern: /^\/api\/verify\//, maxRequests: 30, windowMs: 60_000 },
@@ -48,6 +49,13 @@ function isCsrfSafe(request: NextRequest): boolean {
   return false;
 }
 
+function supabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
 export async function proxy(request: NextRequest) {
   if (!isCsrfSafe(request)) {
     return NextResponse.json(
@@ -77,77 +85,43 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  let supabaseResponse = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const sessionToken = request.cookies.get("session")?.value;
+  const jwtPayload = sessionToken ? await verifyToken(sessionToken) : null;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return supabaseResponse;
-  }
+  if (jwtPayload) {
+    const db = supabaseAdmin();
+    if (db) {
+      const { data: membership } = await db
+        .from("user_memberships")
+        .select("role")
+        .eq("user_id", jwtPayload.sub)
+        .eq("organization_id", ORG_ID)
+        .single();
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
+      request.headers.set("x-user-id", jwtPayload.sub);
+      request.headers.set("x-user-email", jwtPayload.email ?? "");
+      request.headers.set("x-user-name", jwtPayload.name ?? "");
+      request.headers.set("x-user-role", membership?.role ?? "participant");
     }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    request.headers.set("x-user-id", user.id);
-    request.headers.set("x-user-email", user.email ?? "");
-    request.headers.set("x-user-name", (user.user_metadata?.name as string) ?? "");
-
-    const { data: membership } = await supabase
-      .from("user_memberships")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("organization_id", ORG_ID)
-      .single();
-
-    request.headers.set("x-user-role", membership?.role ?? "participant");
   }
 
   const isProtectedRoute =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/certificates") ||
-    request.nextUrl.pathname.startsWith("/templates") ||
-    request.nextUrl.pathname.startsWith("/users");
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/certificates") ||
+    pathname.startsWith("/templates") ||
+    pathname.startsWith("/users");
 
-  const isParticipantRoute =
-    request.nextUrl.pathname.startsWith("/my");
+  const isParticipantRoute = pathname.startsWith("/my");
 
-  if (isProtectedRoute && !user) {
+  if ((isProtectedRoute || isParticipantRoute) && !jwtPayload) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (isParticipantRoute && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
-
-  return supabaseResponse;
+  return response;
 }
 
 export const config = {

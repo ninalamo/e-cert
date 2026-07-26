@@ -1,15 +1,39 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createClient } from "@supabase/supabase-js";
 import { ORG_ID } from "@/lib/org";
 import { DEFAULT_ROLE, getHomePathForRole, getCurrentSession } from "@/lib/permissions";
 import { loginSchema, type RegisterInput } from "../schemas/auth.schema";
+import {
+  hashPassword,
+  comparePassword,
+  setSession,
+  clearSession,
+  createRefreshToken,
+  deleteRefreshToken,
+  createResetToken,
+  verifyResetToken,
+  deleteResetToken,
+  createConfirmToken,
+  verifyConfirmToken,
+} from "@/lib/auth";
+import {
+  sendConfirmationEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+} from "@/lib/email/auth-emails";
+
+function supabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Missing Supabase env vars");
+  return createClient(url, key);
+}
 
 export async function loginAction(
   _prev: { error?: string; success?: boolean; redirectTo?: string } | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<{ error?: string; success?: boolean; redirectTo?: string }> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -19,20 +43,28 @@ export async function loginAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const supabase = await createClient();
+  const db = supabaseAdmin();
+  const { data: user, error: fetchError } = await db
+    .from("users")
+    .select("id, email, name, password_hash, banned_until")
+    .eq("email", parsed.data.email)
+    .single();
 
-  const { data: result, error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
-    password: parsed.data.password,
-  });
-
-  if (error) {
-    return { error: error.message };
+  if (fetchError || !user) {
+    return { error: "Invalid email or password" };
   }
 
-  if (!result.session) {
-    return { error: "Unable to establish session" };
+  if (user.banned_until && new Date(user.banned_until) > new Date()) {
+    return { error: "Account is banned" };
   }
+
+  const valid = await comparePassword(parsed.data.password, user.password_hash);
+  if (!valid) {
+    return { error: "Invalid email or password" };
+  }
+
+  await setSession({ sub: user.id, email: user.email, name: user.name });
+  await createRefreshToken(user.id);
 
   const session = await getCurrentSession();
   const redirectTo = session ? getHomePathForRole(session.role) : "/dashboard";
@@ -41,77 +73,115 @@ export async function loginAction(
 }
 
 export async function register(data: RegisterInput) {
-  const supabase = await createClient();
+  const db = supabaseAdmin();
 
-  const { data: result, error } = await supabase.auth.signUp({
-    email: data.email,
-    password: data.password,
-    options: {
-      data: {
-        name: data.name,
-      },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/auth/callback`,
-    },
+  const { data: existing } = await db
+    .from("users")
+    .select("id")
+    .eq("email", data.email)
+    .single();
+
+  if (existing) {
+    return { error: "Email already registered" };
+  }
+
+  const passwordHash = await hashPassword(data.password);
+
+  const { data: user, error: insertError } = await db
+    .from("users")
+    .insert({
+      email: data.email,
+      password_hash: passwordHash,
+      name: data.name,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !user) {
+    return { error: insertError?.message ?? "Failed to create account" };
+  }
+
+  await db.from("user_memberships").insert({
+    user_id: user.id,
+    organization_id: ORG_ID,
+    role: DEFAULT_ROLE,
   });
 
-  if (error) {
-    return { error: error.message };
-  }
-
-  if (result.user) {
-    await supabaseAdmin.from("user_memberships").insert({
-      user_id: result.user.id,
-      organization_id: ORG_ID,
-      role: DEFAULT_ROLE,
-    });
-  }
+  const confirmToken = await createConfirmToken(user.id);
+  await sendConfirmationEmail(data.email, confirmToken);
+  await sendWelcomeEmail(data.email, data.name);
 
   redirect(getHomePathForRole(DEFAULT_ROLE));
 }
 
 export async function logout() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  await clearSession();
   redirect("/login");
 }
 
-export async function forgotPassword(data: { email: string }) {
-  const supabase = await createClient();
+export async function forgotPassword(data: { email: string }): Promise<{ error?: string; success?: boolean }> {
+  const db = supabaseAdmin();
 
-  const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/update-password`,
-  });
+  const { data: user } = await db
+    .from("users")
+    .select("id")
+    .eq("email", data.email)
+    .single();
 
-  if (error) {
-    return { error: error.message };
+  if (!user) {
+    return { success: true };
   }
+
+  const resetToken = await createResetToken(user.id);
+  await sendPasswordResetEmail(data.email, resetToken);
 
   return { success: true };
 }
 
 export async function updatePassword(data: { password: string }) {
-  const supabase = await createClient();
+  const session = await getCurrentSession();
+  if (!session) {
+    return { error: "Not authenticated" };
+  }
 
-  const { error } = await supabase.auth.updateUser({
-    password: data.password,
-  });
+  const db = supabaseAdmin();
+  const passwordHash = await hashPassword(data.password);
+
+  const { error } = await db
+    .from("users")
+    .update({ password_hash: passwordHash })
+    .eq("id", session.id);
 
   if (error) {
     return { error: error.message };
   }
 
-  const session = await getCurrentSession();
-  const redirectTo = session ? getHomePathForRole(session.role) : "/login";
-
+  const redirectTo = getHomePathForRole(session.role);
   return { success: true, redirectTo };
 }
 
 export async function updateEmail(data: { email: string }) {
-  const supabase = await createClient();
+  const session = await getCurrentSession();
+  if (!session) {
+    return { error: "Not authenticated" };
+  }
 
-  const { error } = await supabase.auth.updateUser({
-    email: data.email,
-  });
+  const db = supabaseAdmin();
+
+  const { data: existing } = await db
+    .from("users")
+    .select("id")
+    .eq("email", data.email)
+    .single();
+
+  if (existing) {
+    return { error: "Email already in use" };
+  }
+
+  const { error } = await db
+    .from("users")
+    .update({ email: data.email })
+    .eq("id", session.id);
 
   if (error) {
     return { error: error.message };
@@ -120,8 +190,50 @@ export async function updateEmail(data: { email: string }) {
   return { success: true };
 }
 
+export async function confirmEmail(token: string) {
+  const result = await verifyConfirmToken(token);
+  if (!result) {
+    return { error: "Invalid or expired confirmation link" };
+  }
+
+  const db = supabaseAdmin();
+  await db
+    .from("users")
+    .update({ email_confirmed_at: new Date().toISOString() })
+    .eq("id", result.userId);
+
+  return { success: true };
+}
+
+export async function resetPassword(token: string, password: string) {
+  const result = await verifyResetToken(token);
+  if (!result) {
+    return { error: "Invalid or expired reset link" };
+  }
+
+  const db = supabaseAdmin();
+  const passwordHash = await hashPassword(password);
+
+  await db
+    .from("users")
+    .update({ password_hash: passwordHash })
+    .eq("id", result.userId);
+
+  await deleteResetToken(token);
+
+  return { success: true };
+}
+
 export async function getCurrentUser() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
+  const session = await getCurrentSession();
+  if (!session) return null;
+
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from("users")
+    .select("id, email, name, created_at")
+    .eq("id", session.id)
+    .single();
+
+  return data;
 }

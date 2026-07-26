@@ -1,7 +1,6 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
-import { ORG_ID } from "@/lib/org";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type { UserRole } from "@/types/organization";
 
 export type { UserRole };
@@ -19,9 +18,8 @@ export interface SessionUser {
 export const DEFAULT_ROLE: UserRole = "participant";
 
 /**
- * Resolve the current authenticated user and their role from user_memberships
- * for the single organization. Returns null if not authenticated or has no
- * membership (shouldn't normally happen since registration grants one).
+ * Resolve the current authenticated user and their role from proxy-injected
+ * headers. Returns null if not authenticated.
  */
 export async function getCurrentSession(): Promise<SessionUser | null> {
   const hdrs = await headers();
@@ -39,27 +37,7 @@ export async function getCurrentSession(): Promise<SessionUser | null> {
     };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: membership } = await supabase
-    .from("user_memberships")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("organization_id", ORG_ID)
-    .single();
-
-  const role = (membership?.role as UserRole) ?? DEFAULT_ROLE;
-
-  return {
-    id: user.id,
-    email: user.email ?? null,
-    name: (user.user_metadata?.name as string | undefined) ?? null,
-    role,
-  };
+  return null;
 }
 
 /**
@@ -103,8 +81,6 @@ export function canManageUsers(role: UserRole): boolean {
 export function canViewAllCertificates(role: UserRole): boolean {
   return role === "admin" || role === "staff";
 }
-
-import { redirect } from "next/navigation";
 
 /**
  * Guard for server actions / pages. Redirects guests to /login.
