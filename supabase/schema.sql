@@ -139,6 +139,21 @@ CREATE INDEX IF NOT EXISTS idx_certificates_email ON certificates(recipient_emai
 CREATE INDEX IF NOT EXISTS idx_certificate_emails_cert ON certificate_emails(certificate_id);
 CREATE INDEX IF NOT EXISTS idx_cert_sequences_org ON certificate_sequences(organization_id);
 
+-- Deduplicate before creating the unique index
+DELETE FROM certificates
+WHERE id IN (
+  SELECT id FROM (
+    SELECT id,
+      ROW_NUMBER() OVER (
+        PARTITION BY event_id, recipient_email
+        ORDER BY created_at ASC
+      ) AS rn
+    FROM certificates
+    WHERE event_id IS NOT NULL
+  ) dup
+  WHERE dup.rn > 1
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS certificates_event_email_unique
   ON certificates (event_id, recipient_email)
   WHERE event_id IS NOT NULL;
