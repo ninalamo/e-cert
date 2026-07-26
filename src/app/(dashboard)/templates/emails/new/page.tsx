@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { createEmailTemplateAction } from "@/features/templates/server/template.actions";
+import { createEmailTemplateAction, createAuthTemplateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
 
@@ -19,7 +19,7 @@ export default function NewEmailTemplatePage() {
       <div>
         <h1 className="text-2xl font-bold text-brand-700">New Email Template</h1>
         <p className="text-muted-foreground text-sm">
-          Create a new email template for certificate notifications
+          Create a new email template for certificate notifications or authentication emails
         </p>
       </div>
       <TemplateForm
@@ -33,6 +33,16 @@ export default function NewEmailTemplatePage() {
           setPreviewOpen(true);
         }}
         onSubmit={async (data) => {
+          if (data.type === 'auth' && data.auth_process) {
+            return await createAuthTemplateAction({
+              organization_id: ORG_ID,
+              name: data.name,
+              description: data.description,
+              html_content: data.html_content,
+              css_content: data.css_content,
+              auth_process: data.auth_process,
+            });
+          }
           return await createEmailTemplateAction({
             organization_id: ORG_ID,
             name: data.name,

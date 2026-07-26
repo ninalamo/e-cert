@@ -39,6 +39,10 @@ export default function EditTemplateForm({ id }: { id: string }) {
     return <p className="text-red-600">Template not found.</p>;
   }
 
+  if (template.type === 'auth') {
+    return <p className="text-red-600">Auth templates cannot be edited here. Use the Email Templates page.</p>;
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -59,11 +63,11 @@ export default function EditTemplateForm({ id }: { id: string }) {
 
        <TemplateForm
          key={template.id}
-         templateType={template.type}
+         templateType={template.type as 'certificate' | 'email'}
          initialData={{
            name: template.name,
            description: template.description ?? "",
-           type: template.type,
+           type: template.type as 'certificate' | 'email',
            html_content: template.html_content,
            css_content: template.css_content ?? "",
          }}

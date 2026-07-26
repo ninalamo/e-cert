@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
-  getEmailTemplateAction,
+  getTemplateAction,
   updateTemplateAction,
   isEmailTemplateLockedAction,
 } from "@/features/templates/server/template.actions";
@@ -27,7 +27,7 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const data = await getEmailTemplateAction(id);
+      const data = await getTemplateAction(id);
       if (!active) return;
       setTemplate(data);
       const isLocked = await isEmailTemplateLockedAction(id);
@@ -71,6 +71,8 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
           description: template.description ?? "",
           html_content: template.html_content,
           css_content: template.css_content ?? "",
+          type: template.type === 'auth' ? 'auth' : 'email',
+          auth_process: template.auth_process,
         }}
         disabled={locked}
         submitLabel="Save Changes"

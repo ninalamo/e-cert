@@ -66,13 +66,18 @@ CREATE TABLE IF NOT EXISTS certificate_templates (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
-  type TEXT NOT NULL DEFAULT 'certificate' CHECK (type IN ('certificate', 'email')),
+  type TEXT NOT NULL DEFAULT 'certificate' CHECK (type IN ('certificate', 'email', 'auth')),
+  auth_process TEXT,
   html_content TEXT NOT NULL DEFAULT '',
   css_content TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(organization_id, name)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_templates_auth_process 
+  ON certificate_templates(auth_process) 
+  WHERE auth_process IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS events (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

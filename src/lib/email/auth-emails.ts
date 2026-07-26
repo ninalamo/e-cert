@@ -1,4 +1,6 @@
 import { getEmailProvider } from "./index";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { AuthProcess } from "@/types/template";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 const ORG_NAME = "Lyceum Of Alabang";
@@ -41,6 +43,40 @@ function wrap(title: string, body: string): string {
 </html>`;
 }
 
+async function getAuthTemplate(authProcess: AuthProcess): Promise<string | null> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("certificate_templates")
+      .select("html_content")
+      .eq("type", "auth")
+      .eq("auth_process", authProcess)
+      .single();
+
+    if (error || !data) return null;
+    return data.html_content;
+  } catch {
+    return null;
+  }
+}
+
+function renderAuthTemplate(
+  html: string,
+  data: {
+    user_name?: string;
+    org_name: string;
+    login_url?: string;
+    reset_url?: string;
+    confirm_url?: string;
+  }
+): string {
+  return html
+    .replace(/\{\{user_name\}\}/g, data.user_name ?? "")
+    .replace(/\{\{org_name\}\}/g, data.org_name)
+    .replace(/\{\{login_url\}\}/g, data.login_url ?? "")
+    .replace(/\{\{reset_url\}\}/g, data.reset_url ?? "")
+    .replace(/\{\{confirm_url\}\}/g, data.confirm_url ?? "");
+}
+
 export async function sendPasswordResetEmail(
   email: string,
   resetToken: string,
@@ -48,30 +84,40 @@ export async function sendPasswordResetEmail(
   const url = `${BASE_URL}/update-password?token=${resetToken}`;
   const provider = getEmailProvider();
 
-  const html = wrap("Reset Your Password", `
-    <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">Reset Your Password</h2>
-    <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
-      We received a request to reset your password. Click the button below to choose a new password.
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-      <tr>
-        <td align="center">
-          <a href="${url}" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
-            Reset Password
-          </a>
-        </td>
-      </tr>
-    </table>
-    <p style="margin:0 0 8px;font-size:13px;color:#6b7280;line-height:1.6;">
-      Or copy and paste this link into your browser:
-    </p>
-    <p style="margin:0;font-size:13px;color:#4f39f6;word-break:break-all;">
-      <a href="${url}" style="color:#4f39f6;">${url}</a>
-    </p>
-    <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
-      This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.
-    </p>
-  `);
+  const customTemplate = await getAuthTemplate("forgot_password");
+  let html: string;
+
+  if (customTemplate) {
+    html = renderAuthTemplate(customTemplate, {
+      org_name: ORG_NAME,
+      reset_url: url,
+    });
+  } else {
+    html = wrap("Reset Your Password", `
+      <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">Reset Your Password</h2>
+      <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
+        We received a request to reset your password. Click the button below to choose a new password.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+        <tr>
+          <td align="center">
+            <a href="${url}" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
+              Reset Password
+            </a>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 8px;font-size:13px;color:#6b7280;line-height:1.6;">
+        Or copy and paste this link into your browser:
+      </p>
+      <p style="margin:0;font-size:13px;color:#4f39f6;word-break:break-all;">
+        <a href="${url}" style="color:#4f39f6;">${url}</a>
+      </p>
+      <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
+        This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.
+      </p>
+    `);
+  }
 
   await provider.sendEmail({
     to: email,
@@ -88,30 +134,40 @@ export async function sendConfirmationEmail(
   const url = `${BASE_URL}/auth/confirm?token=${confirmToken}`;
   const provider = getEmailProvider();
 
-  const html = wrap("Confirm Your Email", `
-    <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">Confirm Your Email</h2>
-    <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
-      Thanks for signing up! Please confirm your email address to get started.
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-      <tr>
-        <td align="center">
-          <a href="${url}" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
-            Confirm Email
-          </a>
-        </td>
-      </tr>
-    </table>
-    <p style="margin:0 0 8px;font-size:13px;color:#6b7280;line-height:1.6;">
-      Or copy and paste this link into your browser:
-    </p>
-    <p style="margin:0;font-size:13px;color:#4f39f6;word-break:break-all;">
-      <a href="${url}" style="color:#4f39f6;">${url}</a>
-    </p>
-    <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
-      This link expires in 24 hours. If you didn't create an account, you can safely ignore this email.
-    </p>
-  `);
+  const customTemplate = await getAuthTemplate("registration");
+  let html: string;
+
+  if (customTemplate) {
+    html = renderAuthTemplate(customTemplate, {
+      org_name: ORG_NAME,
+      confirm_url: url,
+    });
+  } else {
+    html = wrap("Confirm Your Email", `
+      <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">Confirm Your Email</h2>
+      <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
+        Thanks for signing up! Please confirm your email address to get started.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+        <tr>
+          <td align="center">
+            <a href="${url}" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
+              Confirm Email
+            </a>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 8px;font-size:13px;color:#6b7280;line-height:1.6;">
+        Or copy and paste this link into your browser:
+      </p>
+      <p style="margin:0;font-size:13px;color:#4f39f6;word-break:break-all;">
+        <a href="${url}" style="color:#4f39f6;">${url}</a>
+      </p>
+      <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">
+        This link expires in 24 hours. If you didn't create an account, you can safely ignore this email.
+      </p>
+    `);
+  }
 
   await provider.sendEmail({
     to: email,
@@ -126,32 +182,44 @@ export async function sendWelcomeEmail(
   name: string | null,
 ): Promise<void> {
   const provider = getEmailProvider();
-  const greeting = name ? `Hi ${name}` : "Hi there";
+  const loginUrl = `${BASE_URL}/login`;
 
-  const html = wrap("Welcome!", `
-    <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">Welcome to ${ORG_NAME}!</h2>
-    <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
-      ${greeting}, your account has been created successfully. You can now log in to access your certificates and profile.
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-      <tr>
-        <td align="center">
-          <a href="${BASE_URL}/login" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
-            Go to Login
-          </a>
-        </td>
-      </tr>
-    </table>
-    <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">
-      If you have any questions, feel free to reach out to our support team.
-    </p>
-  `);
+  const customTemplate = await getAuthTemplate("welcome");
+  let html: string;
+
+  if (customTemplate) {
+    html = renderAuthTemplate(customTemplate, {
+      user_name: name ?? undefined,
+      org_name: ORG_NAME,
+      login_url: loginUrl,
+    });
+  } else {
+    const greeting = name ? `Hi ${name}` : "Hi there";
+    html = wrap("Welcome!", `
+      <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">Welcome to ${ORG_NAME}!</h2>
+      <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
+        ${greeting}, your account has been created successfully. You can now log in to access your certificates and profile.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+        <tr>
+          <td align="center">
+            <a href="${loginUrl}" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
+              Go to Login
+            </a>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">
+        If you have any questions, feel free to reach out to our support team.
+      </p>
+    `);
+  }
 
   await provider.sendEmail({
     to: email,
     subject: `Welcome to ${ORG_NAME}!`,
     html,
-    text: `Welcome to ${ORG_NAME}! Log in at: ${BASE_URL}/login`,
+    text: `Welcome to ${ORG_NAME}! Log in at: ${loginUrl}`,
   });
 }
 
@@ -160,31 +228,43 @@ export async function sendEmailConfirmedEmail(
   name: string | null,
 ): Promise<void> {
   const provider = getEmailProvider();
-  const greeting = name ? `Hi ${name}` : "Hi there";
+  const loginUrl = `${BASE_URL}/login`;
 
-  const html = wrap("Email Confirmed", `
-    <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">Email Confirmed!</h2>
-    <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
-      ${greeting}, your email has been confirmed successfully. You can now log in to access your certificates and profile.
-    </p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-      <tr>
-        <td align="center">
-          <a href="${BASE_URL}/login" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
-            Go to Login
-          </a>
-        </td>
-      </tr>
-    </table>
-    <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">
-      If you have any questions, feel free to reach out to our support team.
-    </p>
-  `);
+  const customTemplate = await getAuthTemplate("confirm_email");
+  let html: string;
+
+  if (customTemplate) {
+    html = renderAuthTemplate(customTemplate, {
+      user_name: name ?? undefined,
+      org_name: ORG_NAME,
+      login_url: loginUrl,
+    });
+  } else {
+    const greeting = name ? `Hi ${name}` : "Hi there";
+    html = wrap("Email Confirmed", `
+      <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">Email Confirmed!</h2>
+      <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
+        ${greeting}, your email has been confirmed successfully. You can now log in to access your certificates and profile.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+        <tr>
+          <td align="center">
+            <a href="${loginUrl}" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
+              Go to Login
+            </a>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">
+        If you have any questions, feel free to reach out to our support team.
+      </p>
+    `);
+  }
 
   await provider.sendEmail({
     to: email,
     subject: `Email Confirmed — ${ORG_NAME}`,
     html,
-    text: `Your email has been confirmed. Log in at: ${BASE_URL}/login`,
+    text: `Your email has been confirmed. Log in at: ${loginUrl}`,
   });
 }

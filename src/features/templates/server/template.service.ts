@@ -1,5 +1,5 @@
 import { CertificateTemplateRepository } from "./template.repository";
-import type { CertificateTemplate } from "@/types/template";
+import type { CertificateTemplate, AuthProcess } from "@/types/template";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as eventRepo from "@/features/events/server/event.repository";
@@ -117,6 +117,17 @@ export async function getEmailTemplates(
   );
 }
 
+export async function getAuthTemplates(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<CertificateTemplate[]> {
+  return repo(client ?? (await createClient())).findByOrganizationIdAndType(
+    organizationId,
+    'auth',
+    TEMPLATE_LISTING_COLUMNS
+  );
+}
+
 export async function getTemplate(
   id: string,
   client?: SupabaseClient
@@ -134,7 +145,7 @@ export async function getEmailTemplate(
 }
 
 export async function createTemplate(
-  data: Pick<CertificateTemplate, "organization_id" | "name" | "description" | "html_content" | "css_content"> & { type?: 'certificate' | 'email' },
+  data: Pick<CertificateTemplate, "organization_id" | "name" | "description" | "html_content" | "css_content"> & { type?: 'certificate' | 'email' | 'auth'; auth_process?: AuthProcess },
   client?: SupabaseClient
 ): Promise<{ template: CertificateTemplate | null; error?: string }> {
   const r = repo(client ?? (await createClient()));
@@ -143,9 +154,17 @@ export async function createTemplate(
     return { template: null, error: `A template named "${data.name}" already exists. Please choose a different name.` };
   }
 
+  if (data.type === 'auth' && data.auth_process) {
+    const existing = await r.findByAuthProcess(data.auth_process);
+    if (existing) {
+      return { template: null, error: `A template for "${data.auth_process}" already exists. Each auth process can only have one template.` };
+    }
+  }
+
   const { data: template, error } = await r.create({
     ...data,
     type: data.type ?? 'certificate',
+    auth_process: data.auth_process ?? null,
   } as Partial<CertificateTemplate>);
   if (!template) {
     return { template: null, error: error ?? "Failed to create template" };
@@ -160,9 +179,23 @@ export async function createEmailTemplate(
   return createTemplate({ ...data, type: 'email' }, client);
 }
 
+export async function createAuthTemplate(
+  data: Pick<CertificateTemplate, "organization_id" | "name" | "description" | "html_content" | "css_content"> & { auth_process: AuthProcess },
+  client?: SupabaseClient
+): Promise<{ template: CertificateTemplate | null; error?: string }> {
+  return createTemplate({ ...data, type: 'auth', auth_process: data.auth_process }, client);
+}
+
+export async function getAuthTemplateByProcess(
+  authProcess: AuthProcess,
+  client?: SupabaseClient
+): Promise<CertificateTemplate | null> {
+  return repo(client ?? (await createClient())).findByAuthProcess(authProcess);
+}
+
 export async function updateTemplate(
   id: string,
-  data: Partial<Pick<CertificateTemplate, "name" | "description" | "html_content" | "css_content">>,
+  data: Partial<Pick<CertificateTemplate, "name" | "description" | "html_content" | "css_content" | "type" | "auth_process">> & { type?: 'certificate' | 'email' | 'auth' },
   client?: SupabaseClient
 ): Promise<{ template: CertificateTemplate | null; error?: string }> {
   const r = repo(client ?? (await createClient()));
@@ -175,6 +208,13 @@ export async function updateTemplate(
     const duplicate = await r.findByOrganizationIdAndName(existing.organization_id, data.name);
     if (duplicate && duplicate.id !== id) {
       return { template: null, error: `A template named "${data.name}" already exists. Please choose a different name.` };
+    }
+  }
+
+  if (data.type === 'auth' && data.auth_process && data.auth_process !== existing.auth_process) {
+    const existingAuth = await r.findByAuthProcess(data.auth_process);
+    if (existingAuth && existingAuth.id !== id) {
+      return { template: null, error: `A template for "${data.auth_process}" already exists. Each auth process can only have one template.` };
     }
   }
 
