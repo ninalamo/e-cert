@@ -14,24 +14,12 @@ export async function GET(
   const { data: certificate, error } = await supabaseAdmin
     .from("certificates")
     .select(`
-      id,
       certificate_number,
-      recipient_name,
       issued_at,
       expires_at,
       revoked_at,
-      events (
-        name,
-        description,
-        event_date,
-        location,
-        organizer,
-        certificate_title
-      ),
-      organizations (
-        name,
-        slug
-      )
+      events ( name ),
+      organizations ( name )
     `)
     .eq("certificate_number", number)
     .single();
@@ -51,39 +39,16 @@ export async function GET(
     status = "expired";
   }
 
-  const event = certificate.events as unknown as {
-    name: string;
-    description: string | null;
-    event_date: string | null;
-    location: string | null;
-    organizer: string | null;
-    certificate_title: string | null;
-  } | null;
-
-  const org = certificate.organizations as unknown as {
-    name: string;
-    slug: string;
-  } | null;
+  const event = certificate.events as unknown as { name: string } | null;
+  const org = certificate.organizations as unknown as { name: string } | null;
 
   return NextResponse.json({
     valid: true,
-    id: certificate.id,
     certificate_number: certificate.certificate_number,
-    recipient_name: certificate.recipient_name,
     issued_date: certificate.issued_at,
     valid_until: certificate.expires_at,
     status,
     organization: org ? { name: org.name } : null,
-    event_name: event?.name,
-    event: event
-      ? {
-        name: event.name,
-        description: event.description,
-        event_date: event.event_date,
-        location: event.location,
-        organizer: event.organizer,
-        certificate_title: event.certificate_title,
-      }
-      : null,
+    event_name: event?.name ?? null,
   }, { headers: CACHE_HEADERS });
 }

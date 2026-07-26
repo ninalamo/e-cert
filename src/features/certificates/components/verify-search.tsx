@@ -6,9 +6,7 @@ import { Suspense } from "react";
 
 export interface VerificationResult {
   valid: boolean;
-  id?: string;
   certificate_number?: string;
-  recipient_name?: string;
   issued_date?: string;
   valid_until?: string;
   status?: string;
@@ -16,14 +14,7 @@ export interface VerificationResult {
   organization?: {
     name: string;
   } | null;
-  event?: {
-    name: string;
-    description: string | null;
-    event_date: string | null;
-    location: string | null;
-    organizer: string | null;
-    certificate_title: string | null;
-  } | null;
+  event_name?: string | null;
 }
 
 function VerifySearchInner() {
@@ -171,46 +162,11 @@ function VerifySearchInner() {
                 <span className="font-mono font-medium text-primary text-sm break-all text-right max-w-[65%]">{result.certificate_number}</span>
               </div>
 
-              <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
-                <span className="text-sm text-tertiary">Recipient</span>
-                <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.recipient_name}</span>
-              </div>
-
-              {result.event && (
-                <>
-                  <div className="pt-2 border-t border-border" />
-                  <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-brand/5 border-border/50">
-                    <span className="text-sm font-medium text-brand">Event Details</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
-                    <span className="text-sm text-tertiary">Event</span>
-                    <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.event.name}</span>
-                  </div>
-                  {result.event.event_date && (
-                    <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
-                      <span className="text-sm text-tertiary">Event Date</span>
-                      <span className="font-medium text-primary text-sm">{formatDate(result.event.event_date)}</span>
-                    </div>
-                  )}
-                  {result.event.location && (
-                    <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
-                      <span className="text-sm text-tertiary">Location</span>
-                      <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.event.location}</span>
-                    </div>
-                  )}
-                  {result.event.organizer && (
-                    <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
-                      <span className="text-sm text-tertiary">Organizer</span>
-                      <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.event.organizer}</span>
-                    </div>
-                  )}
-                  {result.event.certificate_title && (
-                    <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
-                      <span className="text-sm text-tertiary">Title</span>
-                      <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.event.certificate_title}</span>
-                    </div>
-                  )}
-                </>
+              {result.event_name && (
+                <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
+                  <span className="text-sm text-tertiary">Event</span>
+                  <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.event_name}</span>
+                </div>
               )}
 
               {result.organization && (
@@ -233,15 +189,6 @@ function VerifySearchInner() {
                 <span className="font-medium text-primary text-sm">{formatDate(result.valid_until) || "No expiry"}</span>
               </div>
             </div>
-
-            {result.id && (
-              <a
-                href={`/my/certificates/${result.id}`}
-                className="mt-4 block w-full py-3.5 px-6 text-center text-base font-semibold text-white bg-brand rounded-xl hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:ring-offset-2 transition-all duration-200 active:scale-[0.98]"
-              >
-                View Certificate
-              </a>
-            )}
           </div>
         </div>
       )}
