@@ -5,10 +5,10 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { createAuthTemplateAction, getCurrentRoleAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
-import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
 import { AUTH_PROCESS_LABELS } from "@/features/templates/components/email-placeholder-field";
 import type { AuthProcess } from "@/types/template";
 import type { UserRole } from "@/lib/permissions";
+import { useEmailPreview } from "@/features/templates/hooks/use-email-preview";
 
 const AuthEmailEditor = dynamic(() => import("@/features/templates/components/auth-email-editor"), { ssr: false });
 
@@ -16,10 +16,8 @@ export default function NewAuthEmailPage() {
   const searchParams = useSearchParams();
   const initialProcess = searchParams.get("process") as AuthProcess | null;
 
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState("");
-  const [previewName, setPreviewName] = useState("");
   const [role, setRole] = useState<UserRole>("staff");
+  const { onPreview, PreviewDialog } = useEmailPreview();
 
   useEffect(() => {
     getCurrentRoleAction().then(setRole);
@@ -44,7 +42,7 @@ export default function NewAuthEmailPage() {
         <div>
           <h1 className="text-2xl font-bold text-red-600">Invalid Request</h1>
           <p className="text-muted-foreground text-sm">
-            No auth process specified. Please go back and click &quot;Configure&quot; on a process.
+            No auth process specified. Please go back and click Configure on a process.
           </p>
         </div>
       </div>
@@ -64,11 +62,7 @@ export default function NewAuthEmailPage() {
       <AuthEmailEditor
         initialData={{ name: "", description: "", html_content: "", auth_process: initialProcess }}
         lockProcess={true}
-        onPreview={(html, name) => {
-          setPreviewHtml(html);
-          setPreviewName(name);
-          setPreviewOpen(true);
-        }}
+        onPreview={onPreview}
         onSubmit={async (data) => {
           return await createAuthTemplateAction({
             organization_id: ORG_ID,
@@ -80,12 +74,7 @@ export default function NewAuthEmailPage() {
           });
         }}
       />
-      <EmailTemplatePreviewDialog
-        open={previewOpen}
-        onOpenChange={setPreviewOpen}
-        html={previewHtml}
-        name={previewName}
-      />
+      <PreviewDialog />
     </div>
   );
 }

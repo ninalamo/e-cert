@@ -12,7 +12,7 @@ export default async function LoginPage({
     <div className="flex min-h-dvh items-center justify-center bg-surface-muted p-4 light-override">
       <div className="app-card w-full max-w-md space-y-6 p-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold text-primary">Staff Sign In</h1>
+          <h1 className="text-2xl font-bold text-primary">VERICERT</h1>
           <p className="text-sm text-tertiary">
             Sign in to manage certificates and events.
           </p>
