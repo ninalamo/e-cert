@@ -1,7 +1,13 @@
 import Link from "next/link";
 import LoginForm from "@/features/auth/components/login-form";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ confirmed?: string; error?: string }>;
+}) {
+  const params = await searchParams;
+
   return (
     <div className="flex min-h-dvh items-center justify-center bg-surface-muted p-4 light-override">
       <div className="app-card w-full max-w-md space-y-6 p-6">
@@ -12,7 +18,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <LoginForm />
+        <LoginForm confirmed={params.confirmed} error={params.error} />
 
         <p className="text-center text-sm text-tertiary">
           Want to verify a certificate?{" "}

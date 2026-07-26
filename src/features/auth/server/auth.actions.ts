@@ -22,6 +22,7 @@ import {
   sendConfirmationEmail,
   sendPasswordResetEmail,
   sendWelcomeEmail,
+  sendEmailConfirmedEmail,
 } from "@/lib/email/auth-emails";
 
 function supabaseAdmin() {
@@ -46,7 +47,7 @@ export async function loginAction(
   const db = supabaseAdmin();
   const { data: user, error: fetchError } = await db
     .from("users")
-    .select("id, email, name, password_hash, banned_until")
+    .select("id, email, name, password_hash, banned_until, email_confirmed_at")
     .eq("email", parsed.data.email)
     .single();
 
@@ -56,6 +57,10 @@ export async function loginAction(
 
   if (user.banned_until && new Date(user.banned_until) > new Date()) {
     return { error: "Account is banned" };
+  }
+
+  if (!user.email_confirmed_at) {
+    return { error: "Please confirm your email before logging in." };
   }
 
   const valid = await comparePassword(parsed.data.password, user.password_hash);
@@ -118,7 +123,7 @@ export async function register(data: RegisterInput) {
   await sendConfirmationEmail(data.email, confirmToken);
   await sendWelcomeEmail(data.email, data.name);
 
-  redirect(getHomePathForRole(DEFAULT_ROLE));
+  return { success: true };
 }
 
 export async function logout() {
@@ -204,10 +209,21 @@ export async function confirmEmail(token: string) {
   }
 
   const db = supabaseAdmin();
+
+  const { data: user } = await db
+    .from("users")
+    .select("email, name")
+    .eq("id", result.userId)
+    .single();
+
   await db
     .from("users")
     .update({ email_confirmed_at: new Date().toISOString() })
     .eq("id", result.userId);
+
+  if (user) {
+    await sendEmailConfirmedEmail(user.email, user.name);
+  }
 
   return { success: true };
 }

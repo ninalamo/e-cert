@@ -154,3 +154,37 @@ export async function sendWelcomeEmail(
     text: `Welcome to ${ORG_NAME}! Log in at: ${BASE_URL}/login`,
   });
 }
+
+export async function sendEmailConfirmedEmail(
+  email: string,
+  name: string | null,
+): Promise<void> {
+  const provider = getEmailProvider();
+  const greeting = name ? `Hi ${name}` : "Hi there";
+
+  const html = wrap("Email Confirmed", `
+    <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">Email Confirmed!</h2>
+    <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
+      ${greeting}, your email has been confirmed successfully. You can now log in to access your certificates and profile.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      <tr>
+        <td align="center">
+          <a href="${BASE_URL}/login" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
+            Go to Login
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">
+      If you have any questions, feel free to reach out to our support team.
+    </p>
+  `);
+
+  await provider.sendEmail({
+    to: email,
+    subject: `Email Confirmed — ${ORG_NAME}`,
+    html,
+    text: `Your email has been confirmed. Log in at: ${BASE_URL}/login`,
+  });
+}
