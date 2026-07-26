@@ -20,6 +20,7 @@ interface AuthEmailEditorProps {
   }) => Promise<{ error?: string }>;
   submitLabel: string;
   disabled?: boolean;
+  lockProcess?: boolean;
   onPreview?: (html: string, name: string) => void;
 }
 
@@ -135,6 +136,7 @@ export default function AuthEmailEditor({
   onSubmit,
   submitLabel,
   disabled = false,
+  lockProcess = false,
   onPreview,
 }: AuthEmailEditorProps) {
   const [name, setName] = useState(initialData?.name ?? "");
@@ -195,27 +197,44 @@ export default function AuthEmailEditor({
       )}
 
       <fieldset disabled={disabled} className="space-y-6 disabled:opacity-60">
-        {/* Auth Process Selector */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-[var(--color-text)]">Auth Process</label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {Object.entries(AUTH_PROCESS_LABELS).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => handleProcessChange(value as AuthProcess)}
-                disabled={disabled}
-                className={`rounded-xl border p-3 text-left text-sm transition-all ${
-                  authProcess === value
-                    ? "border-[var(--color-brand-500)] bg-[var(--color-brand-50)] ring-1 ring-[var(--color-brand-500)]"
-                    : "border-[var(--color-border)] hover:border-[var(--color-brand-300)]"
-                }`}
-              >
-                <span className="font-medium text-[var(--color-text)]">{label}</span>
-              </button>
-            ))}
+        {/* Auth Process - Locked */}
+        {lockProcess && authProcess && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[var(--color-text)]">Auth Process</label>
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+              <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800">
+                {AUTH_PROCESS_LABELS[authProcess]}
+              </span>
+              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+                This template is configured for this specific auth process and cannot be changed.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Auth Process Selector - Unlocked (only for new templates without pre-selected process) */}
+        {!lockProcess && !authProcess && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[var(--color-text)]">Auth Process</label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {Object.entries(AUTH_PROCESS_LABELS).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handleProcessChange(value as AuthProcess)}
+                  disabled={disabled}
+                  className={`rounded-xl border p-3 text-left text-sm transition-all ${
+                    authProcess === value
+                      ? "border-[var(--color-brand-500)] bg-[var(--color-brand-50)] ring-1 ring-[var(--color-brand-500)]"
+                      : "border-[var(--color-border)] hover:border-[var(--color-brand-300)]"
+                  }`}
+                >
+                  <span className="font-medium text-[var(--color-text)]">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Template Name */}
         <div className="space-y-2">

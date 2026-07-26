@@ -3,7 +3,6 @@ import { getAuthTemplatesAction } from "@/features/templates/server/template.act
 import { ORG_ID } from "@/lib/org";
 import { AUTH_PROCESS_LABELS } from "@/features/templates/components/email-placeholder-field";
 import type { AuthProcess } from "@/types/template";
-import { PlusIcon } from "lucide-react";
 
 export default async function AuthEmailsPage() {
   const templates = await getAuthTemplatesAction(ORG_ID);
@@ -15,19 +14,13 @@ export default async function AuthEmailsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--color-text)]">
-            Auth Email Templates
-          </h1>
-          <p className="mt-1 text-sm text-tertiary">
-            Manage authentication email templates for registration, password reset, and email confirmation
-          </p>
-        </div>
-        <Link href="/templates/auth-emails/new" className="btn-brand">
-          <PlusIcon className="size-4" />
-          New Auth Email
-        </Link>
+      <div>
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--color-text)]">
+          Auth Email Templates
+        </h1>
+        <p className="mt-1 text-sm text-tertiary">
+          Manage authentication email templates for registration, password reset, and email confirmation
+        </p>
       </div>
 
       {/* Configured Templates */}
@@ -36,7 +29,7 @@ export default async function AuthEmailsPage() {
         {templates.length === 0 ? (
           <div className="app-card p-12 text-center">
             <p className="text-sm text-tertiary">
-              No auth email templates configured. Create your first one to customize authentication emails.
+              No auth email templates configured. Configure one below to customize authentication emails.
             </p>
           </div>
         ) : (

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { createAuthTemplateAction, getCurrentRoleAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
+import { AUTH_PROCESS_LABELS } from "@/features/templates/components/email-placeholder-field";
 import type { AuthProcess } from "@/types/template";
 import type { UserRole } from "@/lib/permissions";
 
@@ -15,7 +16,6 @@ export default function NewAuthEmailPage() {
   const searchParams = useSearchParams();
   const initialProcess = searchParams.get("process") as AuthProcess | null;
 
-  const [fullscreen, setFullscreen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewName, setPreviewName] = useState("");
@@ -38,16 +38,32 @@ export default function NewAuthEmailPage() {
     );
   }
 
+  if (!initialProcess) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-red-600">Invalid Request</h1>
+          <p className="text-muted-foreground text-sm">
+            No auth process specified. Please go back and click "Configure" on a process.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-brand-700">New Auth Email Template</h1>
+        <h1 className="text-2xl font-bold text-brand-700">
+          Configure: {AUTH_PROCESS_LABELS[initialProcess]}
+        </h1>
         <p className="text-muted-foreground text-sm">
-          Create a new authentication email template
+          Customize the email template for this authentication process
         </p>
       </div>
       <AuthEmailEditor
-        initialData={initialProcess ? { name: "", description: "", html_content: "", auth_process: initialProcess } : undefined}
+        initialData={{ name: "", description: "", html_content: "", auth_process: initialProcess }}
+        lockProcess={true}
         submitLabel="Save Template"
         onPreview={(html, name) => {
           setPreviewHtml(html);

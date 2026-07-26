@@ -81,6 +81,7 @@ export default function EditAuthEmailForm({ id }: { id: string }) {
           html_content: template.html_content,
           auth_process: template.auth_process,
         }}
+        lockProcess={true}
         submitLabel="Save Changes"
         onPreview={(html, name) => {
           setPreviewContent(html);
