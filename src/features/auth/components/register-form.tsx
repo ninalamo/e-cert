@@ -8,6 +8,7 @@ import type { RegisterInput } from "../schemas/auth.schema";
 export default function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -27,7 +28,24 @@ export default function RegisterForm() {
     if (result?.error) {
       setError(result.error);
       setLoading(false);
+    } else if (result?.success) {
+      setSuccess(true);
     }
+  }
+
+  if (success) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-xl border bg-success-bg p-3 text-sm text-success-text">
+          Registration successful! Please check your email for a confirmation link.
+        </div>
+        <p className="text-center text-sm text-tertiary">
+          <Link href="/login" className="font-medium text-brand-700 underline">
+            Go to Sign in
+          </Link>
+        </p>
+      </div>
+    );
   }
 
   return (

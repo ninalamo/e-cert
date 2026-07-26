@@ -4,7 +4,13 @@ import { useEffect, useRef } from "react";
 import { useActionState } from "react";
 import { loginAction } from "../server/auth.actions";
 
-export default function LoginForm() {
+export default function LoginForm({
+  confirmed,
+  error: urlError,
+}: {
+  confirmed?: string;
+  error?: string;
+}) {
   const [state, formAction, pending] = useActionState(loginAction, undefined);
   const navigated = useRef(false);
 
@@ -17,6 +23,20 @@ export default function LoginForm() {
 
   return (
     <div className="space-y-4">
+      {confirmed === "true" && (
+        <div className="rounded-xl border bg-success-bg p-3 text-sm text-success-text">
+          Email confirmed! Please sign in.
+        </div>
+      )}
+
+      {urlError && (
+        <div className="rounded-xl border bg-danger-bg p-3 text-sm text-danger-text">
+          {urlError === "Confirmation+failed"
+            ? "Confirmation failed. The link may have expired."
+            : urlError}
+        </div>
+      )}
+
       <form action={formAction} className="space-y-4">
         {state?.error && (
           <div className="rounded-xl border bg-danger-bg p-3 text-sm text-danger-text">
