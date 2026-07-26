@@ -6,6 +6,7 @@ import { ORG_ID } from "@/lib/org";
 import {
   getCertificatesWithEventAction,
   revokeCertificateAction,
+  deleteCertificateAction,
 } from "../server/certificate.actions";
 import type { Certificate } from "@/types/certificate";
 import {
@@ -23,6 +24,7 @@ import {
   FilterIcon,
   ChevronRightIcon,
   ShieldOffIcon,
+  Trash2Icon,
   EyeIcon,
 } from "lucide-react";
 
@@ -49,6 +51,10 @@ export default function CertificatesList({
   const [revoking, setRevoking] = useState(false);
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CertificateWithEvent | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function loadCertificates() {
     try {
@@ -91,6 +97,36 @@ export default function CertificatesList({
     setRevokeTarget(null);
     setRevokeReason("");
     setRevokeError(null);
+  };
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+    const result = await deleteCertificateAction(deleteTarget.id);
+    setDeleting(false);
+    if (result?.error) {
+      setDeleteError(result.error);
+      return;
+    }
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+    const updated = await loadCertificates();
+    if (updated.length > 0) {
+      setCertificates(updated);
+    }
+  }
+
+  const openDeleteDialog = (cert: CertificateWithEvent) => {
+    setDeleteTarget(cert);
+    setDeleteError(null);
+    setDeleteDialogOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+    setDeleteError(null);
   };
 
   const filtered = useMemo(() => {
@@ -245,6 +281,15 @@ export default function CertificatesList({
                               Revoke
                             </button>
                           )}
+                          {cert.revoked_at && (
+                            <button
+                              onClick={() => openDeleteDialog(cert)}
+                              className="text-xs text-danger hover:underline"
+                            >
+                              <Trash2Icon className="size-3 inline mr-1" />
+                              Delete
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -351,6 +396,46 @@ export default function CertificatesList({
               disabled={revoking || !revokeReason.trim()}
             >
               {revoking ? "Revoking..." : "Revoke"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={closeDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Certificate</DialogTitle>
+            <DialogDescription>
+              This will permanently delete{" "}
+              <strong>
+                {deleteTarget?.certificate_number ?? "this certificate"}
+              </strong>{" "}
+              and all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+              <Trash2Icon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
+              <p className="text-[var(--color-danger-text)]">
+                This cannot be undone. The certificate will be permanently removed.
+              </p>
+            </div>
+          </div>
+          {deleteError && (
+            <p className="text-xs text-[var(--color-danger-text)]">
+              {deleteError}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteDialog}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
