@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import Image from "next/image";
-import type { AnyEmailBlock, HeaderBlockProps, TextBlockProps, ImageBlockProps, ButtonBlockProps, DividerBlockProps, SpacerBlockProps, ColumnsBlockProps } from "./types";
+import type { EmailBlockType, AnyEmailBlock, HeaderBlockProps, TextBlockProps, ImageBlockProps, ButtonBlockProps, DividerBlockProps, SpacerBlockProps, ColumnsBlockProps } from "./types";
 import { getBlockLabel, BLOCK_TYPE_ICONS, BLOCK_COLORS, BLOCK_TYPE_LABELS } from "./block-definitions";
 import {
   GripVerticalIcon,
