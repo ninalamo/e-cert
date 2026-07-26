@@ -5,7 +5,22 @@
 -- Safe to re-run: uses IF NOT EXISTS pattern.
 -- ============================================================
 
--- Only apply when event_id is NOT NULL (standalone certs without events are fine)
+-- 1. Remove duplicates, keeping only the oldest certificate per (event_id, recipient_email)
+DELETE FROM certificates
+WHERE id IN (
+  SELECT id FROM (
+    SELECT id,
+      ROW_NUMBER() OVER (
+        PARTITION BY event_id, recipient_email
+        ORDER BY created_at ASC
+      ) AS rn
+    FROM certificates
+    WHERE event_id IS NOT NULL
+  ) dup
+  WHERE dup.rn > 1
+);
+
+-- 2. Now add the unique constraint
 CREATE UNIQUE INDEX IF NOT EXISTS certificates_event_email_unique
   ON certificates (event_id, recipient_email)
   WHERE event_id IS NOT NULL;
