@@ -1,8 +1,13 @@
 "use server";
 
 import * as templateService from "./template.service";
-import { requireRole } from "@/lib/permissions";
+import { requireRole, getCurrentSession, type UserRole } from "@/lib/permissions";
 import type { AuthProcess } from "@/types/template";
+
+export async function getCurrentRoleAction(): Promise<UserRole> {
+  const session = await getCurrentSession();
+  return session?.role ?? "participant";
+}
 
 export async function getTemplatesAction(organizationId: string) {
   await requireRole(["admin", "staff"]);

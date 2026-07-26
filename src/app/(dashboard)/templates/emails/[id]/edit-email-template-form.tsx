@@ -7,10 +7,12 @@ import {
   getTemplateAction,
   updateTemplateAction,
   isEmailTemplateLockedAction,
+  getCurrentRoleAction,
 } from "@/features/templates/server/template.actions";
 
 const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
+import type { UserRole } from "@/lib/permissions";
 import { SkeletonForm } from "@/components/ui/skeleton";
 import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
 
@@ -23,16 +25,20 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewContent, setPreviewContent] = useState("");
   const [previewName, setPreviewName] = useState("");
+  const [role, setRole] = useState<UserRole>("staff");
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const data = await getTemplateAction(id);
+      const [data, isLocked, userRole] = await Promise.all([
+        getTemplateAction(id),
+        isEmailTemplateLockedAction(id),
+        getCurrentRoleAction(),
+      ]);
       if (!active) return;
       setTemplate(data);
-      const isLocked = await isEmailTemplateLockedAction(id);
-      if (!active) return;
       setLocked(isLocked);
+      setRole(userRole);
       setLoading(false);
     })();
     return () => { active = false; };
@@ -66,6 +72,7 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
 
       <TemplateForm
         key={template.id}
+        role={role}
         initialData={{
           name: template.name,
           description: template.description ?? "",

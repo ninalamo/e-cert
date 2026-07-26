@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { createEmailTemplateAction, createAuthTemplateAction } from "@/features/templates/server/template.actions";
+import { createEmailTemplateAction, createAuthTemplateAction, getCurrentRoleAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
+import type { UserRole } from "@/lib/permissions";
 
 const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 
@@ -13,6 +14,11 @@ export default function NewEmailTemplatePage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewName, setPreviewName] = useState("");
+  const [role, setRole] = useState<UserRole>("staff");
+
+  useEffect(() => {
+    getCurrentRoleAction().then(setRole);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -23,6 +29,7 @@ export default function NewEmailTemplatePage() {
         </p>
       </div>
       <TemplateForm
+        role={role}
         submitLabel="Save Changes"
         fullscreen={fullscreen}
         onFullscreenChange={setFullscreen}

@@ -24,6 +24,7 @@ interface EmailTemplateFormV2Props {
   }) => Promise<{ error?: string }>;
   submitLabel: string;
   disabled?: boolean;
+  role?: string;
   onPreview?: (html: string, name: string) => void;
   onFullscreenChange?: (fullscreen: boolean) => void;
   onClose?: () => void;
@@ -35,6 +36,7 @@ export default function EmailTemplateFormV2({
   onSubmit,
   submitLabel,
   disabled = false,
+  role = "staff",
   onPreview,
   onFullscreenChange,
   onClose,
@@ -49,6 +51,9 @@ export default function EmailTemplateFormV2({
   const [loading, setLoading] = useState(false);
   const builderRef = useRef<EmailBlockBuilderV2Handle | null>(null);
 
+  const isAdmin = role === "admin";
+  const isAuthTemplate = templateType === 'auth';
+
   async function handleSave() {
     setError(null);
     setLoading(true);
@@ -59,7 +64,7 @@ export default function EmailTemplateFormV2({
       html_content: finalHtml,
       css_content: "",
       type: templateType,
-      auth_process: templateType === 'auth' ? authProcess : null,
+      auth_process: isAuthTemplate ? authProcess : null,
     });
     if (result?.error) {
       setError(result.error);
@@ -78,46 +83,46 @@ export default function EmailTemplateFormV2({
       )}
 
       <fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
-        {/* Template Type Selector */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-[var(--color-text)]">Template Type</label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="templateType"
-                value="email"
-                checked={templateType === 'email'}
-                onChange={() => { setTemplateType('email'); setAuthProcess(null); }}
-                disabled={disabled}
-                className="h-4 w-4"
-              />
-              <span className="text-sm text-[var(--color-text)]">Regular (Event Email)</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="templateType"
-                value="auth"
-                checked={templateType === 'auth'}
-                onChange={() => setTemplateType('auth')}
-                disabled={disabled}
-                className="h-4 w-4"
-              />
-              <span className="text-sm text-[var(--color-text)]">Auth (Authentication Email)</span>
-            </label>
+        {/* Template Type Selector - iOS Segmented Control */}
+        {isAdmin && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[var(--color-text)]">Template Type</label>
+            <div className="flex rounded-xl bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => { setTemplateType('email'); setAuthProcess(null); }}
+                className={`flex-1 rounded-lg py-2 px-4 text-sm font-medium transition-all duration-200 ${
+                  !isAuthTemplate
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Regular
+              </button>
+              <button
+                type="button"
+                onClick={() => setTemplateType('auth')}
+                className={`flex-1 rounded-lg py-2 px-4 text-sm font-medium transition-all duration-200 ${
+                  isAuthTemplate
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Auth
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Auth Process Selector */}
-        {templateType === 'auth' && (
+        {isAuthTemplate && isAdmin && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-[var(--color-text)]">Auth Process</label>
             <select
               value={authProcess ?? ''}
               onChange={(e) => setAuthProcess(e.target.value as AuthProcess || null)}
               disabled={disabled}
-              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm transition-colors focus:border-[var(--color-brand-500)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
             >
               <option value="">Select an auth process...</option>
               {Object.entries(AUTH_PROCESS_LABELS).map(([value, label]) => (
