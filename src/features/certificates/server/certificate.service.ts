@@ -246,6 +246,31 @@ export async function revokeCertificate(
   return { certificate };
 }
 
+export async function deleteCertificate(id: string, client?: SupabaseClient): Promise<{ certificate: Certificate | null; error?: string }> {
+  const certRepo = repo(client ?? (await createClient()));
+  const existing = await certRepo.findById(id);
+  if (!existing) {
+    return { certificate: null, error: "Certificate not found" };
+  }
+
+  if (existing.file_path) {
+    try {
+      const { getStorageProvider } = await import("@/lib/storage");
+      const storage = getStorageProvider();
+      await storage.deleteFile(existing.file_path);
+    } catch (err) {
+      console.error(`[deleteCertificate] Failed to delete stored file for ${id}:`, err);
+    }
+  }
+
+  const ok = await certRepo.delete(id);
+  if (!ok) {
+    return { certificate: null, error: "Failed to delete certificate" };
+  }
+
+  return { certificate: existing };
+}
+
 export async function getCertificatePdfBuffer(certificate: Certificate): Promise<Buffer> {
   if (certificate.file_path) {
     const { getStorageProvider } = await import("@/lib/storage");
