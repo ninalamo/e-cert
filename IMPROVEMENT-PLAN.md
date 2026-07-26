@@ -377,25 +377,40 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 | 6 | ~~Add unique constraint on `certificates(event_id, recipient_email)`~~ | ~~Schema migration~~ | ~~Prevent duplicate issuance~~ | **Done** |
 | 7 | ~~Create `issue_certificate_atomic` PL/pgSQL function~~ | ~~Schema migration~~ | ~~Transaction integrity~~ | **Done** |
 | 8 | ~~Hook cleanup into revocation/deletion flows~~ | ~~`certificate.service.ts`, `event.service.ts`~~ | ~~Storage cleanup on revoke~~ | **Done** |
-| 9 | Replace in-memory rate limiter with distributed solution | `lib/rate-limit.ts`, `proxy.ts` | Rate limiting ineffective on serverless | Pending |
-| 10 | Add pagination to certificate listing | `certificate.service.ts`, `certificate.repository.ts` | Performance at scale | Pending |
+| 9 | ~~Replace in-memory rate limiter with distributed solution~~ | ~~`lib/rate-limit.ts`, `proxy.ts`~~ | ~~Rate limiting ineffective on serverless~~ | Deferred (low priority for current scale) |
+| 10 | ~~Add pagination to certificate listing~~ | ~~`certificate.service.ts`, `certificate.repository.ts`~~ | ~~Performance at scale~~ | **Done** |
 
 ### Phase 3: Quality (polish)
 
-| # | Task | Files | Impact |
-|---|------|-------|--------|
-| 11 | Extract shared `renderTemplate` function | `certificate.service.ts`, `download/route.ts` | Code deduplication |
-| 12 | Add Zod validation to server actions | `*.actions.ts` files | Input validation |
-| 13 | Use `env.ts` everywhere instead of direct `process.env` | Throughout | Type-safe env vars |
-| 14 | Remove `console.log` debug statements | Throughout | Production cleanliness |
-| 15 | Fix `getMyOrganizationsAction` empty string bug | `organization.actions.ts` | Broken feature |
-| 16 | Add confirmation dialogs for destructive actions | UI components | UX safety |
-| 17 | Reduce public verify API data exposure | `api/verify/[number]/route.ts` | Privacy |
-| 18 | Separate dashboard activity feed event types | `dashboard.service.ts` | UX clarity |
+| # | Task | Files | Impact | Status |
+|---|------|-------|--------|--------|
+| 11 | ~~Extract shared `renderTemplate` function~~ | ~~`certificate.service.ts`, `download/route.ts`~~ | ~~Code deduplication~~ | **Done** |
+| 12 | Add Zod validation to server actions | `*.actions.ts` files | Input validation | Pending |
+| 13 | Use `env.ts` everywhere instead of direct `process.env` | Throughout | Type-safe env vars | Pending |
+| 14 | ~~Remove `console.log` debug statements~~ | ~~Throughout~~ | ~~Production cleanliness~~ | **Done** |
+| 15 | ~~Fix `getMyOrganizationsAction` empty string bug~~ | ~~`organization.actions.ts`~~ | ~~Broken feature~~ | **Done** |
+| 16 | Add confirmation dialogs for destructive actions | UI components | UX safety | Pending |
+| 17 | ~~Reduce public verify API data exposure~~ | ~~`api/verify/[number]/route.ts`~~ | ~~Privacy~~ | **Done** |
+| 18 | Separate dashboard activity feed event types | `dashboard.service.ts` | UX clarity | Pending |
 
 ---
 
 ## 10. Changelog
+
+### 2026-07-26
+
+**Branch:** `fix/supabase-storage-provider`
+
+| Change | Files |
+|--------|-------|
+| Add pagination support to certificate listing (returns count + safety limit of 5000) | `certificate.repository.ts`, `certificate.service.ts`, `certificates-list.tsx`, `page.tsx` |
+| Fix `getMyOrganizationsAction` passing empty string instead of user ID | `organization.actions.ts` |
+| Reduce verify API data exposure — remove `recipient_name` and full event details from public endpoint | `api/verify/[number]/route.ts`, `verify-search.tsx` |
+| Extract shared `renderTemplate` into `lib/template-renderer.ts` | `lib/template-renderer.ts` (new), `certificate.service.ts`, `download/route.ts` |
+| Remove 30 debug `console.log` statements across 8 files | `certificate-email.service.ts`, `download/route.ts`, `nodemailer.provider.ts`, `attendee.service.ts`, `attendee.repository.ts`, `attendee.actions.ts`, `attendees-manager.tsx`, `permissions.ts` |
+| Make `schema.sql` fully idempotent (no destructive drops, safe to re-run) | `supabase/schema.sql` |
+
+---
 
 ### 2026-07-25
 
