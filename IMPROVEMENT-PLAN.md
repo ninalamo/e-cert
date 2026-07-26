@@ -364,7 +364,7 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 
 | # | Task | Files | Impact | Status |
 |---|------|-------|--------|--------|
-| 1 | Consolidate migration files into `migrations/` | `supabase/migrations/` | Database portability — the core requirement | Pending |
+| 1 | ~~Consolidate migration files into `migrations/`~~ | ~~`supabase/migrations/`~~ | ~~Database portability — the core requirement~~ | **Done** |
 | 2 | ~~Replace `LocalStorageProvider` with `SupabaseStorageProvider`~~ | ~~`src/lib/storage/`~~ | ~~File upload feature broken on Vercel~~ | **Done** |
 | 3 | ~~Fix email sending to include PDF attachment on issuance~~ | ~~`certificate.service.ts:158`~~ | ~~Users don't get their certificate PDF~~ | **Done** |
 | 4 | ~~Remove hardcoded credentials from source~~ | ~~`api/health/route.ts:4`~~ | ~~Security — credentials in repo~~ | **Done** |
@@ -374,8 +374,8 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 
 | # | Task | Files | Impact | Status |
 |---|------|-------|--------|--------|
-| 6 | Add unique constraint on `certificates(event_id, recipient_email)` | Schema migration | Prevent duplicate issuance | Pending |
-| 7 | Create `issue_certificate_atomic` PL/pgSQL function | Schema migration | Transaction integrity | Pending |
+| 6 | ~~Add unique constraint on `certificates(event_id, recipient_email)`~~ | ~~Schema migration~~ | ~~Prevent duplicate issuance~~ | **Done** |
+| 7 | ~~Create `issue_certificate_atomic` PL/pgSQL function~~ | ~~Schema migration~~ | ~~Transaction integrity~~ | **Done** |
 | 8 | ~~Hook cleanup into revocation/deletion flows~~ | ~~`certificate.service.ts`, `event.service.ts`~~ | ~~Storage cleanup on revoke~~ | **Done** |
 | 9 | Replace in-memory rate limiter with distributed solution | `lib/rate-limit.ts`, `proxy.ts` | Rate limiting ineffective on serverless | Pending |
 | 10 | Add pagination to certificate listing | `certificate.service.ts`, `certificate.repository.ts` | Performance at scale | Pending |
@@ -407,6 +407,7 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 | `69913f1` | Include PDF attachment in certificate issuance emails | `src/features/certificates/server/certificate.service.ts` |
 | `33fbbc6` | Move health check password to environment variable | `src/app/api/health/route.ts` |
 | `c90def2` | Sanitize template variables to prevent XSS | `src/lib/utils.ts`, `src/app/view/[id]/certificate-viewer.tsx`, `src/features/certificates/server/certificate.service.ts`, `src/app/api/certificates/[id]/download/route.ts`, `src/features/certificates/server/email-template.ts` |
+| `TBD` | Consolidate migrations + add unique constraint + atomic functions | `supabase/migrations/` (9 files) |
 
 **Summary of changes:**
 
@@ -423,3 +424,11 @@ The primary issue (missing PDF attachment on issuance) has been fixed. See [Chan
 6. **Health check password** — Moved hardcoded `HEALTH_PASSWORD` from source code to `process.env.HEALTH_PASSWORD`. Added `HEALTH_PASSWORD` to `.env.example`.
 
 7. **XSS prevention** — Added `sanitizeHtml()` utility that escapes `&`, `<`, `>`, `"`, and `'`. Applied to all template variable substitutions across client and server rendering.
+
+8. **Migration consolidation** — Moved 5 loose migration files from `supabase/` root into `supabase/migrations/` with proper sequential naming. All 9 migrations now follow the `YYYYMMDDHHMMSS_description.sql` convention and can be applied via `npx supabase db push`.
+
+9. **Unique constraint** — Added partial unique index `certificates_event_email_unique` on `certificates(event_id, recipient_email)` WHERE `event_id IS NOT NULL` to prevent duplicate certificate issuance.
+
+10. **Atomic issuance function** — Created `issue_certificate_atomic()` PL/pgSQL function that wraps certificate creation + attendee linking in a single transaction.
+
+11. **Atomic revocation function** — Created `revoke_certificate_atomic()` PL/pgSQL function that revokes a certificate and clears the linked attendee record in a single transaction.
