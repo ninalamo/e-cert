@@ -1,29 +1,11 @@
 -- ============================================================
--- E-Cert — Full Schema + Seed Data
--- Single-source rebuild script.  Mirrors migrations as of
--- 2026-07-25.  Safe to re-run: drops everything first.
+-- E-Cert — Idempotent Schema
+-- Safe to run on an existing database at any time.
+-- No data is dropped. All statements use IF NOT EXISTS / OR REPLACE.
 -- ============================================================
 
 -- ============================================================
--- 1. DROP EXISTING (reverse dependency order)
--- ============================================================
-
-DROP TABLE IF EXISTS certificate_emails CASCADE;
-DROP TABLE IF EXISTS certificates CASCADE;
-DROP TABLE IF EXISTS certificate_templates CASCADE;
-DROP TABLE IF EXISTS event_attendees CASCADE;
-DROP TABLE IF EXISTS certificate_sequences CASCADE;
-DROP TABLE IF EXISTS events CASCADE;
-DROP TABLE IF EXISTS user_memberships CASCADE;
-DROP TABLE IF EXISTS organizations CASCADE;
-
-DROP FUNCTION IF EXISTS next_certificate_number(UUID, TEXT) CASCADE;
-DROP FUNCTION IF EXISTS issue_certificate_atomic(UUID, UUID, UUID, TEXT, TEXT, TEXT, TIMESTAMPTZ, JSONB) CASCADE;
-DROP FUNCTION IF EXISTS revoke_certificate_atomic(UUID, TEXT) CASCADE;
-DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
-
--- ============================================================
--- 2. TABLES
+-- 1. TABLES
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS organizations (
@@ -131,39 +113,38 @@ CREATE TABLE IF NOT EXISTS certificate_sequences (
 );
 
 -- ============================================================
--- 3. INDEXES
+-- 2. INDEXES
 -- ============================================================
 
-CREATE INDEX idx_organizations_slug ON organizations(slug);
-CREATE INDEX idx_user_memberships_user_id ON user_memberships(user_id);
-CREATE INDEX idx_user_memberships_org_id ON user_memberships(organization_id);
-CREATE INDEX idx_cert_templates_org ON certificate_templates(organization_id);
-CREATE INDEX idx_cert_templates_org_created ON certificate_templates(organization_id, created_at DESC);
-CREATE INDEX idx_cert_templates_type ON certificate_templates(type);
-CREATE INDEX idx_events_org ON events(organization_id);
-CREATE INDEX idx_events_org_created ON events(organization_id, created_at DESC);
-CREATE INDEX idx_events_status ON events(status);
-CREATE INDEX idx_events_email_template ON events(email_template_id);
-CREATE INDEX idx_events_template ON events(template_id);
-CREATE INDEX idx_attendees_event ON event_attendees(event_id);
-CREATE INDEX idx_attendees_org ON event_attendees(organization_id);
-CREATE INDEX idx_attendees_completed ON event_attendees(event_id, completed);
-CREATE INDEX idx_attendees_certificate ON event_attendees(certificate_id);
-CREATE INDEX idx_certificates_org ON certificates(organization_id);
-CREATE INDEX idx_certificates_org_created ON certificates(organization_id, created_at DESC);
-CREATE INDEX idx_certificates_event ON certificates(event_id);
-CREATE INDEX idx_certificates_number ON certificates(certificate_number);
-CREATE INDEX idx_certificates_email ON certificates(recipient_email);
-CREATE INDEX idx_certificate_emails_cert ON certificate_emails(certificate_id);
-CREATE INDEX idx_cert_sequences_org ON certificate_sequences(organization_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
+CREATE INDEX IF NOT EXISTS idx_user_memberships_user_id ON user_memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_memberships_org_id ON user_memberships(organization_id);
+CREATE INDEX IF NOT EXISTS idx_cert_templates_org ON certificate_templates(organization_id);
+CREATE INDEX IF NOT EXISTS idx_cert_templates_org_created ON certificate_templates(organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cert_templates_type ON certificate_templates(type);
+CREATE INDEX IF NOT EXISTS idx_events_org ON events(organization_id);
+CREATE INDEX IF NOT EXISTS idx_events_org_created ON events(organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+CREATE INDEX IF NOT EXISTS idx_events_email_template ON events(email_template_id);
+CREATE INDEX IF NOT EXISTS idx_events_template ON events(template_id);
+CREATE INDEX IF NOT EXISTS idx_attendees_event ON event_attendees(event_id);
+CREATE INDEX IF NOT EXISTS idx_attendees_org ON event_attendees(organization_id);
+CREATE INDEX IF NOT EXISTS idx_attendees_completed ON event_attendees(event_id, completed);
+CREATE INDEX IF NOT EXISTS idx_attendees_certificate ON event_attendees(certificate_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_org ON certificates(organization_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_org_created ON certificates(organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_certificates_event ON certificates(event_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_number ON certificates(certificate_number);
+CREATE INDEX IF NOT EXISTS idx_certificates_email ON certificates(recipient_email);
+CREATE INDEX IF NOT EXISTS idx_certificate_emails_cert ON certificate_emails(certificate_id);
+CREATE INDEX IF NOT EXISTS idx_cert_sequences_org ON certificate_sequences(organization_id);
 
--- Unique index: prevent duplicate certs per event+email
 CREATE UNIQUE INDEX IF NOT EXISTS certificates_event_email_unique
   ON certificates (event_id, recipient_email)
   WHERE event_id IS NOT NULL;
 
 -- ============================================================
--- 3b. updated_at TRIGGER
+-- 3. FUNCTIONS
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION set_updated_at()
@@ -173,36 +154,6 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_organizations_updated_at
-  BEFORE UPDATE ON organizations
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-CREATE TRIGGER trg_user_memberships_updated_at
-  BEFORE UPDATE ON user_memberships
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-CREATE TRIGGER trg_cert_templates_updated_at
-  BEFORE UPDATE ON certificate_templates
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-CREATE TRIGGER trg_events_updated_at
-  BEFORE UPDATE ON events
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-CREATE TRIGGER trg_certificates_updated_at
-  BEFORE UPDATE ON certificates
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-CREATE TRIGGER trg_event_attendees_updated_at
-  BEFORE UPDATE ON event_attendees
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ============================================================
--- 3c. CERTIFICATE NUMBER SEQUENCE
--- Shared per-(organization, pattern) counter so two events using the
--- same pattern draw from one counter -> no collisions.
--- ============================================================
 
 CREATE OR REPLACE FUNCTION next_certificate_number(
   p_org_id UUID,
@@ -223,10 +174,6 @@ BEGIN
   RETURN v_next;
 END;
 $$;
-
--- ============================================================
--- 3d. ATOMIC CERTIFICATE FUNCTIONS
--- ============================================================
 
 CREATE OR REPLACE FUNCTION issue_certificate_atomic(
   p_org_id UUID,
@@ -280,176 +227,209 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================
--- 4. ROW LEVEL SECURITY
+-- 4. TRIGGERS
 -- ============================================================
 
--- Organizations
-ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members can read org" ON organizations
-  FOR SELECT USING (
-    id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
-  );
-
--- User memberships
-ALTER TABLE user_memberships ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can read memberships" ON user_memberships
-  FOR SELECT USING (
-    user_id = auth.uid()
-  );
-
-CREATE POLICY "Admins can add members" ON user_memberships
-  FOR INSERT WITH CHECK (
-    organization_id IN (
-      SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role = 'admin'
-    )
-  );
-
-CREATE POLICY "Admins can remove members" ON user_memberships
-  FOR DELETE USING (
-    organization_id IN (
-      SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role = 'admin'
-    )
-    AND user_id <> auth.uid()
-  );
-
--- Certificate templates
-ALTER TABLE certificate_templates ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members can read templates" ON certificate_templates
-  FOR SELECT USING (
-    organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
-  );
-
-CREATE POLICY "Staff and admins manage templates" ON certificate_templates
-  FOR ALL USING (
-    organization_id IN (
-      SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
-    )
-  );
-
--- Events
-ALTER TABLE events ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members can read events" ON events
-  FOR SELECT USING (
-    organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
-  );
-
-CREATE POLICY "Staff and admins manage events" ON events
-  FOR ALL USING (
-    organization_id IN (
-      SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
-    )
-  );
-
--- Event attendees
-ALTER TABLE event_attendees ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members can read attendees" ON event_attendees
-  FOR SELECT USING (
-    organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
-  );
-
-CREATE POLICY "Staff and admins manage attendees" ON event_attendees
-  FOR ALL USING (
-    organization_id IN (
-      SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
-    )
-  );
-
--- Certificates
-ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members can read org certificates" ON certificates
-  FOR SELECT USING (
-    organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
-    OR recipient_email = (SELECT email FROM auth.users WHERE id = auth.uid())
-  );
-
-CREATE POLICY "Staff and admins manage certificates" ON certificates
-  FOR ALL USING (
-    organization_id IN (
-      SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
-    )
-  );
-
--- Certificate sequences
-ALTER TABLE certificate_sequences ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Staff and admins manage certificate sequences" ON certificate_sequences
-  FOR ALL USING (
-    organization_id IN (
-      SELECT organization_id FROM user_memberships
-      WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
-    )
-  );
-
--- Certificate emails (audit trail — admins only)
-ALTER TABLE certificate_emails ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admins can view email logs" ON certificate_emails
-  FOR SELECT USING (
-    certificate_id IN (
-      SELECT id FROM certificates WHERE organization_id IN (
-        SELECT organization_id FROM user_memberships
-        WHERE user_id = auth.uid() AND role = 'admin'
-      )
-    )
-  );
-
--- Email logs are written by the service role (bypasses RLS); no app-user writes.
-
--- ============================================================
--- 5. GRANTS
--- ============================================================
-
--- RLS policies reference auth.users, so the authenticated role needs SELECT.
-GRANT SELECT ON auth.users TO authenticated;
-
--- ============================================================
--- 6. SEED DATA
--- ============================================================
-
--- 6a. Organization
-INSERT INTO organizations (id, name, slug, created_at, updated_at)
-VALUES ('d4444444-4444-4444-4444-444444444444', 'Lyceum Of Alabang', 'lyceum-of-alabang', now(), now())
-ON CONFLICT (id) DO NOTHING;
-
--- 6b. Auth users + memberships are seeded via the Supabase Admin API,
---     NOT raw SQL. GoTrue (Supabase Auth) rejects password hashes
---     produced by pgcrypto — only the Admin API produces valid hashes.
---
---     Clean slate: remove all auth rows so GoTrue starts fresh.
---     Safe to re-run.
---
---     PRODUCTION GUARD: set app.environment = 'production' on the database
---     to block this section. Development/unset environments are allowed.
---       ALTER DATABASE postgres SET app.environment = 'production';
 DO $$
 BEGIN
-  IF current_setting('app.environment', true) = 'production' THEN
-    RAISE EXCEPTION 'Refusing to delete auth users in production. Set app.environment to something other than ''production'' to override.';
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_organizations_updated_at') THEN
+    CREATE TRIGGER trg_organizations_updated_at
+      BEFORE UPDATE ON organizations
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_user_memberships_updated_at') THEN
+    CREATE TRIGGER trg_user_memberships_updated_at
+      BEFORE UPDATE ON user_memberships
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_cert_templates_updated_at') THEN
+    CREATE TRIGGER trg_cert_templates_updated_at
+      BEFORE UPDATE ON certificate_templates
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_events_updated_at') THEN
+    CREATE TRIGGER trg_events_updated_at
+      BEFORE UPDATE ON events
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_certificates_updated_at') THEN
+    CREATE TRIGGER trg_certificates_updated_at
+      BEFORE UPDATE ON certificates
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_event_attendees_updated_at') THEN
+    CREATE TRIGGER trg_event_attendees_updated_at
+      BEFORE UPDATE ON event_attendees
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   END IF;
 END $$;
 
-DELETE FROM auth.refresh_tokens;
-DELETE FROM auth.sessions;
-DELETE FROM auth.identities;
-DELETE FROM auth.users;
+-- ============================================================
+-- 5. ROW LEVEL SECURITY
+-- ============================================================
 
---     After running this schema, seed users by running:
---       npx tsx scripts/seed-users.ts
---     Or by calling PUT http://localhost:3000/api/health
---
---     Default credentials (all roles):
---       admin@lyceumalabang.edu.ph      / password123
---       staff@lyceumalabang.edu.ph      / password123
---       participant@lyceumalabang.edu.ph / password123
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_memberships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE certificate_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_attendees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE certificate_sequences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE certificate_emails ENABLE ROW LEVEL SECURITY;
+
+-- Helper: safe CREATE POLICY (skip if exists)
+DO $$
+BEGIN
+  -- Organizations
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read org' AND tablename = 'organizations') THEN
+    CREATE POLICY "Members can read org" ON organizations
+      FOR SELECT USING (
+        id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+      );
+  END IF;
+
+  -- User memberships
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can read memberships' AND tablename = 'user_memberships') THEN
+    CREATE POLICY "Users can read memberships" ON user_memberships
+      FOR SELECT USING (
+        user_id = auth.uid()
+      );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Admins can add members' AND tablename = 'user_memberships') THEN
+    CREATE POLICY "Admins can add members" ON user_memberships
+      FOR INSERT WITH CHECK (
+        organization_id IN (
+          SELECT organization_id FROM user_memberships
+          WHERE user_id = auth.uid() AND role = 'admin'
+        )
+      );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Admins can remove members' AND tablename = 'user_memberships') THEN
+    CREATE POLICY "Admins can remove members" ON user_memberships
+      FOR DELETE USING (
+        organization_id IN (
+          SELECT organization_id FROM user_memberships
+          WHERE user_id = auth.uid() AND role = 'admin'
+        )
+        AND user_id <> auth.uid()
+      );
+  END IF;
+
+  -- Certificate templates
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read templates' AND tablename = 'certificate_templates') THEN
+    CREATE POLICY "Members can read templates" ON certificate_templates
+      FOR SELECT USING (
+        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+      );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Staff and admins manage templates' AND tablename = 'certificate_templates') THEN
+    CREATE POLICY "Staff and admins manage templates" ON certificate_templates
+      FOR ALL USING (
+        organization_id IN (
+          SELECT organization_id FROM user_memberships
+          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+        )
+      );
+  END IF;
+
+  -- Events
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read events' AND tablename = 'events') THEN
+    CREATE POLICY "Members can read events" ON events
+      FOR SELECT USING (
+        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+      );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Staff and admins manage events' AND tablename = 'events') THEN
+    CREATE POLICY "Staff and admins manage events" ON events
+      FOR ALL USING (
+        organization_id IN (
+          SELECT organization_id FROM user_memberships
+          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+        )
+      );
+  END IF;
+
+  -- Event attendees
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read attendees' AND tablename = 'event_attendees') THEN
+    CREATE POLICY "Members can read attendees" ON event_attendees
+      FOR SELECT USING (
+        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+      );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Staff and admins manage attendees' AND tablename = 'event_attendees') THEN
+    CREATE POLICY "Staff and admins manage attendees" ON event_attendees
+      FOR ALL USING (
+        organization_id IN (
+          SELECT organization_id FROM user_memberships
+          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+        )
+      );
+  END IF;
+
+  -- Certificates
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Members can read org certificates' AND tablename = 'certificates') THEN
+    CREATE POLICY "Members can read org certificates" ON certificates
+      FOR SELECT USING (
+        organization_id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
+        OR recipient_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+      );
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Staff and admins manage certificates' AND tablename = 'certificates') THEN
+    CREATE POLICY "Staff and admins manage certificates" ON certificates
+      FOR ALL USING (
+        organization_id IN (
+          SELECT organization_id FROM user_memberships
+          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+        )
+      );
+  END IF;
+
+  -- Certificate sequences
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Staff and admins manage certificate sequences' AND tablename = 'certificate_sequences') THEN
+    CREATE POLICY "Staff and admins manage certificate sequences" ON certificate_sequences
+      FOR ALL USING (
+        organization_id IN (
+          SELECT organization_id FROM user_memberships
+          WHERE user_id = auth.uid() AND role IN ('admin', 'staff')
+        )
+      );
+  END IF;
+
+  -- Certificate emails (audit trail)
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Admins can view email logs' AND tablename = 'certificate_emails') THEN
+    CREATE POLICY "Admins can view email logs" ON certificate_emails
+      FOR SELECT USING (
+        certificate_id IN (
+          SELECT id FROM certificates WHERE organization_id IN (
+            SELECT organization_id FROM user_memberships
+            WHERE user_id = auth.uid() AND role = 'admin'
+          )
+        )
+      );
+  END IF;
+END $$;
+
+-- ============================================================
+-- 6. GRANTS
+-- ============================================================
+
+GRANT SELECT ON auth.users TO authenticated;
+
+-- ============================================================
+-- 7. SEED DATA (idempotent)
+-- ============================================================
+
+INSERT INTO organizations (id, name, slug, created_at, updated_at)
+VALUES ('d4444444-4444-4444-4444-444444444444', 'Lyceum Of Alabang', 'lyceum-of-alabang', now(), now())
+ON CONFLICT (id) DO NOTHING;
