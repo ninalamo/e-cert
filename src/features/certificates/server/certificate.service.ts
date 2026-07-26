@@ -5,27 +5,11 @@ import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { createClient } from "@/lib/supabase/server";
 import { ORG_NAME } from "@/lib/org";
+import { renderTemplate } from "@/lib/template-renderer";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function repo(client: SupabaseClient) {
   return new CertificateRepository(client);
-}
-
-function renderTemplate(html: string, css: string, variables: Record<string, string>): string {
-  let rendered = html;
-  for (const [key, value] of Object.entries(variables)) {
-    rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
-  }
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <style>${css}</style>
-</head>
-<body>
-${rendered}
-</body>
-</html>`;
 }
 
 export async function issueCertificate(
@@ -155,7 +139,7 @@ export async function issueCertificate(
 
   if (data.send_email && data.user_id) {
     const { sendCertificateEmail } = await import("./certificate-email.service");
-    const emailResult = await sendCertificateEmail(certificate.id, data.user_id, undefined, { skip_pdf: true });
+    const emailResult = await sendCertificateEmail(certificate.id, data.user_id);
     return { certificate, emailSent: emailResult.success, error: emailResult.error };
   }
 
@@ -173,7 +157,7 @@ export async function getCertificates(
 export async function getCertificatesWithEvent(
   organizationId: string,
   client?: SupabaseClient
-): Promise<Array<Certificate & { events: { name: string } | null }>> {
+): Promise<{ data: Array<Certificate & { events: { name: string } | null }>; count: number }> {
   const certRepo = repo(client ?? (await createClient()));
   return certRepo.findByOrganizationIdWithEvent(organizationId);
 }
@@ -247,6 +231,16 @@ export async function revokeCertificate(
 
   if (!certificate) {
     return { certificate: null, error: "Failed to revoke certificate" };
+  }
+
+  if (existing.file_path) {
+    try {
+      const { getStorageProvider } = await import("@/lib/storage");
+      const storage = getStorageProvider();
+      await storage.deleteFile(existing.file_path);
+    } catch (err) {
+      console.error(`[revokeCertificate] Failed to delete stored file for ${id}:`, err);
+    }
   }
 
   return { certificate };

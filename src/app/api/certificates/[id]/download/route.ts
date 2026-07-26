@@ -4,24 +4,9 @@ import { getCertificatePdfBuffer } from "@/features/certificates/server/certific
 import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { ORG_NAME } from "@/lib/org";
+import { renderTemplate } from "@/lib/template-renderer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
-
-function renderTemplate(html: string, css: string, variables: Record<string, string>): string {
-  let rendered = html;
-  for (const [key, value] of Object.entries(variables)) {
-    rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
-  }
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <style>${css}</style>
-</head>
-<body>
-${rendered}
-</body>
-</html>`;
-}
 
 export async function GET(
   _request: NextRequest,
@@ -66,7 +51,6 @@ export async function GET(
   if (typeof cachedPdf === "string") {
     const pdfBuffer = Buffer.from(cachedPdf, "base64");
     if (pdfBuffer.length > 4 && pdfBuffer.subarray(0, 4).toString() === "%PDF") {
-      console.log(`[download] Serving cached rendered_pdf for ${id}`);
       return new NextResponse(new Uint8Array(pdfBuffer), {
         headers: {
           "Content-Type": "application/pdf",
@@ -74,7 +58,6 @@ export async function GET(
         },
       });
     }
-    console.warn(`[download] metadata.rendered_pdf exists but invalid for ${id}`);
   }
 
   const cachedHtml = meta.rendered_html;
@@ -90,7 +73,6 @@ export async function GET(
         await certRepo.update(id, {
           metadata: { ...meta, rendered_pdf: pdfBase64 },
         } as never);
-        console.log(`[download] Rendered PDF from cached rendered_html for ${id}`);
         return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: {
             "Content-Type": "application/pdf",
@@ -106,7 +88,6 @@ export async function GET(
   try {
     const pdfBuffer = await getCertificatePdfBuffer(certificate);
     if (pdfBuffer.length > 4 && pdfBuffer.subarray(0, 4).toString() === "%PDF") {
-      console.log(`[download] Serving PDF from getCertificatePdfBuffer for ${id}`);
       return new NextResponse(new Uint8Array(pdfBuffer), {
         headers: {
           "Content-Type": "application/pdf",
@@ -166,7 +147,6 @@ export async function GET(
           metadata: { ...(certificate.metadata ?? {}), rendered_pdf: pdfBase64 },
         } as never);
 
-        console.log(`[download] On-demand rendered PDF from template for ${id}`);
         return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: {
             "Content-Type": "application/pdf",

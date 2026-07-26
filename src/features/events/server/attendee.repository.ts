@@ -28,11 +28,8 @@ export class EventAttendeeRepository extends BaseRepository<EventAttendee> {
         return [];
       }
 
-      console.log(`[AttendeeRepository] Fallback (no join) returned ${fallback?.length ?? 0} rows for event ${eventId} — FK join name is mismatched`);
       return (fallback ?? []) as EventAttendee[];
     }
-
-    console.log(`[AttendeeRepository] Raw response for event ${eventId}: rows=${data?.length ?? 0}`);
 
     return (data ?? []) as EventAttendee[];
   }

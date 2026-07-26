@@ -11,8 +11,6 @@ export async function getAttendeesAction(eventId: string) {
   const userOrgIds = attendees.map((a) => a.organization_id);
   const uniqueOrgIds = [...new Set(userOrgIds)];
 
-  console.log(`[AttendeeAction] getAttendeesAction: event=${eventId}, user=${session.id}, userRole=${session.role}, rows=${attendees.length}, attendeeOrgIds=${JSON.stringify(uniqueOrgIds)}`);
-
   if (attendees.length > 0) {
     const firstAttendeeOrg = attendees[0].organization_id;
     const { createClient } = await import("@/lib/supabase/server");
@@ -22,8 +20,6 @@ export async function getAttendeesAction(eventId: string) {
       .select("organization_id")
       .eq("user_id", session.id)
       .single();
-
-    console.log(`[AttendeeAction] Org check: attendeeOrg=${firstAttendeeOrg}, membershipOrg=${membership?.organization_id ?? "NONE"}, match=${firstAttendeeOrg === membership?.organization_id}`);
   }
 
   return attendees;

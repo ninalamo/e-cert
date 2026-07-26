@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reseed, SEED_USERS, SEED_PASSWORD, getSeedAdmin } from "@/lib/seed";
 
-const HEALTH_PASSWORD = "admin@lyceumalabang.edu.ph";
+const HEALTH_PASSWORD = process.env.HEALTH_PASSWORD;
 
 function isAuthorized(request: NextRequest): boolean {
+  if (!HEALTH_PASSWORD) {
+    console.error("[health] HEALTH_PASSWORD env var not set");
+    return false;
+  }
   return request.headers.get("x-health-password") === HEALTH_PASSWORD;
 }
 

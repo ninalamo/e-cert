@@ -88,24 +88,27 @@ export class CertificateRepository extends BaseRepository<Certificate> {
   async findByOrganizationIdWithEvent(
     organizationId: string,
     options?: { limit?: number; offset?: number; columns?: string }
-  ): Promise<Array<Certificate & { events: { name: string } | null }>> {
+  ): Promise<{ data: Array<Certificate & { events: { name: string } | null }>; count: number }> {
     const selectColumns = options?.columns
       ? `${options.columns}, events!event_id(name)`
       : `*, events!event_id(name)`;
+
+    const limit = options?.limit ?? 5000;
+    const offset = options?.offset ?? 0;
 
     let q = this.client
       .from(this.table)
       .select(selectColumns, { count: "exact" })
       .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    if (options?.limit !== undefined && options.offset !== undefined) {
-      q = q.range(options.offset, options.offset + options.limit - 1);
-    }
-
-    const { data, error } = await q;
-    if (error) return [];
-    return (data ?? []) as unknown as Array<Certificate & { events: { name: string } | null }>;
+    const { data, error, count } = await q;
+    if (error) return { data: [], count: 0 };
+    return {
+      data: (data ?? []) as unknown as Array<Certificate & { events: { name: string } | null }>,
+      count: count ?? 0,
+    };
   }
 
   async deleteByEventId(eventId: string): Promise<boolean> {

@@ -11,21 +11,12 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const isLocalhost =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-
-function debug(...args: unknown[]) {
-  if (isLocalhost) console.log("[EmailService:dev]", ...args);
-}
-
 export async function sendCertificateEmail(
   certificateId: string,
   userId: string,
   client?: SupabaseClient,
   options?: { skip_pdf?: boolean }
 ): Promise<{ success: boolean; error?: string }> {
-  console.log(`[EmailService] sendCertificateEmail called: certId=${certificateId}, userId=${userId}, skip_pdf=${options?.skip_pdf}`);
   const supabase = client ?? (await createClient());
   const certRepo = new CertificateRepository(supabase);
   const emailRepo = new CertificateEmailRepository(supabaseAdmin);
@@ -37,7 +28,6 @@ export async function sendCertificateEmail(
     console.error(`[EmailService] Certificate not found: ${certificateId}`);
     return { success: false, error: "Certificate not found" };
   }
-  console.log(`[EmailService] Certificate found: recipient=${certificate.recipient_email}, number=${certificate.certificate_number}`);
 
   let orgName = ORG_NAME;
   if (certificate.organization_id) {
@@ -80,7 +70,6 @@ export async function sendCertificateEmail(
     if (event?.email_template_id) {
       const emailTemplate = await templateRepo.findById(event.email_template_id);
       if (emailTemplate && emailTemplate.type === 'email') {
-        console.log(`[EmailService] Using custom email template: ${emailTemplate.name}`);
         html = renderEmailTemplate(emailTemplate.html_content, {
           recipient_name: certificate.recipient_name,
           certificate_number: certificate.certificate_number,
@@ -122,23 +111,13 @@ export async function sendCertificateEmail(
 
   const emailProvider = getEmailProvider();
 
-  console.log(`[EmailService] Sending email to ${certificate.recipient_email}, subject: "${subject}"`);
-  console.log(`[EmailService] viewUrl=${viewUrl}`);
-
   try {
-    debug("Calling emailProvider.sendEmail", {
-      to: certificate.recipient_email,
-      subject,
-      hasAttachments: !!attachments,
-      provider: emailProvider.constructor?.name,
-    });
     await emailProvider.sendEmail({
       to: certificate.recipient_email,
       subject,
       html,
       ...(attachments ? { attachments } : {}),
     });
-    console.log(`[EmailService] Email sent successfully to ${certificate.recipient_email}`);
 
     const logData = {
       sent_to: certificate.recipient_email,
@@ -151,15 +130,11 @@ export async function sendCertificateEmail(
 
     try {
       if (existingLog) {
-        debug("Updating existing email log", existingLog.id, logData);
         await emailRepo.update(existingLog.id, logData);
       } else {
-        debug("Creating new email log", { certificate_id: certificateId, ...logData });
         await emailRepo.create({ certificate_id: certificateId, ...logData });
       }
-      debug("Email log write succeeded");
     } catch (logErr) {
-      debug("Email log write FAILED:", logErr);
       console.error("[EmailService] Failed to write email log:", logErr);
     }
 
@@ -167,11 +142,6 @@ export async function sendCertificateEmail(
   } catch (error) {
     console.error("[EmailService] Failed to send email:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    debug("Email send error detail:", {
-      message: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-      raw: error,
-    });
 
     const logData = {
       sent_to: certificate.recipient_email,
@@ -184,15 +154,11 @@ export async function sendCertificateEmail(
 
     try {
       if (existingLog) {
-        debug("Updating existing email log (failed)", existingLog.id, logData);
         await emailRepo.update(existingLog.id, logData);
       } else {
-        debug("Creating new email log (failed)", { certificate_id: certificateId, ...logData });
         await emailRepo.create({ certificate_id: certificateId, ...logData });
       }
-      debug("Email log write (failed) succeeded");
     } catch (logErr) {
-      debug("Email log write (failed) FAILED:", logErr);
       console.error("[EmailService] Failed to write email log:", logErr);
     }
 

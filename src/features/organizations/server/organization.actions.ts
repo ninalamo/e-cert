@@ -9,8 +9,8 @@ export async function createOrganizationAction() {
 }
 
 export async function getMyOrganizationsAction() {
-  await requireRole(["admin", "staff"]);
-  return orgService.getUserOrganizations("");
+  const session = await requireRole(["admin", "staff"]);
+  return orgService.getUserOrganizations(session.id);
 }
 
 export async function getOrganizationMembersAction(organizationId: string) {

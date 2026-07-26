@@ -54,8 +54,8 @@ export default function CertificatesList({
 
   async function loadCertificates() {
     try {
-      const data = await getCertificatesWithEventAction(ORG_ID);
-      return data;
+      const result = await getCertificatesWithEventAction(ORG_ID);
+      return result.data;
     } catch {
       setLoadError("Failed to load certificates.");
       return [];
