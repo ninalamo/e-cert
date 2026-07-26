@@ -25,6 +25,7 @@ function NavLinks({
   pathname,
   certCount,
   certOpen,
+  settingsOpen,
   onToggle,
   onNavigate,
   role,
@@ -33,7 +34,8 @@ function NavLinks({
   pathname: string;
   certCount: number | null;
   certOpen: boolean;
-  onToggle: () => void;
+  settingsOpen: boolean;
+  onToggle: (label: string) => void;
   onNavigate?: () => void;
   role?: UserRole;
 }) {
@@ -67,7 +69,7 @@ function NavLinks({
           <div key={item.href}>
             <button
               type="button"
-              onClick={onToggle}
+              onClick={() => onToggle(item.label)}
               className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors ${
                 parentActive
                   ? "bg-brand-600 text-black font-medium"
@@ -104,7 +106,7 @@ function NavLinks({
                 </svg>
               </div>
             </button>
-            {certOpen && (
+            {(item.label === "Settings" ? settingsOpen : certOpen) && (
               <div className="mt-1 space-y-1 pl-3">
                 {children
                   .filter((child) => !child.roles || !role || child.roles.includes(role))
@@ -144,6 +146,7 @@ export default function MobileNav({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [certOpen, setCertOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const { stats } = useDashboardStats();
   const certCount = role !== "participant" ? (stats?.totalCertificates ?? null) : null;
@@ -151,25 +154,25 @@ export default function MobileNav({
   const adminItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Events", href: "/events", roles: ["admin", "staff"] },
-    {
-      label: "Certificates",
-      href: "/certificates",
-      children: [
-        { label: "Records", href: "/certificates" },
-      ],
-      roles: ["admin", "staff"],
-    },
+    { label: "Certificates", href: "/certificates", roles: ["admin", "staff"] },
     {
       label: "Templates",
       href: "/templates",
       children: [
         { label: "Certificates", href: "/templates/certificates" },
         { label: "Emails", href: "/templates/emails" },
-        { label: "Auth Emails", href: "/templates/auth-emails", roles: ["admin"] },
       ],
       roles: ["admin", "staff"],
     },
-    { label: "Users", href: "/users", roles: ["admin"] },
+    {
+      label: "Settings",
+      href: "/settings",
+      children: [
+        { label: "Users", href: "/users" },
+        { label: "Auth Emails", href: "/templates/auth-emails", roles: ["admin"] },
+      ],
+      roles: ["admin"],
+    },
   ];
 
   const participantItems: NavItem[] = [
@@ -252,7 +255,14 @@ export default function MobileNav({
                 pathname={pathname}
                 certCount={certCount}
                 certOpen={certOpen}
-                onToggle={() => setCertOpen((o) => !o)}
+                settingsOpen={settingsOpen}
+                onToggle={(label) => {
+                  if (label === "Settings") {
+                    setSettingsOpen((o) => !o);
+                  } else {
+                    setCertOpen((o) => !o);
+                  }
+                }}
                 onNavigate={() => setOpen(false)}
                 role={role}
               />
