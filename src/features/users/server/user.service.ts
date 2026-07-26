@@ -14,10 +14,12 @@ export interface ManagedUser {
 }
 
 export async function listUsers(): Promise<ManagedUser[]> {
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-  if (error || !data?.users) return [];
+  const { data: users, error } = await supabaseAdmin
+    .from("users")
+    .select("id, email, name, created_at, banned_until");
+  if (error || !users) return [];
 
-  const userIds = data.users.map((u) => u.id);
+  const userIds = users.map((u) => u.id);
 
   const { data: memberships } = await supabaseAdmin
     .from("user_memberships")
@@ -30,7 +32,7 @@ export async function listUsers(): Promise<ManagedUser[]> {
     roleMap.set(m.user_id, m.role as UserRole);
   }
 
-  const emails = data.users.map((u) => u.email!);
+  const emails = users.map((u) => u.email);
 
   const { data: attendees } = await supabaseAdmin
     .from("event_attendees")
@@ -40,15 +42,15 @@ export async function listUsers(): Promise<ManagedUser[]> {
 
   const attendeeEmails = new Set((attendees ?? []).map((a) => a.email));
 
-  return data.users.map((u) => ({
+  return users.map((u) => ({
     id: u.id,
-    email: u.email!,
-    name: (u.user_metadata?.name as string | undefined) ?? null,
+    email: u.email,
+    name: u.name,
     created_at: u.created_at,
-    last_sign_in_at: u.last_sign_in_at ?? null,
-    banned_until: u.banned_until ?? null,
+    last_sign_in_at: null,
+    banned_until: u.banned_until,
     role: roleMap.get(u.id) ?? null,
-    is_attendee: attendeeEmails.has(u.email!),
+    is_attendee: attendeeEmails.has(u.email),
   }));
 }
 
@@ -68,9 +70,10 @@ export async function setUserRole(
 export async function banUser(
   userId: string
 ): Promise<{ error?: string }> {
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-    ban_duration: "indefinite",
-  });
+  const { error } = await supabaseAdmin
+    .from("users")
+    .update({ banned_until: "infinity" })
+    .eq("id", userId);
   if (error) return { error: error.message };
   return {};
 }
@@ -78,9 +81,10 @@ export async function banUser(
 export async function unbanUser(
   userId: string
 ): Promise<{ error?: string }> {
-  const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-    ban_duration: "none",
-  });
+  const { error } = await supabaseAdmin
+    .from("users")
+    .update({ banned_until: null })
+    .eq("id", userId);
   if (error) return { error: error.message };
   return {};
 }
@@ -94,7 +98,10 @@ export async function deleteUser(
     .eq("user_id", userId)
     .eq("organization_id", ORG_ID);
 
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  const { error } = await supabaseAdmin
+    .from("users")
+    .delete()
+    .eq("id", userId);
   if (error) return { error: error.message };
   return {};
 }

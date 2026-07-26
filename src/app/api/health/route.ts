@@ -12,28 +12,34 @@ function isAuthorized(request: NextRequest): boolean {
 }
 
 async function getSeededUsersDetail(admin: ReturnType<typeof getSeedAdmin>) {
-  const { data } = await admin.auth.admin.listUsers();
-  const seededEmails = new Set(SEED_USERS.map((u) => u.email));
-  const authUsers = data.users.filter((u) => u.email && seededEmails.has(u.email));
+  const seededEmails = SEED_USERS.map((u) => u.email);
+
+  const { data: users } = await admin
+    .from("users")
+    .select("id, email, name, created_at, banned_until")
+    .in("email", seededEmails);
+
+  if (!users) return [];
+
+  const userIds = users.map((u) => u.id);
 
   const { data: memberships } = await admin
     .from("user_memberships")
     .select("user_id, role, created_at, updated_at")
-    .in("user_id", authUsers.map((u) => u.id));
+    .in("user_id", userIds);
 
   const membershipMap = new Map((memberships ?? []).map((m) => [m.user_id, m]));
 
-  return authUsers.map((u) => {
+  return users.map((u) => {
     const seed = SEED_USERS.find((s) => s.email === u.email);
     const membership = membershipMap.get(u.id);
     return {
       email: u.email,
-      name: seed?.name ?? u.user_metadata?.name ?? null,
+      name: seed?.name ?? u.name ?? null,
       password: SEED_PASSWORD,
       role: membership?.role ?? "unknown",
-      auth_created_at: u.created_at,
-      auth_updated_at: u.updated_at,
-      auth_last_sign_in_at: u.last_sign_in_at,
+      created_at: u.created_at,
+      banned_until: u.banned_until,
       membership_created_at: membership?.created_at ?? null,
       membership_updated_at: membership?.updated_at ?? null,
     };
@@ -41,10 +47,8 @@ async function getSeededUsersDetail(admin: ReturnType<typeof getSeedAdmin>) {
 }
 
 export async function GET(request: NextRequest) {
-
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
   }
 
   try {
@@ -71,8 +75,8 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const admin = getSeedAdmin();
     await reseed();
+    const admin = getSeedAdmin();
     const users = await getSeededUsersDetail(admin);
     return NextResponse.json({ status: "ok", message: "Reseeded default users", users });
   } catch (err) {

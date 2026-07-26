@@ -174,7 +174,7 @@ src/
     - Welcome email
 13. Use existing Nodemailer infrastructure
 
-### Phase 6: Admin Operations
+### Phase 6: Admin Operations ✅
 
 14. **`user.service.ts`** — Replace `supabaseAdmin.auth.admin.*` with direct DB queries:
     - `listUsers()` → `SELECT * FROM users`
@@ -182,10 +182,16 @@ src/
     - `banUser()` → `UPDATE users SET ban_duration`
     - `deleteUser()` → `DELETE FROM users`
 
-### Phase 7: Seed & Health
+### Phase 7: Seed & Health ✅
 
 15. **`seed/index.ts`** — Replace `supabaseAdmin.auth.admin.createUser` with direct inserts
 16. **`health/route.ts`** — Query `users` table directly
+
+### Phase 8: Client Components ✅
+
+17. **`auth/callback/route.ts`** — Replace Supabase code exchange with `confirmEmail` action
+18. **`update-password/page.tsx`** — Pass token from query params to form
+19. **`update-password-form.tsx`** — Accept token prop, use `resetPassword` for token flow
 
 ### Phase 8: Client Components
 

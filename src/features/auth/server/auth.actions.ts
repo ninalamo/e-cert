@@ -221,7 +221,7 @@ export async function resetPassword(token: string, password: string) {
 
   await deleteResetToken(token);
 
-  return { success: true };
+  return { success: true, redirectTo: "/login" };
 }
 
 export async function getCurrentUser() {

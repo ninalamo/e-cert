@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { updatePassword } from "../server/auth.actions";
+import { updatePassword, resetPassword } from "../server/auth.actions";
 
-export default function UpdatePasswordForm() {
+export default function UpdatePasswordForm({ token }: { token?: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,12 @@ export default function UpdatePasswordForm() {
     const formData = new FormData(e.currentTarget);
     const password = formData.get("password") as string;
 
-    const result = await updatePassword({ password });
+    let result: { error?: string; success?: boolean; redirectTo?: string };
+    if (token) {
+      result = await resetPassword(token, password);
+    } else {
+      result = await updatePassword({ password });
+    }
 
     setLoading(false);
 
@@ -28,14 +33,14 @@ export default function UpdatePasswordForm() {
     }
 
     setDone(true);
-    const dest = result?.redirectTo ?? "/login";
+    const dest = token ? "/login" : (result?.redirectTo ?? "/login");
     setTimeout(() => router.push(dest), 1200);
   }
 
   if (done) {
     return (
       <div className="rounded-xl border bg-success-bg p-3 text-sm text-success-text">
-        Password updated. Redirecting to your dashboard...
+        Password updated. Redirecting...
       </div>
     );
   }
