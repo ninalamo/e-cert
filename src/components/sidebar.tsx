@@ -72,7 +72,7 @@ const navItems: NavItem[] = [
     icon: <SettingsIcon />,
     children: [
       { label: "Users", href: "/users" },
-      { label: "Auth Emails", href: "/templates/auth-emails", roles: ["admin"] },
+      { label: "Auth Emails (WIP)", href: "/templates/auth-emails", roles: ["admin"] },
     ],
     roles: ["admin"],
   },
