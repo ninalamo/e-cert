@@ -83,7 +83,7 @@ export async function getEmailTemplatesWithLockState(
   return templates.map((t) => ({ ...t, locked: lockedIds.has(t.id) }));
 }
 
-const TEMPLATE_LISTING_COLUMNS = "id, name, description, organization_id, created_at, updated_at";
+const TEMPLATE_LISTING_COLUMNS = "id, name, description, organization_id, type, auth_process, created_at, updated_at";
 
 export async function getTemplates(
   organizationId: string,
