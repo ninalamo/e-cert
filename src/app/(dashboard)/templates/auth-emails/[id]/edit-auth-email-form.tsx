@@ -12,15 +12,13 @@ const AuthEmailEditor = dynamic(() => import("@/features/templates/components/au
 import type { CertificateTemplate } from "@/types/template";
 import type { UserRole } from "@/lib/permissions";
 import { SkeletonForm } from "@/components/ui/skeleton";
-import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
+import { useEmailPreview } from "@/features/templates/hooks/use-email-preview";
 
 export default function EditAuthEmailForm({ id }: { id: string }) {
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [loading, setLoading] = useState(true);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewContent, setPreviewContent] = useState("");
-  const [previewName, setPreviewName] = useState("");
   const [role, setRole] = useState<UserRole>("staff");
+  const { onPreview, PreviewDialog } = useEmailPreview();
 
   useEffect(() => {
     let active = true;
@@ -80,22 +78,13 @@ export default function EditAuthEmailForm({ id }: { id: string }) {
           auth_process: template.auth_process,
         }}
         lockProcess={true}
-        onPreview={(html, name) => {
-          setPreviewContent(html);
-          setPreviewName(name);
-          setPreviewOpen(true);
-        }}
+        onPreview={onPreview}
         onSubmit={async (data) => {
           return await updateTemplateAction(id, data);
         }}
       />
 
-      <EmailTemplatePreviewDialog
-        open={previewOpen}
-        onOpenChange={setPreviewOpen}
-        html={previewContent}
-        name={previewName}
-      />
+      <PreviewDialog />
     </div>
   );
 }

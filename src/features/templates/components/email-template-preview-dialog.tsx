@@ -1,19 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
-interface EmailTemplatePreviewDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  html: string;
-  name: string;
-}
+import { useEffect, useRef, useState } from "react";
+import { XIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
 
 const SAMPLE_DATA: Record<string, string> = {
   recipient_name: "John Doe",
@@ -40,6 +29,20 @@ function replacePlaceholders(html: string): string {
   return result;
 }
 
+const IFRAME_STYLE = `
+  body{margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:64px}
+  table{max-width:100%}img{max-width:100%;height:auto}
+  .email-container{width:100%;background:white;border-radius:10px}
+  @media(max-width:720px){.email-container{max-width:100%}}
+`;
+
+interface EmailTemplatePreviewDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  html: string;
+  name: string;
+}
+
 export default function EmailTemplatePreviewDialog({
   open,
   onOpenChange,
@@ -47,34 +50,54 @@ export default function EmailTemplatePreviewDialog({
   name,
 }: EmailTemplatePreviewDialogProps) {
   const processedHtml = replacePlaceholders(html);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeHeight, setIframeHeight] = useState(600);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onOpenChange(false);
-      }
-    };
-    if (open) {
-      window.addEventListener("keydown", handleKeyDown);
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onOpenChange(false);
     }
+    if (open) window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onOpenChange]);
 
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const resize = () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (doc) {
+          const height = doc.documentElement.scrollHeight + 32;
+          setIframeHeight(Math.min(height, window.innerHeight - 200));
+        }
+      } catch {}
+    };
+
+    iframe.onload = resize;
+    resize();
+  }, [processedHtml, open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-9xl max-h-[90vh] p-0">
-        <DialogHeader className="p-4 border-b">
+      <DialogContent className="max-w-[95vw] p-0 overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
           <DialogTitle className="text-lg">Preview: {name}</DialogTitle>
-        </DialogHeader>
-        <div className="h-[calc(90vh-140px)] overflow-auto p-10 bg-gray-50 flex items-center justify-center">
-          <div className="w-full max-w-5xl bg-white rounded-lg shadow-lg">
-            <iframe
-              srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 64px; } table{max-width:100%;} img{max-width:100%;height:auto;} .email-container { max-width: 640px; width: 100%; margin: 0 auto; } @media (max-width: 640px) { .email-container { max-width: 100%; } }</style></head><body><div class="email-container">${processedHtml}</div></body></html>`}
-              className="w-full h-[800px] border-0 bg-white"
-              title={`Preview: ${name}`}
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            />
-          </div>
+          <DialogClose className="shrink-0 p-1 text-muted-foreground hover:text-foreground">
+            <XIcon className="size-4" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+        </div>
+        <div className="bg-gray-50 min-h-0 flex items-center justify-center p-4 lg:p-8">
+          <iframe
+            ref={iframeRef}
+            srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>${IFRAME_STYLE}</style></head><body><div class="email-container">${processedHtml}</div></body></html>`}
+            className="w-full max-w-7xl border-0 bg-white rounded-lg shadow-xl"
+            style={{ height: `${iframeHeight}px` }}
+            title={`Preview: ${name}`}
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          />
         </div>
       </DialogContent>
     </Dialog>
