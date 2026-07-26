@@ -4,25 +4,9 @@ import { getCertificatePdfBuffer } from "@/features/certificates/server/certific
 import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { ORG_NAME } from "@/lib/org";
-import { sanitizeHtml } from "@/lib/utils";
+import { renderTemplate } from "@/lib/template-renderer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
-
-function renderTemplate(html: string, css: string, variables: Record<string, string>): string {
-  let rendered = html;
-  for (const [key, value] of Object.entries(variables)) {
-    rendered = rendered.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), sanitizeHtml(value));
-  }
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <style>${css}</style>
-</head>
-<body>
-${rendered}
-</body>
-</html>`;
-}
 
 export async function GET(
   _request: NextRequest,
