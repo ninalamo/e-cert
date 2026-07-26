@@ -174,7 +174,7 @@ export async function getCertificates(
 export async function getCertificatesWithEvent(
   organizationId: string,
   client?: SupabaseClient
-): Promise<Array<Certificate & { events: { name: string } | null }>> {
+): Promise<{ data: Array<Certificate & { events: { name: string } | null }>; count: number }> {
   const certRepo = repo(client ?? (await createClient()));
   return certRepo.findByOrganizationIdWithEvent(organizationId);
 }

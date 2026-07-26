@@ -11,7 +11,7 @@ export default async function CertificatesPage({
 }) {
   const { q } = await searchParams;
   await requireRole(["admin", "staff"]);
-  const certificates = await getCertificatesWithEventAction(ORG_ID);
+  const { data: certificates } = await getCertificatesWithEventAction(ORG_ID);
 
   return (
     <Card>
