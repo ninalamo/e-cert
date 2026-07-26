@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { issueCertificatesWorkflow } from "@/workflows/issue-certificates";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentSession } from "@/lib/permissions";
 
 export async function POST(
   request: NextRequest,
@@ -9,21 +9,12 @@ export async function POST(
 ) {
   const { id: eventId } = await params;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const session = await getCurrentSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: membership } = await supabase
-    .from("user_memberships")
-    .select("role")
-    .eq("user_id", user.id)
-    .single();
-
-  if (membership?.role !== "admin" && membership?.role !== "staff") {
+  if (session.role !== "admin" && session.role !== "staff") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -43,7 +34,7 @@ export async function POST(
   const run = await start(issueCertificatesWorkflow, [
     eventId,
     attendeeIds,
-    user.id,
+    session.id,
     sendEmail ?? true,
   ]);
 
