@@ -48,10 +48,10 @@ export class SupabaseStorageProvider implements StorageProvider {
   }
 
   async fileExists(path: string): Promise<boolean> {
-    const { error } = await supabaseAdmin.storage
+    const { data, error } = await supabaseAdmin.storage
       .from(BUCKET)
-      .getMetadata(path);
+      .exists(path);
 
-    return !error;
+    return !error && data;
   }
 }
