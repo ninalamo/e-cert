@@ -152,7 +152,15 @@ export default function MobileNav({
       href: "/certificates",
       children: [
         { label: "Records", href: "/certificates" },
-        { label: "Template", href: "/templates" },
+      ],
+      roles: ["admin", "staff"],
+    },
+    {
+      label: "Templates",
+      href: "/templates",
+      children: [
+        { label: "Certificates", href: "/templates/certificates" },
+        { label: "Emails", href: "/templates/emails" },
       ],
       roles: ["admin", "staff"],
     },

@@ -76,7 +76,7 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
         submitLabel="Save Changes"
         fullscreen={fullscreen}
         onFullscreenChange={setFullscreen}
-        onClose={() => router.push("/templates")}
+        onClose={() => router.push("/templates/emails")}
         onPreview={(html, name) => {
           setPreviewContent(html);
           setPreviewName(name);
