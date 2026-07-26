@@ -1,12 +1,17 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import TemplatesTable from "@/features/templates/components/templates-table";
 import { getEmailTemplatesWithLockStateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import { PlusIcon } from "lucide-react";
+import { SkeletonTemplateCard, SkeletonTable } from "@/components/ui/skeleton";
 
-export default async function EmailTemplatesPage() {
+async function EmailTemplatesContent() {
   const templates = await getEmailTemplatesWithLockStateAction(ORG_ID);
+  return <TemplatesTable initialTemplates={templates} />;
+}
 
+export default function EmailTemplatesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -23,7 +28,9 @@ export default async function EmailTemplatesPage() {
           New Email
         </Link>
       </div>
-      <TemplatesTable initialTemplates={templates} />
+      <Suspense fallback={<SkeletonTable />}>
+        <EmailTemplatesContent />
+      </Suspense>
     </div>
   );
 }
