@@ -7,7 +7,7 @@ import { ORG_NAME } from "@/lib/org";
 import { useDashboardStats } from "@/features/dashboard/components/use-dashboard-stats";
 import type { UserRole } from "@/types/organization";
 
-type NavChild = { label: string; href: string };
+type NavChild = { label: string; href: string; roles?: UserRole[] };
 type NavItem = {
   label: string;
   href: string;
@@ -27,6 +27,7 @@ function NavLinks({
   certOpen,
   onToggle,
   onNavigate,
+  role,
 }: {
   items: NavItem[];
   pathname: string;
@@ -34,6 +35,7 @@ function NavLinks({
   certOpen: boolean;
   onToggle: () => void;
   onNavigate?: () => void;
+  role?: UserRole;
 }) {
   return (
     <nav className="space-y-1">
@@ -104,7 +106,9 @@ function NavLinks({
             </button>
             {certOpen && (
               <div className="mt-1 space-y-1 pl-3">
-                {children.map((child) => {
+                {children
+                  .filter((child) => !child.roles || !role || child.roles.includes(role))
+                  .map((child) => {
                   const active = isActivePath(pathname, child.href);
                   return (
                     <Link
@@ -161,6 +165,7 @@ export default function MobileNav({
       children: [
         { label: "Certificates", href: "/templates/certificates" },
         { label: "Emails", href: "/templates/emails" },
+        { label: "Auth Emails", href: "/templates/auth-emails", roles: ["admin"] },
       ],
       roles: ["admin", "staff"],
     },
@@ -249,6 +254,7 @@ export default function MobileNav({
                 certOpen={certOpen}
                 onToggle={() => setCertOpen((o) => !o)}
                 onNavigate={() => setOpen(false)}
+                role={role}
               />
               <div className="mt-4 border-t border-default pt-4">
                 <Link

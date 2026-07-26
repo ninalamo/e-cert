@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
 import {
@@ -21,12 +21,10 @@ import { usePagination } from "@/components/ui/paginator";
 import {
   SearchIcon,
   FilterIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
   ShieldOffIcon,
   EyeIcon,
 } from "lucide-react";
-import type { Event } from "@/types/event";
 
 interface CertificateWithEvent extends Certificate {
   events: { name: string } | null;

@@ -96,7 +96,7 @@ export class CertificateRepository extends BaseRepository<Certificate> {
     const limit = options?.limit ?? 5000;
     const offset = options?.offset ?? 0;
 
-    let q = this.client
+    const q = this.client
       .from(this.table)
       .select(selectColumns, { count: "exact" })
       .eq("organization_id", organizationId)

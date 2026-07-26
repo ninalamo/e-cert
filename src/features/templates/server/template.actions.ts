@@ -1,7 +1,13 @@
 "use server";
 
 import * as templateService from "./template.service";
-import { requireRole } from "@/lib/permissions";
+import { requireRole, getCurrentSession, type UserRole } from "@/lib/permissions";
+import type { AuthProcess } from "@/types/template";
+
+export async function getCurrentRoleAction(): Promise<UserRole> {
+  const session = await getCurrentSession();
+  return session?.role ?? "participant";
+}
 
 export async function getTemplatesAction(organizationId: string) {
   await requireRole(["admin", "staff"]);
@@ -28,6 +34,11 @@ export async function getEmailTemplatesWithLockStateAction(organizationId: strin
   return templateService.getEmailTemplatesWithLockState(organizationId);
 }
 
+export async function getAuthTemplatesAction(organizationId: string) {
+  await requireRole(["admin", "staff"]);
+  return templateService.getAuthTemplates(organizationId);
+}
+
 export async function getTemplateAction(id: string) {
   await requireRole(["admin", "staff", "participant"]);
   return templateService.getTemplate(id);
@@ -36,6 +47,11 @@ export async function getTemplateAction(id: string) {
 export async function getEmailTemplateAction(id: string) {
   await requireRole(["admin", "staff", "participant"]);
   return templateService.getEmailTemplate(id);
+}
+
+export async function getAuthTemplateByProcessAction(authProcess: AuthProcess) {
+  await requireRole(["admin", "staff"]);
+  return templateService.getAuthTemplateByProcess(authProcess);
 }
 
 export async function isTemplateLockedAction(id: string) {
@@ -78,6 +94,22 @@ export async function createEmailTemplateAction(data: {
   });
 }
 
+export async function createAuthTemplateAction(data: {
+  organization_id: string;
+  name: string;
+  description?: string;
+  html_content: string;
+  css_content?: string;
+  auth_process: AuthProcess;
+}) {
+  await requireRole(["admin", "staff"]);
+  return templateService.createAuthTemplate({
+    ...data,
+    description: data.description ?? null,
+    css_content: data.css_content ?? null,
+  });
+}
+
 async function isLockedByType(id: string): Promise<boolean> {
   const template = await templateService.getTemplate(id);
   if (!template) return false;
@@ -94,6 +126,8 @@ export async function updateTemplateAction(
     description?: string;
     html_content?: string;
     css_content?: string;
+    type?: 'certificate' | 'email' | 'auth';
+    auth_process?: AuthProcess | null;
   }
 ) {
   await requireRole(["admin", "staff"]);

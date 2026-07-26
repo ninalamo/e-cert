@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
 import { getTemplatesAction, deleteTemplateAction } from "@/features/templates/server/template.actions";
 import type { CertificateTemplate } from "@/types/template";
+import { AUTH_PROCESS_LABELS } from "./email-placeholder-field";
 
 type TemplateRow = CertificateTemplate & { locked: boolean };
 import { usePagination, Paginator } from "@/components/ui/paginator";
@@ -164,6 +165,11 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
                   >
                     {t.name}
                   </Link>
+                  {t.type === 'auth' && t.auth_process && (
+                    <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+                      Auth: {AUTH_PROCESS_LABELS[t.auth_process]}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-0.5 truncate text-xs text-tertiary">
                   {t.description || "No description"}

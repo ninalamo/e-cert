@@ -254,3 +254,19 @@ export function SkeletonTemplateGrid({ count = 6 }: { count?: number }) {
     </div>
   );
 }
+
+export function SkeletonToggleList({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="app-card divide-y divide-border overflow-hidden" aria-hidden="true">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between gap-4 px-4 py-4">
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-3 w-1/3" />
+          </div>
+          <Skeleton className="h-6 w-11 rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
+}

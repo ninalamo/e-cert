@@ -1,12 +1,17 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import TemplatesTable from "@/features/templates/components/templates-table";
 import { getCertificateTemplatesWithLockStateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import { PlusIcon } from "lucide-react";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
-export default async function CertificateTemplatesPage() {
+async function CertificateTemplatesContent() {
   const templates = await getCertificateTemplatesWithLockStateAction(ORG_ID);
+  return <TemplatesTable initialTemplates={templates} />;
+}
 
+export default function CertificateTemplatesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -23,7 +28,9 @@ export default async function CertificateTemplatesPage() {
           New Certificate
         </Link>
       </div>
-      <TemplatesTable initialTemplates={templates} />
+      <Suspense fallback={<SkeletonTable />}>
+        <CertificateTemplatesContent />
+      </Suspense>
     </div>
   );
 }

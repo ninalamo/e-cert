@@ -22,7 +22,7 @@ export class NodemailerProvider implements EmailProvider {
     const toStr = Array.isArray(to) ? to.join(", ") : to;
 
     try {
-      const result = await this.transporter.sendMail({
+      await this.transporter.sendMail({
         from: process.env.SMTP_FROM,
         to: toStr,
         subject,

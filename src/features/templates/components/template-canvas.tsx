@@ -29,10 +29,7 @@ import {
   LockIcon,
   LockOpenIcon,
   XCircleIcon,
-  EyeIcon,
-  EyeOffIcon,
   ChevronDownIcon,
-  GripVerticalIcon,
   QrCodeIcon,
 } from "lucide-react";
 import TemplateSidebar from "./template-sidebar";
@@ -268,10 +265,6 @@ function isPlaceholderElement(el: CanvasElement): boolean {
   if (el.type !== "text") return false;
   const text = el.content.replace(/<[^>]*>/g, "").trim();
   return /^\{\{.+\}\}$/.test(text);
-}
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
 }
 
 function textToSimpleHtml(text: string): string {
@@ -768,12 +761,6 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     } else {
       selectOnly(id);
     }
-  }
-
-  function openEditModal(el: CanvasElement) {
-    setEditingElement(el);
-    setEditContent(el.type === "text" ? stripHtml(el.content) : el.content);
-    setEditSrc(el.src ?? "");
   }
 
   function handleSaveEdit() {

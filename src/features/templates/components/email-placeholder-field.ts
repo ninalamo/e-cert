@@ -1,3 +1,5 @@
+import type { AuthProcess } from "@/types/template";
+
 export const EMAIL_PLACEHOLDER_FIELDS = [
   { key: "recipient_name", label: "Recipient Name" },
   { key: "certificate_number", label: "Certificate Number" },
@@ -8,6 +10,32 @@ export const EMAIL_PLACEHOLDER_FIELDS = [
 ] as const;
 
 export type EmailPlaceholderKey = (typeof EMAIL_PLACEHOLDER_FIELDS)[number]["key"];
+
+export const AUTH_PLACEHOLDER_FIELDS = [
+  { key: "user_name", label: "User Name" },
+  { key: "org_name", label: "Organization Name" },
+  { key: "login_url", label: "Login URL" },
+  { key: "reset_url", label: "Reset URL" },
+  { key: "confirm_url", label: "Confirm URL" },
+] as const;
+
+export type AuthPlaceholderKey = (typeof AUTH_PLACEHOLDER_FIELDS)[number]["key"];
+
+export const AUTH_PROCESS_LABELS: Record<AuthProcess, string> = {
+  registration: "Registration (Confirmation Email)",
+  forgot_password: "Forgot Password (Reset Email)",
+  confirm_email: "Confirm Email (Confirmed Notification)",
+  password_reset: "Password Reset (Success Email)",
+  welcome: "Welcome (Welcome Email)",
+};
+
+export const AUTH_PROCESS_PLACEHOLDERS: Record<AuthProcess, readonly { key: string; label: string }[]> = {
+  registration: [AUTH_PLACEHOLDER_FIELDS[0], AUTH_PLACEHOLDER_FIELDS[1], AUTH_PLACEHOLDER_FIELDS[4], AUTH_PLACEHOLDER_FIELDS[2]],
+  forgot_password: [AUTH_PLACEHOLDER_FIELDS[0], AUTH_PLACEHOLDER_FIELDS[1], AUTH_PLACEHOLDER_FIELDS[3]],
+  confirm_email: [AUTH_PLACEHOLDER_FIELDS[0], AUTH_PLACEHOLDER_FIELDS[1], AUTH_PLACEHOLDER_FIELDS[2]],
+  password_reset: [AUTH_PLACEHOLDER_FIELDS[0], AUTH_PLACEHOLDER_FIELDS[1], AUTH_PLACEHOLDER_FIELDS[2]],
+  welcome: [AUTH_PLACEHOLDER_FIELDS[0], AUTH_PLACEHOLDER_FIELDS[1], AUTH_PLACEHOLDER_FIELDS[2]],
+};
 
 export const DEFAULT_EMAIL_TEMPLATE = `
 <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #d4d4d8;font-family:Georgia,'Times New Roman',serif;">
