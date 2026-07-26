@@ -140,19 +140,26 @@ CREATE INDEX IF NOT EXISTS idx_certificate_emails_cert ON certificate_emails(cer
 CREATE INDEX IF NOT EXISTS idx_cert_sequences_org ON certificate_sequences(organization_id);
 
 -- Deduplicate before creating the unique index
-DELETE FROM certificates
-WHERE id IN (
-  SELECT id FROM (
-    SELECT id,
-      ROW_NUMBER() OVER (
-        PARTITION BY event_id, recipient_email
-        ORDER BY created_at ASC
-      ) AS rn
-    FROM certificates
-    WHERE event_id IS NOT NULL
-  ) dup
-  WHERE dup.rn > 1
-);
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT id FROM (
+      SELECT id,
+        ROW_NUMBER() OVER (
+          PARTITION BY event_id, recipient_email
+          ORDER BY created_at ASC
+        ) AS rn
+      FROM certificates
+      WHERE event_id IS NOT NULL
+    ) dup
+    WHERE dup.rn > 1
+  LOOP
+    UPDATE event_attendees SET certificate_id = NULL WHERE certificate_id = r.id;
+    DELETE FROM certificates WHERE id = r.id;
+  END LOOP;
+END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS certificates_event_email_unique
   ON certificates (event_id, recipient_email)
