@@ -7,7 +7,7 @@ import { ORG_NAME } from "@/lib/org";
 import { useDashboardStats } from "@/features/dashboard/components/use-dashboard-stats";
 import type { UserRole } from "@/types/organization";
 
-type NavChild = { label: string; href: string };
+type NavChild = { label: string; href: string; roles?: UserRole[] };
 type NavItem = {
   label: string;
   href: string;
@@ -66,6 +66,7 @@ const navItems: NavItem[] = [
     children: [
       { label: "Certificates", href: "/templates/certificates" },
       { label: "Emails", href: "/templates/emails" },
+      { label: "Auth Emails", href: "/templates/auth-emails", roles: ["admin"] },
     ],
     roles: ["admin", "staff"],
   },
@@ -204,7 +205,9 @@ export default function Sidebar({ role }: { role: UserRole }) {
               </button>
               {!collapsed && certOpen && (
                 <div className="mt-1 space-y-1 pl-3">
-                  {children.map((child) => {
+                  {children
+                    .filter((child) => !child.roles || child.roles.includes(role))
+                    .map((child) => {
                     const active = isActivePath(pathname, child.href);
                     return (
                       <Link

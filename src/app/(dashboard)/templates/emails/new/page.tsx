@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
-import { createEmailTemplateAction, createAuthTemplateAction, getCurrentRoleAction } from "@/features/templates/server/template.actions";
+import { createEmailTemplateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import EmailTemplatePreviewDialog from "@/features/templates/components/email-template-preview-dialog";
-import type { UserRole } from "@/lib/permissions";
 
 const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 
@@ -14,22 +13,16 @@ export default function NewEmailTemplatePage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewName, setPreviewName] = useState("");
-  const [role, setRole] = useState<UserRole>("staff");
-
-  useEffect(() => {
-    getCurrentRoleAction().then(setRole);
-  }, []);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-brand-700">New Email Template</h1>
         <p className="text-muted-foreground text-sm">
-          Create a new email template for certificate notifications or authentication emails
+          Create a new email template for certificate notifications
         </p>
       </div>
       <TemplateForm
-        role={role}
         submitLabel="Save Changes"
         fullscreen={fullscreen}
         onFullscreenChange={setFullscreen}
@@ -40,16 +33,6 @@ export default function NewEmailTemplatePage() {
           setPreviewOpen(true);
         }}
         onSubmit={async (data) => {
-          if (data.type === 'auth' && data.auth_process) {
-            return await createAuthTemplateAction({
-              organization_id: ORG_ID,
-              name: data.name,
-              description: data.description,
-              html_content: data.html_content,
-              css_content: data.css_content,
-              auth_process: data.auth_process,
-            });
-          }
           return await createEmailTemplateAction({
             organization_id: ORG_ID,
             name: data.name,

@@ -1,18 +1,11 @@
 import Link from "next/link";
 import TemplatesTable from "@/features/templates/components/templates-table";
-import { getEmailTemplatesWithLockStateAction, getAuthTemplatesAction } from "@/features/templates/server/template.actions";
+import { getEmailTemplatesWithLockStateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import { PlusIcon } from "lucide-react";
 
 export default async function EmailTemplatesPage() {
-  const [emailTemplates, authTemplates] = await Promise.all([
-    getEmailTemplatesWithLockStateAction(ORG_ID),
-    getAuthTemplatesAction(ORG_ID),
-  ]);
-  const templates = [
-    ...emailTemplates,
-    ...authTemplates.map(t => ({ ...t, locked: false })),
-  ];
+  const templates = await getEmailTemplatesWithLockStateAction(ORG_ID);
 
   return (
     <div className="space-y-6">
@@ -22,7 +15,7 @@ export default async function EmailTemplatesPage() {
             Email Templates
           </h1>
           <p className="mt-1 text-sm text-tertiary">
-            Manage your email templates for certificate notifications and authentication emails
+            Manage your email templates for certificate notifications
           </p>
         </div>
         <Link href="/templates/emails/new" className="btn-brand">
