@@ -113,7 +113,7 @@ export default function TemplateCard({
           </button>
           {(selected || event.template_id) && (
             <Link
-              href={`/templates/${selected || event.template_id}`}
+              href={`/templates/certificates/${selected || event.template_id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-brand-soft"
@@ -173,7 +173,7 @@ export default function TemplateCard({
           </button>
           {(selectedEmail || event.email_template_id) && (
             <Link
-              href={`/templates/email/${selectedEmail || event.email_template_id}`}
+              href={`/templates/emails/${selectedEmail || event.email_template_id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-brand-soft"

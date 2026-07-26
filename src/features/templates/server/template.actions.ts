@@ -13,9 +13,19 @@ export async function getCertificateTemplatesAction(organizationId: string) {
   return templateService.getCertificateTemplates(organizationId);
 }
 
+export async function getCertificateTemplatesWithLockStateAction(organizationId: string) {
+  await requireRole(["admin", "staff"]);
+  return templateService.getCertificateTemplatesWithLockState(organizationId);
+}
+
 export async function getEmailTemplatesAction(organizationId: string) {
   await requireRole(["admin", "staff"]);
   return templateService.getEmailTemplates(organizationId);
+}
+
+export async function getEmailTemplatesWithLockStateAction(organizationId: string) {
+  await requireRole(["admin", "staff"]);
+  return templateService.getEmailTemplatesWithLockState(organizationId);
 }
 
 export async function getTemplateAction(id: string) {
@@ -68,6 +78,15 @@ export async function createEmailTemplateAction(data: {
   });
 }
 
+async function isLockedByType(id: string): Promise<boolean> {
+  const template = await templateService.getTemplate(id);
+  if (!template) return false;
+  if (template.type === "email") {
+    return templateService.isEmailTemplateLocked(id);
+  }
+  return templateService.isTemplateLocked(id);
+}
+
 export async function updateTemplateAction(
   id: string,
   data: {
@@ -78,7 +97,7 @@ export async function updateTemplateAction(
   }
 ) {
   await requireRole(["admin", "staff"]);
-  if (await templateService.isTemplateLocked(id)) {
+  if (await isLockedByType(id)) {
     return { template: null, error: "This template is locked because it is used by an active or archived event. Archive the linked event(s) to edit it." };
   }
   return templateService.updateTemplate(id, {
@@ -90,7 +109,7 @@ export async function updateTemplateAction(
 
 export async function deleteTemplateAction(id: string) {
   await requireRole(["admin"]);
-  if (await templateService.isTemplateLocked(id)) {
+  if (await isLockedByType(id)) {
     return { error: "This template is locked because it is used by an active or archived event. Archive the linked event(s) to delete it." };
   }
   return templateService.deleteTemplate(id);

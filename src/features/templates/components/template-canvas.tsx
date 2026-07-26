@@ -1283,7 +1283,7 @@ const content = (
                 onSave={onSave}
                 onClose={() => {
                   if (window.confirm("Are you sure you want to close? Any unsaved changes will be lost.")) {
-                    window.location.href = "/templates";
+                    window.location.href = "/templates/certificates";
                   }
                 }}
                 loading={loading}

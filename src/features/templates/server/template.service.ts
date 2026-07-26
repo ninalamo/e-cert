@@ -44,7 +44,41 @@ export async function getTemplatesWithLockState(
     (e) => e.status !== "draft"
   );
   const lockedIds = new Set(
+    linkedEvents
+      .flatMap((e) => [e.template_id, e.email_template_id])
+      .filter((id): id is string => !!id)
+  );
+  return templates.map((t) => ({ ...t, locked: lockedIds.has(t.id) }));
+}
+
+export async function getCertificateTemplatesWithLockState(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<(CertificateTemplate & { locked: boolean })[]> {
+  const c = client ?? (await createClient());
+  const templates = await repo(c).findByOrganizationIdAndType(organizationId, 'certificate');
+  const eventR = new eventRepo.EventRepository(c);
+  const linkedEvents = (await eventR.findByOrganizationId(organizationId)).filter(
+    (e) => e.status !== "draft"
+  );
+  const lockedIds = new Set(
     linkedEvents.map((e) => e.template_id).filter((id): id is string => !!id)
+  );
+  return templates.map((t) => ({ ...t, locked: lockedIds.has(t.id) }));
+}
+
+export async function getEmailTemplatesWithLockState(
+  organizationId: string,
+  client?: SupabaseClient
+): Promise<(CertificateTemplate & { locked: boolean })[]> {
+  const c = client ?? (await createClient());
+  const templates = await repo(c).findByOrganizationIdAndType(organizationId, 'email');
+  const eventR = new eventRepo.EventRepository(c);
+  const linkedEvents = (await eventR.findByOrganizationId(organizationId)).filter(
+    (e) => e.status !== "draft"
+  );
+  const lockedIds = new Set(
+    linkedEvents.map((e) => e.email_template_id).filter((id): id is string => !!id)
   );
   return templates.map((t) => ({ ...t, locked: lockedIds.has(t.id) }));
 }

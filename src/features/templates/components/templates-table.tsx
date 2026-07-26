@@ -17,27 +17,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon, MailIcon, FileTextIcon } from "lucide-react";
+import { Trash2Icon, SearchIcon, InfoIcon } from "lucide-react";
 
-type FilterKey = "all" | "certificate" | "email";
 type SortKey = "name-asc" | "name-desc" | "created-desc" | "created-asc";
-
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "certificate", label: "Certificates" },
-  { key: "email", label: "Emails" },
-];
 
 interface TemplatesTableProps {
   initialTemplates: TemplateRow[];
-  initialFilter?: FilterKey;
 }
 
-export default function TemplatesTable({ initialTemplates, initialFilter }: TemplatesTableProps) {
+export default function TemplatesTable({ initialTemplates }: TemplatesTableProps) {
   const [templates, setTemplates] = useState<TemplateRow[]>(initialTemplates);
 
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<FilterKey>(initialFilter ?? "all");
   const [sort] = useState<SortKey>("created-desc");
   const [previewTemplate, setPreviewTemplate] = useState<CertificateTemplate | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
@@ -52,15 +43,11 @@ export default function TemplatesTable({ initialTemplates, initialFilter }: Temp
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = templates.filter((t) => {
-      const matchesQuery =
+      return (
         !q ||
         t.name.toLowerCase().includes(q) ||
-        (t.description ?? "").toLowerCase().includes(q);
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "certificate" && t.type === "certificate") ||
-        (filter === "email" && t.type === "email");
-      return matchesQuery && matchesFilter;
+        (t.description ?? "").toLowerCase().includes(q)
+      );
     });
 
     list = [...list].sort((a, b) => {
@@ -83,7 +70,7 @@ export default function TemplatesTable({ initialTemplates, initialFilter }: Temp
       }
     });
     return list;
-  }, [templates, query, filter, sort]);
+  }, [templates, query, sort]);
 
   const { page, totalPages, pageSize, paginatedItems, setPage, setPageSize } =
     usePagination(filtered, 10);
@@ -136,17 +123,6 @@ export default function TemplatesTable({ initialTemplates, initialFilter }: Temp
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2">
-        <Link href="/templates/new" className="btn-brand-soft">
-          <PlusIcon className="size-4" />
-          New Certificate
-        </Link>
-        <Link href="/templates/email/new" className="btn-brand">
-          <MailIcon className="size-4" />
-          New Email
-        </Link>
-      </div>
-
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-tertiary" />
@@ -160,40 +136,6 @@ export default function TemplatesTable({ initialTemplates, initialFilter }: Temp
             placeholder="Search templates..."
             className="input pl-8 py-1.5 text-xs"
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((f) => {
-            const active = filter === f.key;
-            return (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => {
-                  setFilter(f.key);
-                  setPage(0);
-                }}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all cursor-pointer ${
-                  active
-                    ? "border-[var(--color-brand-600)] bg-[var(--color-brand-600)] text-white"
-                    : "border-[var(--color-border-strong)] bg-[var(--color-surface)] text-tertiary hover:border-[var(--color-brand-300)]"
-                }`}
-              >
-                {f.label}
-              </button>
-            );
-          })}
-          {filter !== "all" && (
-            <button
-              type="button"
-              onClick={() => {
-                setFilter("all");
-                setPage(0);
-              }}
-              className="text-xs text-tertiary hover:text-secondary cursor-pointer"
-            >
-              Clear
-            </button>
-          )}
         </div>
       </div>
 
@@ -217,23 +159,11 @@ export default function TemplatesTable({ initialTemplates, initialFilter }: Temp
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/templates/${t.id}`}
+                    href={t.type === 'email' ? `/templates/emails/${t.id}` : `/templates/certificates/${t.id}`}
                     className="font-medium text-[var(--color-text)] hover:underline"
                   >
                     {t.name}
                   </Link>
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                    t.type === 'email'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {t.type === 'email' ? (
-                      <MailIcon className="size-2.5" />
-                    ) : (
-                      <FileTextIcon className="size-2.5" />
-                    )}
-                    {t.type === 'email' ? 'Email' : 'Certificate'}
-                  </span>
                 </div>
                 <p className="mt-0.5 truncate text-xs text-tertiary">
                   {t.description || "No description"}
@@ -252,12 +182,6 @@ export default function TemplatesTable({ initialTemplates, initialFilter }: Temp
                 ) : (
                   <span className="status-pill status-active">Editable</span>
                 )}
-                {/* <button
-                  onClick={() => setPreviewTemplate(t)}
-                  className="btn-disclosure"
-                >
-                  Preview
-                </button> */}
                 {t.locked ? (
                   <span
                     title="Locked: used by an active or archived event"
@@ -267,7 +191,7 @@ export default function TemplatesTable({ initialTemplates, initialFilter }: Temp
                     <SearchIcon className="size-4" />
                   </span>
                 ) : (
-                  <Link href={t.type === 'email' ? `/templates/email/${t.id}` : `/templates/${t.id}`} className="btn-disclosure">
+                  <Link href={t.type === 'email' ? `/templates/emails/${t.id}` : `/templates/certificates/${t.id}`} className="btn-disclosure">
                     Edit
                   </Link>
                 )}
@@ -345,7 +269,7 @@ export default function TemplatesTable({ initialTemplates, initialFilter }: Temp
                   {previewTemplate.description || "No description"}
                 </span>
                 <Link
-                  href={previewTemplate.type === 'email' ? `/templates/email/${previewTemplate.id}` : `/templates/${previewTemplate.id}`}
+                  href={previewTemplate.type === 'email' ? `/templates/emails/${previewTemplate.id}` : `/templates/certificates/${previewTemplate.id}`}
                   className="btn-brand text-xs px-4 py-2"
                 >
                   Edit Template
@@ -395,7 +319,7 @@ function buildPreviewSrcDoc(template: CertificateTemplate): string {
   for (const [placeholder, value] of Object.entries(replacements)) {
     content = content.replace(new RegExp(placeholder.replace(/[{}]/g, "\\$&"), "g"), value);
   }
-  content = content.replace(/\{\{qr_code\}\}/g, '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><g fill="#000"><rect x="5" y="5" width="25" height="25"/><rect x="10" y="10" width="15" height="15" fill="#fff"/><rect x="13" y="13" width="9" height="9"/><rect x="70" y="5" width="25" height="25"/><rect x="75" y="10" width="15" height="15" fill="#fff"/><rect x="78" y="13" width="9" height="9"/><rect x="5" y="70" width="25" height="25"/><rect x="10" y="75" width="15" height="15" fill="#fff"/><rect x="13" y="78" width="9" height="9"/><rect x="35" y="5" width="5" height="5"/><rect x="45" y="5" width="5" height="5"/><rect x="55" y="5" width="5" height="5"/><rect x="35" y="15" width="5" height="5"/><rect x="50" y="15" width="5" height="5"/><rect x="60" y="15" width="5" height="5"/><rect x="35" y="25" width="5" height="5"/><rect x="45" y="25" width="5" height="5"/><rect x="55" y="35" width="5" height="5"/><rect x="40" y="40" width="5" height="5"/><rect x="50" y="40" width="5" height="5"/><rect x="60" y="40" width="5" height="5"/><rect x="35" y="50" width="5" height="5"/><rect x="45" y="50" width="5" height="5"/><rect x="55" y="50" width="5" height="5"/><rect x="5" y="35" width="5" height="5"/><rect x="5" y="45" width="5" height="5"/><rect x="15" y="40" width="5" height="5"/><rect x="25" y="35" width="5" height="5"/><rect x="25" y="45" width="5" height="5"/><rect x="5" y="55" width="5" height="5"/><rect x="15" y="60" width="5" height="5"/><rect x="25" y="55" width="5" height="5"/><rect x="35" y="60" width="5" height="5"/><rect x="45" y="55" width="5" height="5"/><rect x="55" y="55" width="5" height="5"/><rect x="65" y="35" width="5" height="5"/><rect x="75" y="35" width="5" height="5"/><rect x="85" y="35" width="5" height="5"/><rect x="70" y="45" width="5" height="5"/><rect x="80" y="45" width="5" height="5"/><rect x="90" y="45" width="5" height="5"/><rect x="65" y="55" width="5" height="5"/><rect x="75" y="60" width="5" height="5"/><rect x="85" y="55" width="5" height="5"/><rect x="35" y="70" width="5" height="5"/><rect x="45" y="75" width="5" height="5"/><rect x="55" y="70" width="5" height="5"/><rect x="40" y="85" width="5" height="5"/><rect x="50" y="80" width="5" height="5"/><rect x="60" y="85" width="5" height="5"/><rect x="70" y="70" width="5" height="5"/><rect x="80" y="75" width="5" height="5"/><rect x="90" y="80" width="5" height="5"/><rect x="75" y="85" width="5" height="5"/><rect x="85" y="90" width="5" height="5"/></g></svg>');
+  content = content.replace(/\{\{qr_code\}\}/g, '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><g fill="#000"><rect x="5" y="5" width="25" height="25"/><rect x="10" y="10" width="15" height="15" fill="#fff"/><rect x="13" y="13" width="9" height="9"/><rect x="70" y="5" width="25" height="25"/><rect x="75" y="10" width="15" height="15" fill="#fff"/><rect x="78" y="13" width="9" height="9"/><rect x="5" y="70" width="25" height="25"/><rect x="10" y="75" width="15" height="15" fill="#fff"/><rect x="13" y="78" width="9" height="9"/><rect x="35" y="5" width="5" height="5"/><rect x="45" y="5" width="5" height="5"/><rect x="55" y="5" width="5" height="5"/><rect x="35" y="15" width="5" height="5"/><rect x="50" y="15" width="5" height="5"/><rect x="60" y="15" width="5" height="5"/><rect x="35" y="25" width="5" height="5"/><rect x="45" y="25" width="5" height="5"/><rect x="55" y="35" width="5" height="5"/><rect x="40" y="40" width="5" height="5"/><rect x="50" y="40" width="5" height="5"/><rect x="60" y="40" width="5" height="5"/><rect x="35" y="50" width="5" height="5"/><rect x="45" y="50" width="5" height="5"/><rect x="55" y="50" width="5" height="5"/><rect x="5" y="35" width="5" height="5"/><rect x="5" y="45" width="5" height="5"/><rect x="15" y="40" width="5" height="5"/><rect x="25" y="35" width="5" height="5"/><rect x="25" y="45" width="5" height="5"/><rect x="5" y="55" width="5" height="5"/><rect x="15" y="60" width="5" height="5"/><rect x="25" y="55" width="5" height="5"/><rect x="35" y="60" width="5" height="5"/><rect x="45" y="55" width="5" height="5"/><rect x="55" y="55" width="5" height="5"/><rect x="65" y="35" width="5" height="5"/><rect x="75" y="35" width="5" height="5"/><rect x="85" y="35" width="5" height="5"/><rect x="70" y="45" width="5" height="5"/><rect x="80" y="45" width="5" height="5"/><rect x="90" y="45" width="5" height="5"/><rect x="65" y="55" width="5" height="5"/><rect x="75" y="55" width="5" height="5"/><rect x="85" y="55" width="5" height="5"/><rect x="35" y="70" width="5" height="5"/><rect x="45" y="70" width="5" height="5"/><rect x="55" y="70" width="5" height="5"/><rect x="35" y="80" width="5" height="5"/><rect x="50" y="80" width="5" height="5"/><rect x="60" y="80" width="5" height="5"/><rect x="35" y="90" width="5" height="5"/><rect x="45" y="90" width="5" height="5"/><rect x="55" y="90" width="5" height="5"/></g></svg>');
 
   const wMatch = content.match(/width:\s*([\d.]+)px/);
   const hMatch = content.match(/height:\s*([\d.]+)px/);
