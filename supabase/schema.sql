@@ -1,7 +1,7 @@
 -- ============================================================
 -- E-Cert — Full Schema + Seed Data
--- Run this single file to set up the database from scratch.
--- Safe to re-run: drops everything before recreating.
+-- Single-source rebuild script.  Mirrors migrations as of
+-- 2026-07-25.  Safe to re-run: drops everything first.
 -- ============================================================
 
 -- ============================================================
@@ -12,9 +12,15 @@ DROP TABLE IF EXISTS certificate_emails CASCADE;
 DROP TABLE IF EXISTS certificates CASCADE;
 DROP TABLE IF EXISTS certificate_templates CASCADE;
 DROP TABLE IF EXISTS event_attendees CASCADE;
+DROP TABLE IF EXISTS certificate_sequences CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS user_memberships CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
+
+DROP FUNCTION IF EXISTS next_certificate_number(UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS issue_certificate_atomic(UUID, UUID, UUID, TEXT, TEXT, TEXT, TIMESTAMPTZ, JSONB) CASCADE;
+DROP FUNCTION IF EXISTS revoke_certificate_atomic(UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
 
 -- ============================================================
 -- 2. TABLES
@@ -138,17 +144,23 @@ CREATE INDEX idx_events_org ON events(organization_id);
 CREATE INDEX idx_events_org_created ON events(organization_id, created_at DESC);
 CREATE INDEX idx_events_status ON events(status);
 CREATE INDEX idx_events_email_template ON events(email_template_id);
+CREATE INDEX idx_events_template ON events(template_id);
 CREATE INDEX idx_attendees_event ON event_attendees(event_id);
 CREATE INDEX idx_attendees_org ON event_attendees(organization_id);
 CREATE INDEX idx_attendees_completed ON event_attendees(event_id, completed);
+CREATE INDEX idx_attendees_certificate ON event_attendees(certificate_id);
 CREATE INDEX idx_certificates_org ON certificates(organization_id);
 CREATE INDEX idx_certificates_org_created ON certificates(organization_id, created_at DESC);
 CREATE INDEX idx_certificates_event ON certificates(event_id);
 CREATE INDEX idx_certificates_number ON certificates(certificate_number);
 CREATE INDEX idx_certificates_email ON certificates(recipient_email);
 CREATE INDEX idx_certificate_emails_cert ON certificate_emails(certificate_id);
-CREATE INDEX idx_events_template ON events(template_id);
-CREATE INDEX idx_attendees_certificate ON event_attendees(certificate_id);
+CREATE INDEX idx_cert_sequences_org ON certificate_sequences(organization_id);
+
+-- Unique index: prevent duplicate certs per event+email
+CREATE UNIQUE INDEX IF NOT EXISTS certificates_event_email_unique
+  ON certificates (event_id, recipient_email)
+  WHERE event_id IS NOT NULL;
 
 -- ============================================================
 -- 3b. updated_at TRIGGER
@@ -213,13 +225,63 @@ END;
 $$;
 
 -- ============================================================
--- 4. ROW LEVEL SECURITY
--- Roles: admin (full, incl. audit + delete), staff (all except audit + delete),
---         participant (own profile + own certificates by email), guest (none).
+-- 3d. ATOMIC CERTIFICATE FUNCTIONS
 -- ============================================================
 
--- Helper: role of the current user for the single org
--- (inline in each policy to avoid needing a SECURITY DEFINER function)
+CREATE OR REPLACE FUNCTION issue_certificate_atomic(
+  p_org_id UUID,
+  p_event_id UUID,
+  p_template_id UUID,
+  p_recipient_name TEXT,
+  p_recipient_email TEXT,
+  p_certificate_number TEXT,
+  p_expires_at TIMESTAMPTZ,
+  p_metadata JSONB
+) RETURNS certificates AS $$
+DECLARE
+  v_cert certificates%ROWTYPE;
+BEGIN
+  INSERT INTO certificates (
+    organization_id, event_id, template_id,
+    recipient_name, recipient_email, certificate_number,
+    expires_at, metadata
+  ) VALUES (
+    p_org_id, p_event_id, p_template_id,
+    p_recipient_name, p_recipient_email, p_certificate_number,
+    p_expires_at, p_metadata
+  )
+  RETURNING * INTO v_cert;
+
+  IF p_event_id IS NOT NULL THEN
+    UPDATE event_attendees
+    SET certificate_id = v_cert.id, updated_at = now()
+    WHERE event_id = p_event_id
+      AND email = p_recipient_email
+      AND certificate_id IS NULL;
+  END IF;
+
+  RETURN v_cert;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION revoke_certificate_atomic(
+  p_cert_id UUID,
+  p_reason TEXT
+) RETURNS void AS $$
+BEGIN
+  UPDATE certificates
+  SET revoked_at = now(), revoke_reason = p_reason, updated_at = now()
+  WHERE id = p_cert_id AND revoked_at IS NULL;
+
+  UPDATE event_attendees
+  SET certificate_id = NULL, updated_at = now()
+  WHERE certificate_id = p_cert_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- 4. ROW LEVEL SECURITY
+-- ============================================================
 
 -- Organizations
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
@@ -228,8 +290,6 @@ CREATE POLICY "Members can read org" ON organizations
   FOR SELECT USING (
     id IN (SELECT organization_id FROM user_memberships WHERE user_id = auth.uid())
   );
-
--- Org is single-tenant; no insert/update/delete by app users.
 
 -- User memberships
 ALTER TABLE user_memberships ENABLE ROW LEVEL SECURITY;
@@ -348,15 +408,22 @@ CREATE POLICY "Admins can view email logs" ON certificate_emails
 -- Email logs are written by the service role (bypasses RLS); no app-user writes.
 
 -- ============================================================
--- 5. SEED DATA
+-- 5. GRANTS
 -- ============================================================
 
--- 5a. Organization
+-- RLS policies reference auth.users, so the authenticated role needs SELECT.
+GRANT SELECT ON auth.users TO authenticated;
+
+-- ============================================================
+-- 6. SEED DATA
+-- ============================================================
+
+-- 6a. Organization
 INSERT INTO organizations (id, name, slug, created_at, updated_at)
 VALUES ('d4444444-4444-4444-4444-444444444444', 'Lyceum Of Alabang', 'lyceum-of-alabang', now(), now())
 ON CONFLICT (id) DO NOTHING;
 
--- 5b. Auth users + memberships are seeded via the Supabase Admin API,
+-- 6b. Auth users + memberships are seeded via the Supabase Admin API,
 --     NOT raw SQL. GoTrue (Supabase Auth) rejects password hashes
 --     produced by pgcrypto — only the Admin API produces valid hashes.
 --
