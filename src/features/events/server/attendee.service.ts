@@ -19,7 +19,6 @@ export async function getAttendees(
   eventId: string,
   client?: SupabaseClient
 ): Promise<EventAttendee[]> {
-  console.log(`[AttendeeService] Fetching attendees for event ${eventId}`);
   return repos(client ?? (await createClient())).attendeeRepo.findByEventId(eventId);
 }
 
@@ -169,8 +168,6 @@ export async function issueCertificatesForCompleted(
   const c = client ?? (await createClient());
   const { attendeeRepo, eventRepo } = repos(c);
 
-  console.log(`[AttendeeService] issueCertificatesForCompleted: eventId=${eventId}, options=${JSON.stringify({ send_email: options?.send_email, user_id: options?.user_id, attendeeIds: options?.attendeeIds })}`);
-
   const event = (await eventRepo.findById(eventId)) as Event | null;
   if (!event) {
     return { issued: 0, emailed: 0, skipped: 0, results: [] };
@@ -192,7 +189,6 @@ export async function issueCertificatesForCompleted(
   }> = [];
 
   for (const attendee of all) {
-    console.log(`[AttendeeService] Processing attendee: ${attendee.name} (${attendee.email}), certificate_id=${attendee.certificate_id}`);
     try {
       let certId = attendee.certificate_id;
 
@@ -240,9 +236,7 @@ export async function issueCertificatesForCompleted(
         const { sendCertificateEmail } = await import(
           "@/features/certificates/server/certificate-email.service"
         );
-        console.log(`[AttendeeService] Sending email for cert ${certId} to ${attendee.email} (user=${options.user_id})`);
         const emailResult = await sendCertificateEmail(certId, options.user_id, c, { skip_pdf: true });
-        console.log(`[AttendeeService] Email result for ${attendee.email}: success=${emailResult.success}, error=${emailResult.error}`);
         if (emailResult.success) emailed++;
         else {
           results.push({
@@ -253,8 +247,6 @@ export async function issueCertificatesForCompleted(
           });
           continue;
         }
-      } else {
-        console.log(`[AttendeeService] Email skipped for ${attendee.email}: send_email=${options?.send_email}, certId=${certId}, user_id=${options?.user_id}`);
       }
 
       results.push({
@@ -273,6 +265,5 @@ export async function issueCertificatesForCompleted(
     }
   }
 
-  console.log(`[AttendeeService] Done: issued=${issued}, emailed=${emailed}, results=${JSON.stringify(results)}`);
   return { issued, emailed, skipped: 0, results };
 }

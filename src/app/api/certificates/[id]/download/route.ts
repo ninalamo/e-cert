@@ -51,7 +51,6 @@ export async function GET(
   if (typeof cachedPdf === "string") {
     const pdfBuffer = Buffer.from(cachedPdf, "base64");
     if (pdfBuffer.length > 4 && pdfBuffer.subarray(0, 4).toString() === "%PDF") {
-      console.log(`[download] Serving cached rendered_pdf for ${id}`);
       return new NextResponse(new Uint8Array(pdfBuffer), {
         headers: {
           "Content-Type": "application/pdf",
@@ -59,7 +58,6 @@ export async function GET(
         },
       });
     }
-    console.warn(`[download] metadata.rendered_pdf exists but invalid for ${id}`);
   }
 
   const cachedHtml = meta.rendered_html;
@@ -75,7 +73,6 @@ export async function GET(
         await certRepo.update(id, {
           metadata: { ...meta, rendered_pdf: pdfBase64 },
         } as never);
-        console.log(`[download] Rendered PDF from cached rendered_html for ${id}`);
         return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: {
             "Content-Type": "application/pdf",
@@ -91,7 +88,6 @@ export async function GET(
   try {
     const pdfBuffer = await getCertificatePdfBuffer(certificate);
     if (pdfBuffer.length > 4 && pdfBuffer.subarray(0, 4).toString() === "%PDF") {
-      console.log(`[download] Serving PDF from getCertificatePdfBuffer for ${id}`);
       return new NextResponse(new Uint8Array(pdfBuffer), {
         headers: {
           "Content-Type": "application/pdf",
@@ -151,7 +147,6 @@ export async function GET(
           metadata: { ...(certificate.metadata ?? {}), rendered_pdf: pdfBase64 },
         } as never);
 
-        console.log(`[download] On-demand rendered PDF from template for ${id}`);
         return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: {
             "Content-Type": "application/pdf",
