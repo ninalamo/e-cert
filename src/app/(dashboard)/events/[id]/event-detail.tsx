@@ -166,7 +166,7 @@ export default function EventDetail({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h1
-                className={`font-heading text-2xl font-bold tracking-tight text-white ${
+                className={`font-heading text-2xl font-bold tracking-tight text-[var(--color-text-primary)] ${
                   event.status === "draft"
                     ? "cursor-pointer rounded-lg px-1 -mx-1 hover:bg-surface-hover transition-colors"
                     : ""

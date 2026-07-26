@@ -83,7 +83,7 @@ export default function EmailTemplatePreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] p-0 overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
-          <DialogTitle className="text-lg">Preview: {name}</DialogTitle>
+          <DialogTitle className="text-lg text-[var(--color-text)]">Preview: {name}</DialogTitle>
           <DialogClose className="shrink-0 p-1 text-muted-foreground hover:text-foreground">
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
