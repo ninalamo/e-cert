@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { AUTH_PROCESS_LABELS, AUTH_PROCESS_PLACEHOLDERS } from "./email-placeholder-field";
+import { AUTH_PROCESS_LABELS } from "./email-placeholder-field";
 import type { AuthProcess } from "@/types/template";
 
 interface AuthEmailEditorProps {
@@ -185,150 +185,134 @@ export default function AuthEmailEditor({
     setLoading(false);
   }
 
-  const placeholderFields = authProcess ? AUTH_PROCESS_PLACEHOLDERS[authProcess] : [];
-
   return (
-    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
+    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
       {error && (
-        <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4 text-sm text-[var(--color-danger-text)]">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      <fieldset disabled={disabled} className="space-y-6 disabled:opacity-60">
-        {/* Auth Process - Locked */}
+      <div className="space-y-4">
         {lockProcess && authProcess && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[var(--color-text)]">Auth Process</label>
-            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Auth Process</p>
+            <div className="mt-2 flex items-center gap-2">
               <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800">
                 {AUTH_PROCESS_LABELS[authProcess]}
               </span>
-              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-                This template is configured for this specific auth process and cannot be changed.
-              </p>
             </div>
+            <p className="mt-2 text-xs text-gray-500">
+              This template is configured for this specific auth process and cannot be changed.
+            </p>
           </div>
         )}
 
-        {/* Auth Process Selector - Unlocked (only for new templates without pre-selected process) */}
         {!lockProcess && !authProcess && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[var(--color-text)]">Auth Process</label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Auth Process</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
               {Object.entries(AUTH_PROCESS_LABELS).map(([value, label]) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => handleProcessChange(value as AuthProcess)}
                   disabled={disabled}
-                  className={`rounded-xl border p-3 text-left text-sm transition-all ${
+                  className={`rounded-xl px-4 py-3 text-center text-sm font-medium transition-all ${
                     authProcess === value
-                      ? "border-[var(--color-brand-500)] bg-[var(--color-brand-50)] ring-1 ring-[var(--color-brand-500)]"
-                      : "border-[var(--color-border)] hover:border-[var(--color-brand-300)]"
+                      ? "bg-brand-600 text-white"
+                      : "border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
                   }`}
                 >
-                  <span className="font-medium text-[var(--color-text)]">{label}</span>
+                  {label}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Template Name */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-[var(--color-text)]">Template Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={authProcess ? AUTH_PROCESS_LABELS[authProcess] : "Select an auth process first"}
-            disabled={disabled || !authProcess}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm transition-colors focus:border-[var(--color-brand-500)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
-          />
-        </div>
+        {authProcess && (
+          <div className="rounded-2xl border border-gray-200 bg-white divide-y divide-gray-100">
+            <div className="p-4">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Template Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={AUTH_PROCESS_LABELS[authProcess]}
+                disabled={disabled}
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-transparent px-4 py-3 text-sm text-gray-900 outline-none transition-colors focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
 
-        {/* Title */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-[var(--color-text)]">Email Title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter email title..."
-            disabled={disabled || !authProcess}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm transition-colors focus:border-[var(--color-brand-500)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
-          />
-        </div>
+            <div className="p-4">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Email Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter email title..."
+                disabled={disabled}
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-transparent px-4 py-3 text-sm text-gray-900 outline-none transition-colors focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
 
-        {/* Message */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-[var(--color-text)]">Message</label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Enter email message..."
-            disabled={disabled || !authProcess}
-            rows={4}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm transition-colors focus:border-[var(--color-brand-500)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
-          />
-        </div>
+            <div className="p-4">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Message</label>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Enter email message..."
+                disabled={disabled}
+                rows={4}
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-transparent px-4 py-3 text-sm text-gray-900 outline-none transition-colors focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              />
+            </div>
 
-        {/* Button Text */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-[var(--color-text)]">Button Text</label>
-          <input
-            type="text"
-            value={buttonText}
-            onChange={(e) => setButtonText(e.target.value)}
-            placeholder="Enter button text..."
-            disabled={disabled || !authProcess}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm transition-colors focus:border-[var(--color-brand-500)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand-500)]"
-          />
-        </div>
-
-        {/* Available Placeholders Info */}
-        {authProcess && placeholderFields.length > 0 && (
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <p className="mb-2 text-sm font-medium text-[var(--color-text)]">Available Placeholders</p>
-            <p className="text-xs text-[var(--color-text-muted)] mb-3">
-              These are automatically replaced with actual values when the email is sent.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {placeholderFields.map((p) => (
-                <code
-                  key={p.key}
-                  className="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700"
-                >
-                  {`{{${p.key}}}`}
-                </code>
-              ))}
+            <div className="p-4">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Button Text</label>
+              <input
+                type="text"
+                value={buttonText}
+                onChange={(e) => setButtonText(e.target.value)}
+                placeholder="Enter button text..."
+                disabled={disabled}
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-transparent px-4 py-3 text-sm text-gray-900 outline-none transition-colors focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              />
             </div>
           </div>
         )}
 
-        {/* Preview Button */}
         {authProcess && (
-          <button
-            type="button"
-            onClick={() => {
-              const url = authProcess === 'registration' ? 'https://example.com/confirm' : authProcess === 'forgot_password' ? 'https://example.com/reset' : 'https://example.com/login';
-              const html = buildAuthEmailHtml(title, message, buttonText, url, "Lyceum Of Alabang");
-              onPreview?.(html, name || AUTH_PROCESS_LABELS[authProcess]);
-            }}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-hover)]"
-          >
-            Preview Email
-          </button>
-        )}
-      </fieldset>
+          <div className="space-y-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                const url = authProcess === 'registration' ? 'https://example.com/confirm' : authProcess === 'forgot_password' ? 'https://example.com/reset' : 'https://example.com/login';
+                const html = buildAuthEmailHtml(title, message, buttonText, url, "Lyceum Of Alabang");
+                onPreview?.(html, name || AUTH_PROCESS_LABELS[authProcess]);
+              }}
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              Preview Email
+            </button>
 
-      {/* Loading Overlay */}
+            <button
+              type="submit"
+              disabled={loading || disabled}
+              className="w-full rounded-2xl bg-brand-600 px-4 py-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50"
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        )}
+      </div>
+
       {loading && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--color-surface)]/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3">
-            <div className="size-8 animate-spin rounded-full border-2 border-[var(--color-brand-600)] border-t-transparent" />
-            <p className="text-sm font-medium text-[var(--color-text)]">Saving changes...</p>
+            <div className="size-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+            <p className="text-sm font-medium text-gray-900">Saving changes...</p>
           </div>
         </div>
       )}
