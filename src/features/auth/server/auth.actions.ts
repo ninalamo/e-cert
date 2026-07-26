@@ -66,8 +66,15 @@ export async function loginAction(
   await setSession({ sub: user.id, email: user.email, name: user.name });
   await createRefreshToken(user.id);
 
-  const session = await getCurrentSession();
-  const redirectTo = session ? getHomePathForRole(session.role) : "/dashboard";
+  const { data: membership } = await db
+    .from("user_memberships")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("organization_id", ORG_ID)
+    .single();
+
+  const role = (membership?.role ?? DEFAULT_ROLE) as import("@/types/organization").UserRole;
+  const redirectTo = getHomePathForRole(role);
 
   return { success: true, redirectTo };
 }

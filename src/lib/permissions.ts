@@ -1,6 +1,9 @@
 import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+import { ORG_ID } from "@/lib/org";
+import { getSession } from "@/lib/auth/session";
 import type { UserRole } from "@/types/organization";
 
 export type { UserRole };
@@ -17,9 +20,20 @@ export interface SessionUser {
  */
 export const DEFAULT_ROLE: UserRole = "participant";
 
+function supabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
 /**
- * Resolve the current authenticated user and their role from proxy-injected
- * headers. Returns null if not authenticated.
+ * Resolve the current authenticated user and their role.
+ *
+ * 1. Fast path – proxy-injected headers (set by src/proxy.ts).
+ * 2. Fallback – read JWT cookie directly and look up role from DB.
+ *
+ * Returns null if not authenticated.
  */
 export async function getCurrentSession(): Promise<SessionUser | null> {
   const hdrs = await headers();
@@ -37,7 +51,27 @@ export async function getCurrentSession(): Promise<SessionUser | null> {
     };
   }
 
-  return null;
+  // Fallback: read the session cookie directly (for server actions where
+  // proxy headers may not be forwarded).
+  const jwt = await getSession();
+  if (!jwt) return null;
+
+  const db = supabaseAdmin();
+  if (!db) return null;
+
+  const { data: membership } = await db
+    .from("user_memberships")
+    .select("role")
+    .eq("user_id", jwt.sub)
+    .eq("organization_id", ORG_ID)
+    .single();
+
+  return {
+    id: jwt.sub,
+    email: jwt.email || null,
+    name: jwt.name,
+    role: (membership?.role as UserRole) ?? DEFAULT_ROLE,
+  };
 }
 
 /**

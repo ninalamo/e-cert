@@ -85,8 +85,6 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  const response = NextResponse.next({ request });
-
   const sessionToken = request.cookies.get("session")?.value;
   const jwtPayload = sessionToken ? await verifyToken(sessionToken) : null;
 
@@ -121,7 +119,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return response;
+  return NextResponse.next({ request });
 }
 
 export const config = {

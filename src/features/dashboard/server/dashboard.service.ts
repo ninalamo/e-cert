@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface DashboardStats {
@@ -12,7 +12,7 @@ export async function getDashboardStats(
   organizationId: string,
   client?: SupabaseClient
 ): Promise<DashboardStats> {
-  const supabase = client ?? (await createClient());
+  const supabase = client ?? supabaseAdmin;
 
   const [total, revoked, certIds] = await Promise.all([
     supabase
@@ -62,7 +62,7 @@ export async function getRecentActivity(
   limit = 5,
   client?: SupabaseClient
 ): Promise<RecentActivity[]> {
-  const supabase = client ?? (await createClient());
+  const supabase = client ?? supabaseAdmin;
 
   const [certs, certIds] = await Promise.all([
     supabase
