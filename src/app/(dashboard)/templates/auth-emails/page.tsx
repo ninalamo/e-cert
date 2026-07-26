@@ -21,6 +21,91 @@ const DEFAULT_AUTH_SUBJECTS: Record<AuthProcess, string> = {
   welcome: "Welcome!",
 };
 
+const DEFAULT_AUTH_TITLES: Record<AuthProcess, string> = {
+  registration: "Confirm Your Email",
+  forgot_password: "Reset Your Password",
+  confirm_email: "Email Confirmed!",
+  password_reset: "Password Reset Successful",
+  welcome: "Welcome to {{org_name}}!",
+};
+
+const DEFAULT_AUTH_MESSAGES: Record<AuthProcess, string> = {
+  registration: "Thanks for signing up! Please confirm your email address to get started.",
+  forgot_password: "We received a request to reset your password. Click the button below to choose a new password.",
+  confirm_email: "Your email has been confirmed successfully. You can now log in to access your certificates and profile.",
+  password_reset: "Your password has been updated successfully. You can now log in with your new password.",
+  welcome: "Your account has been created successfully. You can now log in to access your certificates and profile.",
+};
+
+const DEFAULT_AUTH_BUTTONS: Record<AuthProcess, string> = {
+  registration: "Confirm Email",
+  forgot_password: "Reset Password",
+  confirm_email: "Go to Login",
+  password_reset: "Go to Login",
+  welcome: "Go to Login",
+};
+
+function buildDefaultHtml(process: AuthProcess): string {
+  const urlPlaceholder = process === 'registration' ? '{{confirm_url}}' : process === 'forgot_password' ? '{{reset_url}}' : '{{login_url}}';
+  const title = DEFAULT_AUTH_TITLES[process];
+  const message = DEFAULT_AUTH_MESSAGES[process];
+  const buttonText = DEFAULT_AUTH_BUTTONS[process];
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="background-color:#4f39f6;padding:24px 32px;">
+              <h1 style="margin:0;color:#ffffff;font-size:18px;font-weight:600;">{{org_name}}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <h2 style="margin:0 0 16px;font-size:20px;color:#111827;">${title}</h2>
+              <p style="margin:0 0 16px;font-size:15px;color:#4b5563;line-height:1.6;">
+                ${message}
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${urlPlaceholder}" style="display:inline-block;background-color:#4f39f6;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px;">
+                      ${buttonText}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px;font-size:13px;color:#6b7280;line-height:1.6;">
+                Or copy and paste this link into your browser:
+              </p>
+              <p style="margin:0;font-size:13px;color:#4f39f6;word-break:break-all;">
+                <a href="${urlPlaceholder}" style="color:#4f39f6;">${urlPlaceholder}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;background-color:#f9fafb;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
+                This is a security notification from {{org_name}}.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 export default function AuthEmailsPage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
@@ -44,12 +129,12 @@ export default function AuthEmailsPage() {
     setToggling(process);
 
     if (enabled) {
-      // Create template with defaults
+      // Create template with default HTML content
       const result = await createAuthTemplateAction({
         organization_id: ORG_ID,
         name: AUTH_PROCESS_LABELS[process],
         description: `Custom email template for ${AUTH_PROCESS_LABELS[process]}`,
-        html_content: "",
+        html_content: buildDefaultHtml(process),
         css_content: "",
         auth_process: process,
       });
