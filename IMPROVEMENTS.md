@@ -21,8 +21,8 @@ The `supabaseAdmin()` function was duplicated independently in 6 files — `auth
 
 **Fix:** Generate strong random values for all secrets and store them in a secrets manager for production.
 
-### 4. `as never` Casts Bypass Type Safety
-`download/route.ts:138` and `save-pdf/route.ts:38` cast `metadata` to `never` to bypass TypeScript checking. Fix the type definitions instead.
+### 4. `as never` Casts Bypass Type Safety ✅
+`save-pdf/route.ts` was casting `metadata` to `never` to bypass TypeScript checking. Fixed by using `as Partial<Certificate>` with proper type import instead.
 
 ### ~~5. Missing `src/middleware.ts`~~ ✅ Invalid — Next.js 16 uses `proxy.ts` (not `middleware.ts`) for proxy/middleware wiring. The `next.config.ts` configures the proxy correctly.
 
