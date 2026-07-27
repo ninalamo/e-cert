@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   getEventWithStatsAction,
 } from "@/features/events/server/event.actions";
@@ -9,6 +10,14 @@ import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonEventDetail } from "@/components/ui/skeleton";
 import { CalendarIcon, MapPinIcon, InfoIcon, Trash2Icon } from "lucide-react";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { statusConfig } from "./components/status-change-dialog";
 import StatusChangeDialog from "./components/status-change-dialog";
 import DeleteDialog from "./components/delete-dialog";
@@ -143,6 +152,20 @@ export default function EventDetail({
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/events" />}>
+              Events
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{event.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div>
         {editName ? (
           <form
