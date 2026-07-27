@@ -305,9 +305,9 @@ export default function EventDetail({
 
           <TemplateCard
             event={event}
-            templates={templates.filter((t) => !t.locked)}
+            templates={templates}
             currentTemplate={template}
-            emailTemplates={emailTemplates.filter((t) => !t.locked)}
+            emailTemplates={emailTemplates}
             currentEmailTemplate={emailTemplate}
             onUpdated={handleTemplateUpdated}
             onEmailTemplateUpdated={handleEmailTemplateUpdated}

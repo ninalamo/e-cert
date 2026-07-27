@@ -32,8 +32,8 @@ export default async function EventDetailPage({
         canDelete={canUserDelete}
         initialTab={tab === "attendees" ? "attendees" : "details"}
         initialData={initialData}
-        initialTemplates={initialTemplates}
-        initialEmailTemplates={initialEmailTemplates}
+        initialTemplates={initialTemplates.filter((t) => !t.locked)}
+        initialEmailTemplates={initialEmailTemplates.filter((t) => !t.locked)}
       />
     </Suspense>
   );
