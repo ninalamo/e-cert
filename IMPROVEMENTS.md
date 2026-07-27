@@ -43,10 +43,8 @@ The `supabaseAdmin()` function was duplicated independently in 6 files — `auth
 
 **Fix:** Call `deleteAllRefreshTokens(session.id)` after a successful password change and clear the current session.
 
-### 9. Inconsistent Error Return Shapes
-Some functions return `{ error: string }`, others throw exceptions, and others return `null`. There is no standard result type.
-
-**Fix:** Adopt a consistent `Result<T>` type or `{ data: T | null; error: string | null }` pattern across all server actions and services.
+### 9. Inconsistent Error Return Shapes ✅
+Replaced `throw new Error("Certificate PDF not found")` in `getCertificatePdfBuffer` with a consistent `{ data: Buffer | null; error: string | null }` result type. Updated all callers in `download/route.ts`, `pdf/route.ts`, and `certificate-email.service.ts`.
 
 ### 10. Dynamic Import of `ORG_ID`
 `getMyCertificates` in `certificate.service.ts` dynamically imports `ORG_ID` inside the function body (`await import("@/lib/org")`), while every other function imports it statically at the top. This is unnecessary and inconsistent.
