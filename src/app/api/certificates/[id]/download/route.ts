@@ -64,7 +64,7 @@ export async function GET(
         const pdfBase64 = pdfBuffer.toString("base64");
         await certRepo.update(id, {
           metadata: { ...meta, rendered_pdf: pdfBase64 },
-        } as never);
+        });
         return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: {
             "Content-Type": "application/pdf",
@@ -135,7 +135,7 @@ export async function GET(
         const pdfBase64 = pdfBuffer.toString("base64");
         await certRepo.update(id, {
           metadata: { ...(certificate.metadata ?? {}), rendered_pdf: pdfBase64 },
-        } as never);
+        });
 
         return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: {

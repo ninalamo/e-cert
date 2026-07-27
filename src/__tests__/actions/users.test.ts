@@ -26,7 +26,7 @@ describe("listUsersAction", () => {
 
   it("lists users", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(userService.listUsers).mockResolvedValue([{ id: "user-1" } as never]);
+    vi.mocked(userService.listUsers).mockResolvedValue([{ id: "user-1" } as any]);
     const result = await (await actions()).listUsersAction();
     expect(result).toHaveLength(1);
   });
@@ -35,7 +35,7 @@ describe("listUsersAction", () => {
 describe("setUserRoleAction", () => {
   it("prevents changing own role", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "user-1", email: "admin@t.com", name: "Admin", role: "admin" });
-    vi.mocked(userService.listUsers).mockResolvedValue([{ id: "user-1", email: "admin@t.com" } as never]);
+    vi.mocked(userService.listUsers).mockResolvedValue([{ id: "user-1", email: "admin@t.com" } as any]);
 
     const result = await (await actions()).setUserRoleAction("user-1", "staff");
     expect(result).toEqual({ error: "You cannot change your own role" });
@@ -44,8 +44,8 @@ describe("setUserRoleAction", () => {
 
   it("sets role for other user", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(userService.listUsers).mockResolvedValue([{ id: "user-2", email: "other@t.com" } as never]);
-    vi.mocked(userService.setUserRole).mockResolvedValue({ id: "user-2" } as never);
+    vi.mocked(userService.listUsers).mockResolvedValue([{ id: "user-2", email: "other@t.com" } as any]);
+    vi.mocked(userService.setUserRole).mockResolvedValue({ id: "user-2" } as any);
 
     await (await actions()).setUserRoleAction("user-2", "staff");
     expect(userService.setUserRole).toHaveBeenCalledWith("user-2", "staff");
@@ -61,7 +61,7 @@ describe("banUserAction", () => {
 
   it("bans another user", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(userService.banUser).mockResolvedValue({ id: "user-2" } as never);
+    vi.mocked(userService.banUser).mockResolvedValue({ id: "user-2" } as any);
     await (await actions()).banUserAction("user-2");
     expect(userService.banUser).toHaveBeenCalledWith("user-2");
   });
@@ -70,7 +70,7 @@ describe("banUserAction", () => {
 describe("unbanUserAction", () => {
   it("unbans a user", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(userService.unbanUser).mockResolvedValue({ id: "user-2" } as never);
+    vi.mocked(userService.unbanUser).mockResolvedValue({ id: "user-2" } as any);
     await (await actions()).unbanUserAction("user-2");
     expect(userService.unbanUser).toHaveBeenCalledWith("user-2");
   });
