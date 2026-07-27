@@ -548,8 +548,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   const marqueeStart = useRef<{ x: number; y: number } | null>(null);
   const elementsRef = useRef(elements);
   elementsRef.current = elements;
-  const canvasPointRef = useRef(canvasPoint);
-  canvasPointRef.current = canvasPoint;
+  const canvasPointRef = useRef<(e: { clientX: number; clientY: number }) => { x: number; y: number }>(() => ({ x: 0, y: 0 }));
   const lastCanvasHtml = useRef("");
   const [gridSize, setGridSize] = useState(20);
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -1208,6 +1207,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
       y: (e.clientY - rect.top) / zoom,
     };
   }, [zoom]);
+  canvasPointRef.current = canvasPoint;
 
   function handleCanvasMouseDown(e: React.MouseEvent) {
     if (e.target !== e.currentTarget) return;

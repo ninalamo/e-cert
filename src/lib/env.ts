@@ -17,7 +17,7 @@ const clientSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
 });
 
-function buildEnv() {
+function buildEnv(): { server: z.infer<typeof serverSchema>; client: z.infer<typeof clientSchema> } {
   const serverEnv = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -57,8 +57,8 @@ function buildEnv() {
   }
 
   return {
-    server: parsedServer.data,
-    client: parsedClient.data,
+    server: parsedServer.data!,
+    client: parsedClient.data!,
   };
 }
 
