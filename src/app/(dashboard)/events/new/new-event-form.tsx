@@ -5,7 +5,7 @@ import { ORG_ID } from "@/lib/org";
 import { createEventAction, cloneTemplateForEventAction } from "@/features/events/server/event.actions";
 import type { CertificateTemplate } from "@/types/template";
 import Link from "next/link";
-import { extractCanvasDimensions, computeUniformScale, buildCertificateSrcDoc } from "@/lib/certificate-renderer";
+import { buildCertificateSrcDoc } from "@/lib/certificate-renderer";
 
 function sanitizePrefix(raw: string): string {
   return raw
@@ -58,12 +58,6 @@ export default function NewEventForm({
 
   const certPattern = buildPattern(certNumberPrefix.trim());
   const sampleNumber = certPattern.replace(/#+$/, (m) => m.replace(/#/g, "0"));
-
-  const { certWidth, certHeight } = useMemo(() => {
-    if (!previewTemplate) return { certWidth: 1123, certHeight: 794 };
-    const { width, height } = extractCanvasDimensions(previewTemplate.html_content ?? "");
-    return { certWidth: width, certHeight: height };
-  }, [previewTemplate]);
 
   const previewSrcDoc = useMemo(() => {
     if (!previewTemplate) return "";

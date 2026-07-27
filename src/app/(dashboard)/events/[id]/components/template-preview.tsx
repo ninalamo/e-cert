@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { CertificateTemplate } from "@/types/template";
 import {
   extractCanvasDimensions,
@@ -39,19 +39,25 @@ export default function TemplatePreview({
     [template.html_content, template.css_content, eventDate]
   );
 
-  const [scale, setScale] = useState(1);
-
-  const calcScale = useCallback(() => {
-    const maxW = window.innerWidth * 0.9;
-    const maxH = window.innerHeight * 0.85;
-    setScale(computeUniformScale(canvasW, canvasH, maxW, maxH));
-  }, [canvasW, canvasH]);
+  const [windowSize, setWindowSize] = useState({
+    w: window.innerWidth,
+    h: window.innerHeight,
+  });
 
   useEffect(() => {
-    calcScale();
-    window.addEventListener("resize", calcScale);
-    return () => window.removeEventListener("resize", calcScale);
-  }, [calcScale]);
+    const handler = () => {
+      setWindowSize({ w: window.innerWidth, h: window.innerHeight });
+    };
+    handler();
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  const scale = useMemo(() => {
+    const maxW = windowSize.w * 0.9;
+    const maxH = windowSize.h * 0.85;
+    return computeUniformScale(canvasW, canvasH, maxW, maxH);
+  }, [canvasW, canvasH, windowSize.w, windowSize.h]);
 
   return (
     <>

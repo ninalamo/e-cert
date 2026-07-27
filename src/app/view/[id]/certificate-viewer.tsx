@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
@@ -55,19 +55,20 @@ export default function CertificateViewer({
 
   const certCss = template?.css_content ?? "";
 
-  const [scale, setScale] = useState(1);
-
-  const calcScale = useCallback(() => {
-    const maxW = window.innerWidth * 0.65;
-    const maxH = window.innerHeight * 0.85;
-    setScale(computeUniformScale(certWidth, certHeight, maxW, maxH));
-  }, [certWidth, certHeight]);
+  const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   useEffect(() => {
-    calcScale();
-    window.addEventListener("resize", calcScale);
-    return () => window.removeEventListener("resize", calcScale);
-  }, [calcScale]);
+    const handler = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
+    handler();
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  const scale = useMemo(() => {
+    const maxW = windowSize.w * 0.65;
+    const maxH = windowSize.h * 0.85;
+    return computeUniformScale(certWidth, certHeight, maxW, maxH);
+  }, [certWidth, certHeight, windowSize.w, windowSize.h]);
 
   function handlePrint() {
     if (!certHtml) return;
