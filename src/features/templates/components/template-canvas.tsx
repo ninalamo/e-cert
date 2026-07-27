@@ -2276,7 +2276,7 @@ const content = (
     if (maxW <= 0 || maxH <= 0) return;
     const scale = Math.min(1, maxW / CANVAS_W, maxH / CANVAS_H);
     setZoom(scale);
-  }, [CANVAS_W, CANVAS_H]);
+  }, [CANVAS_W, CANVAS_H, setZoom]);
 
   // Run once on mount
   useEffect(() => {

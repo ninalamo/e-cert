@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ChangePasswordRequestForm() {
   const [state, formAction, pending] = useActionState(
-    async (_prev: { error?: string; success?: boolean } | undefined, _formData: FormData) => {
+    async (_prev: { error?: string; success?: boolean } | undefined) => {
       return requestPasswordChange();
     },
     undefined

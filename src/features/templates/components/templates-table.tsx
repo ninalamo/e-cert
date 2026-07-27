@@ -318,7 +318,8 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
   );
 }
 
-function buildPreviewSrcDoc(template: CertificateTemplate): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _buildPreviewSrcDoc(template: CertificateTemplate): string {
   const replacements = {
     "{{recipient_name}}": "Juan Dela Cruz",
     "{{certificate_number}}": "CERT-000001",

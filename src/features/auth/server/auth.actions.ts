@@ -154,6 +154,10 @@ export async function requestPasswordChange(): Promise<{ error?: string; success
     return { error: "Not authenticated" };
   }
 
+  if (!session.email) {
+    return { error: "No email on file" };
+  }
+
   const resetToken = await createResetToken(session.id);
   await sendPasswordResetEmail(session.email, resetToken);
 
