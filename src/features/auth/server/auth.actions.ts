@@ -13,6 +13,7 @@ import {
   createResetToken,
   verifyResetToken,
   deleteResetToken,
+  deleteAllRefreshTokens,
   createConfirmToken,
   verifyConfirmToken,
 } from "@/lib/auth";
@@ -174,6 +175,8 @@ export async function updatePassword(data: { password: string }) {
   if (error) {
     return { error: error.message };
   }
+
+  await deleteAllRefreshTokens(session.id);
 
   const redirectTo = getHomePathForRole(session.role);
   return { success: true, redirectTo };
