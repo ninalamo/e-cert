@@ -25,7 +25,7 @@ export default function DashboardShell({
             {session.role !== "participant" && (
               <WhatsNew userKey={session.email ?? session.id} />
             )}
-            <UserMenu name={session.name ?? session.email} role={session.role} />
+            <UserMenu name={session.name ?? session.email} />
           </div>
         </header>
         <main className="p-4 pb-safe lg:p-6">
