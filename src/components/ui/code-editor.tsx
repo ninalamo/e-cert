@@ -1,6 +1,9 @@
 "use client";
 
 import { useRef, useCallback } from "react";
+import type React from "react";
+
+const LINE_NUMBERS_STYLE: React.CSSProperties = { minWidth: "3rem" };
 
 interface CodeEditorProps {
   value: string;
@@ -51,7 +54,7 @@ export default function CodeEditor({ value, onChange, rows = 16, id, readOnly = 
       <div
         ref={lineNumbersRef}
         className="select-none text-right bg-[var(--color-surface-tertiary)] text-[var(--color-text-muted)] overflow-hidden shrink-0 py-2.5 pr-2 pl-3"
-        style={{ minWidth: "3rem" }}
+        style={LINE_NUMBERS_STYLE}
         aria-hidden="true"
       >
         {Array.from({ length: lineCount }, (_, i) => (
