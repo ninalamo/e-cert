@@ -168,6 +168,9 @@ const SIZE_PRESETS: SizePreset[] = [
 
 const DEFAULT_SIZE_PRESET = "A4";
 
+const OVERLAY_STYLE: React.CSSProperties = { backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" };
+const PREVIEW_SIDEBAR_STYLE: React.CSSProperties = { maxHeight: "85vh", width: 280, minWidth: 240 };
+
 function extractContainerSize(html: string): { width: number; height: number } | null {
   const wMatch = html.match(/class="certificate"[^>]*?width:(\d+)px/);
   const hMatch = html.match(/class="certificate"[^>]*?height:(\d+)px/);
@@ -2349,7 +2352,7 @@ const content = (
   const previewModal = showPreview ? (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center gap-4 p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+      style={OVERLAY_STYLE}
       onClick={() => setShowPreview(false)}
     >
       <button
@@ -2362,7 +2365,7 @@ const content = (
 
       <div
         className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl p-4 overflow-y-auto"
-        style={{ maxHeight: "85vh", width: 280, minWidth: 240 }}
+        style={PREVIEW_SIDEBAR_STYLE}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-1">

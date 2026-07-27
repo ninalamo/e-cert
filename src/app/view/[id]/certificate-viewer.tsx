@@ -6,11 +6,14 @@ import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import { sanitizeHtml } from "@/lib/utils";
+import type React from "react";
 import {
   extractCanvasDimensions,
   buildQrReplacement,
   computeUniformScale,
 } from "@/lib/certificate-renderer";
+
+const OVERLAY_STYLE: React.CSSProperties = { backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" };
 
 interface Props {
   certificate: Certificate;
@@ -103,7 +106,7 @@ export default function CertificateViewer({
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+      style={OVERLAY_STYLE}
     >
       <div className="fixed top-4 right-4 z-[201] flex items-center gap-2">
         {certHtml && (
