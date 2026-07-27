@@ -21,6 +21,12 @@ export default function NewTemplatePage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/templates" />}>
+              Templates
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
             <BreadcrumbLink render={<Link href="/templates/certificates" />}>
               Certificates
             </BreadcrumbLink>

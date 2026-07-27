@@ -26,6 +26,12 @@ export default function NewEmailTemplatePage() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
+            <BreadcrumbLink render={<Link href="/templates" />}>
+              Templates
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
             <BreadcrumbLink render={<Link href="/templates/emails" />}>
               Emails
             </BreadcrumbLink>
