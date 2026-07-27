@@ -18,6 +18,7 @@ export async function GET(
       issued_at,
       expires_at,
       revoked_at,
+      recipient_name,
       events ( name ),
       organizations ( name )
     `)
@@ -48,6 +49,7 @@ export async function GET(
     issued_date: certificate.issued_at,
     valid_until: certificate.expires_at,
     status,
+    recipient_name: certificate.recipient_name,
     organization: org ? { name: org.name } : null,
     event_name: event?.name ?? null,
   }, { headers: CACHE_HEADERS });
