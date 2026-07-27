@@ -3,6 +3,12 @@
 import * as templateService from "./template.service";
 import { requireRole, getCurrentSession, type UserRole } from "@/lib/permissions";
 import type { AuthProcess } from "@/types/template";
+import {
+  createTemplateSchema,
+  createEmailTemplateSchema,
+  createAuthTemplateSchema,
+  updateTemplateSchema,
+} from "../schemas/template.schema";
 
 export async function getCurrentRoleAction(): Promise<UserRole> {
   const session = await getCurrentSession();
@@ -72,10 +78,11 @@ export async function createTemplateAction(data: {
   css_content?: string;
 }) {
   await requireRole(["admin", "staff"]);
+  const parsed = createTemplateSchema.parse(data);
   return templateService.createTemplate({
-    ...data,
-    description: data.description ?? null,
-    css_content: data.css_content ?? null,
+    ...parsed,
+    description: parsed.description ?? null,
+    css_content: parsed.css_content ?? null,
   });
 }
 
@@ -87,10 +94,11 @@ export async function createEmailTemplateAction(data: {
   css_content?: string;
 }) {
   await requireRole(["admin", "staff"]);
+  const parsed = createEmailTemplateSchema.parse(data);
   return templateService.createEmailTemplate({
-    ...data,
-    description: data.description ?? null,
-    css_content: data.css_content ?? null,
+    ...parsed,
+    description: parsed.description ?? null,
+    css_content: parsed.css_content ?? null,
   });
 }
 
@@ -103,10 +111,11 @@ export async function createAuthTemplateAction(data: {
   auth_process: AuthProcess;
 }) {
   await requireRole(["admin", "staff"]);
+  const parsed = createAuthTemplateSchema.parse(data);
   return templateService.createAuthTemplate({
-    ...data,
-    description: data.description ?? null,
-    css_content: data.css_content ?? null,
+    ...parsed,
+    description: parsed.description ?? null,
+    css_content: parsed.css_content ?? null,
   });
 }
 
@@ -131,13 +140,14 @@ export async function updateTemplateAction(
   }
 ) {
   await requireRole(["admin", "staff"]);
+  const parsed = updateTemplateSchema.parse(data);
   if (await isLockedByType(id)) {
     return { template: null, error: "This template is locked because it is used by an active or archived event. Archive the linked event(s) to edit it." };
   }
   return templateService.updateTemplate(id, {
-    ...data,
-    description: data.description ?? null,
-    css_content: data.css_content ?? null,
+    ...parsed,
+    description: parsed.description ?? null,
+    css_content: parsed.css_content ?? null,
   });
 }
 
