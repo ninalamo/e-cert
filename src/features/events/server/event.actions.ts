@@ -4,6 +4,12 @@ import * as eventService from "./event.service";
 import * as certService from "@/features/certificates/server/certificate.service";
 import { requireRole } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createEventSchema,
+  updateEventSchema,
+  issueEventCertificateSchema,
+  bulkIssueEventCertificatesSchema,
+} from "../schemas/event.schema";
 
 export async function getEventsAction(organizationId: string) {
   await requireRole(["admin", "staff"]);
@@ -47,8 +53,9 @@ export async function createEventAction(data: {
   email_template_id?: string;
 }) {
   await requireRole(["admin", "staff"]);
+  const parsed = createEventSchema.parse(data);
   const client = await createClient();
-  return eventService.createEvent(data, client);
+  return eventService.createEvent(parsed, client);
 }
 
 export async function updateEventAction(
@@ -68,8 +75,9 @@ export async function updateEventAction(
   }
 ) {
   await requireRole(["admin", "staff"]);
+  const parsed = updateEventSchema.parse(data);
   const client = await createClient();
-  return eventService.updateEvent(id, data, client);
+  return eventService.updateEvent(id, parsed, client);
 }
 
 export async function deleteEventAction(id: string) {
@@ -115,19 +123,20 @@ export async function issueEventCertificateAction(data: {
   send_email?: boolean;
 }) {
   const session = await requireRole(["admin", "staff"]);
-  const event = await eventService.getEvent(data.event_id);
+  const parsed = issueEventCertificateSchema.parse(data);
+  const event = await eventService.getEvent(parsed.event_id);
   if (!event) {
     return { certificate: null, error: "Event not found" };
   }
 
   const certificate = await certService.issueCertificate({
-    organization_id: data.organization_id,
-    event_id: data.event_id,
+    organization_id: parsed.organization_id,
+    event_id: parsed.event_id,
     template_id: event.template_id ?? undefined,
-    recipient_name: data.recipient_name,
-    recipient_email: data.recipient_email,
+    recipient_name: parsed.recipient_name,
+    recipient_email: parsed.recipient_email,
     expires_at: event.valid_until ?? undefined,
-    send_email: data.send_email ?? false,
+    send_email: parsed.send_email ?? false,
     user_id: session.id,
     event: {
       name: event.name,
@@ -149,21 +158,22 @@ export async function bulkIssueEventCertificatesAction(data: {
   send_email?: boolean;
 }) {
   await requireRole(["admin", "staff"]);
-  const event = await eventService.getEvent(data.event_id);
+  const parsed = bulkIssueEventCertificatesSchema.parse(data);
+  const event = await eventService.getEvent(parsed.event_id);
   if (!event) {
     return { results: [], error: "Event not found" };
   }
 
   const results: Array<{ name: string; email: string; success: boolean; certNumber?: string; error?: string }> = [];
 
-  for (const recipient of data.recipients) {
+  for (const recipient of parsed.recipients) {
     try {
       const result = await issueEventCertificateAction({
-        event_id: data.event_id,
-        organization_id: data.organization_id,
+        event_id: parsed.event_id,
+        organization_id: parsed.organization_id,
         recipient_name: recipient.name,
         recipient_email: recipient.email,
-        send_email: data.send_email ?? false,
+        send_email: parsed.send_email ?? false,
       });
 
       results.push({
