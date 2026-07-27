@@ -416,6 +416,21 @@ function setBackgroundInCss(css: string, dataUrl: string | null): string {
   return `${cleaned.trim()}\n\n${marker}\n${rule}\n`;
 }
 
+function extractBackgroundColor(css: string): string | null {
+  const m = css.match(/\/\* __CERT_BACKGROUND_COLOR__ \*\/[\s\S]*?background-color:\s*([^;}\n]+)/);
+  return m ? m[1].trim() : null;
+}
+
+function setBackgroundColorInCss(css: string, color: string | null): string {
+  const marker = "/* __CERT_BACKGROUND_COLOR__ */";
+  const cleaned = css.replace(/\/\* __CERT_BACKGROUND_COLOR__ \*\/[\s\S]*?\n}\n?/, "");
+  if (!color || color === "#ffffff" || color === "#fff" || color === "white") return cleaned.trim();
+  const rule = `body, .cert-canvas {
+  background-color: ${color};
+}`;
+  return `${cleaned.trim()}\n\n${marker}\n${rule}\n`;
+}
+
 function buildStarterElements(): CanvasElement[] {
   return [
     {
@@ -576,6 +591,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   useEffect(() => {
     if (currentHtml !== lastHtmlRef.current) {
       lastHtmlRef.current = currentHtml;
+      lastCanvasHtml.current = currentHtml;
       onChange(currentHtml);
     }
   }, [currentHtml, onChange]);
@@ -965,6 +981,14 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     onCssChange(setBackgroundInCss(css, null));
   }
 
+  function handleBackgroundColorChange(color: string) {
+    onCssChange(setBackgroundColorInCss(css, color));
+  }
+
+  function clearBackgroundColor() {
+    onCssChange(setBackgroundColorInCss(css, null));
+  }
+
   function seedStarter() {
     setElements(buildStarterElements());
   }
@@ -1231,7 +1255,9 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   }
 
   const hasBackground = /__CERT_BACKGROUND__/.test(css);
+  const hasBackgroundColor = /__CERT_BACKGROUND_COLOR__/.test(css);
   const canvasBg = extractBackgroundUrl(css);
+  const canvasBgColor = extractBackgroundColor(css);
   const selCount = selectedIds.length;
   const allSelectedLocked = selCount > 0 && elements.filter((e) => isSelected(e.id)).every((e) => e.locked);
 
@@ -1319,9 +1345,23 @@ const content = (
                 <button type="button" onClick={addQr} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-violet-700 transition-all hover:bg-violet-50 active:scale-[0.97]" title="Add QR code element">
                   <QrCodeIcon className="size-3" /> QR
                 </button>
+              </div>
+
+              <div className="w-px h-4 bg-[var(--color-border)]" />
+
+              <div className="flex items-center gap-0.5 rounded-lg bg-[var(--color-surface-secondary)] p-0.5">
                 <button type="button" onClick={() => bgInputRef.current?.click()} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-purple-700 transition-all hover:bg-purple-50 active:scale-[0.97]" title="Set background image">
-                  <PaletteIcon className="size-3" /> BG
+                  <PaletteIcon className="size-3" /> BG Image
                 </button>
+                <label className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-purple-700 transition-all hover:bg-purple-50 active:scale-[0.97] cursor-pointer" title="Set background color">
+                  <PaletteIcon className="size-3" /> BG Color
+                  <input
+                    type="color"
+                    value={canvasBgColor || "#ffffff"}
+                    onChange={(e) => handleBackgroundColorChange(e.target.value)}
+                    className="sr-only"
+                  />
+                </label>
               </div>
 
               <div className="w-px h-4 bg-[var(--color-border)]" />
@@ -1361,10 +1401,10 @@ const content = (
                 </>
               )}
 
-              {hasBackground && (
+              {(hasBackground || hasBackgroundColor) && (
                 <>
                   <div className="w-px h-4 bg-[var(--color-border)]" />
-                  <button type="button" onClick={clearBackground} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97]" title="Remove background image">
+                  <button type="button" onClick={() => { clearBackground(); clearBackgroundColor(); }} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--color-danger-text)] transition-all hover:bg-[var(--color-danger-bg)] active:scale-[0.97]" title="Remove background">
                     Clear BG
                   </button>
                 </>
@@ -1610,13 +1650,13 @@ const content = (
               )}
               <div
                 ref={canvasRef}
-                className="relative shadow bg-white border border-[var(--color-border)]"
+                className="relative shadow border border-[var(--color-border)]"
                 style={{
                   width: CANVAS_W,
                   height: CANVAS_H,
                   background: canvasBg
                     ? `url("${canvasBg}") center / cover no-repeat`
-                    : "transparent",
+                    : canvasBgColor || "#ffffff",
                 }}
                 onMouseDown={handleCanvasMouseDown}
               >
@@ -2225,23 +2265,30 @@ const content = (
   }, []);
 
   // Auto-fit zoom: calculate initial zoom to fit canvas within available container
-  useEffect(() => {
-    function calcAutoFitZoom() {
-      const container = containerRef.current;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
-      const maxW = rect.width - 48;
-      const maxH = rect.height - 48;
-      if (maxW <= 0 || maxH <= 0) return;
-      const scale = Math.min(1, maxW / CANVAS_W, maxH / CANVAS_H);
-      setZoom(scale);
-    }
-    const timer = setTimeout(calcAutoFitZoom, 100);
-    return () => {
-      clearTimeout(timer);
-    };
+  // Only runs on mount and window resize — NOT on canvas dimension changes (e.g. orientation switch)
+  const calcAutoFitZoom = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const maxW = rect.width - 48;
+    const maxH = rect.height - 48;
+    if (maxW <= 0 || maxH <= 0) return;
+    const scale = Math.min(1, maxW / CANVAS_W, maxH / CANVAS_H);
+    setZoom(scale);
   }, [CANVAS_W, CANVAS_H]);
+
+  // Run once on mount
+  useEffect(() => {
+    const timer = setTimeout(calcAutoFitZoom, 100);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fit on window resize (not on canvas dimension changes)
+  useEffect(() => {
+    window.addEventListener("resize", calcAutoFitZoom);
+    return () => window.removeEventListener("resize", calcAutoFitZoom);
+  }, [calcAutoFitZoom]);
 
   const previewDates = useMemo(() => {
     const now = new Date();
@@ -2275,7 +2322,7 @@ const content = (
   // Preview modal auto-fit scale
   useEffect(() => {
     function calcPreviewScale() {
-      const sidebarWidth = 312;
+      const sidebarWidth = 328;
       const padX = 48;
       const padY = 160;
       const maxW = window.innerWidth - sidebarWidth - padX;
@@ -2341,12 +2388,15 @@ const content = (
       </div>
 
       <div
-        className="bg-white shadow-2xl rounded-lg overflow-hidden flex-shrink-0"
+        className="relative shadow border border-[var(--color-border)] flex-shrink-0"
         style={{
           width: CANVAS_W,
           height: CANVAS_H,
           transformOrigin: "center center",
           transform: `scale(${previewScale})`,
+          background: canvasBg
+            ? `url("${canvasBg}") center / cover no-repeat`
+            : canvasBgColor || "#ffffff",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -2358,9 +2408,6 @@ const content = (
           style={{
             width: CANVAS_W,
             height: CANVAS_H,
-            background: canvasBg
-              ? `url("${canvasBg}") center / cover no-repeat`
-              : "transparent",
           }}
         />
       </div>
