@@ -54,34 +54,34 @@ export async function issueCertificate(
   let renderedHtml: string | null = null;
   let renderedPdfBase64: string | null = null;
 
-  if (data.existing_pdf_base64) {
-    renderedPdfBase64 = data.existing_pdf_base64;
-  } else if (data.template_id && !data.skip_pdf) {
+  async function renderFromTemplate(templateId: string, skipPdf: boolean) {
     const { getTemplate } = await import("@/features/templates/server/template.service");
-    const template = await getTemplate(data.template_id);
-    if (template) {
-      renderedHtml = renderTemplate(
-        template.html_content,
-        template.css_content ?? "",
-        {
-          recipient_name: data.recipient_name,
-          certificate_number: number,
-          issued_date: new Date().toLocaleDateString(),
-          organization_name: ORG_NAME,
-          event_name: data.event?.name ?? "",
-          event_date: data.event?.event_date
-            ? new Date(data.event.event_date).toLocaleDateString()
-            : "",
-          event_location: data.event?.location ?? "",
-          event_organizer: data.event?.organizer ?? "",
-          certificate_title: data.event?.certificate_title ?? "",
-          expiry_date: data.expires_at
-            ? new Date(data.expires_at).toLocaleDateString()
-            : "",
-          qr_code: buildQrReplacement(qrDataUrl),
-        }
-      );
+    const template = await getTemplate(templateId);
+    if (!template) return;
 
+    renderedHtml = renderTemplate(
+      template.html_content,
+      template.css_content ?? "",
+      {
+        recipient_name: data.recipient_name,
+        certificate_number: number,
+        issued_date: new Date().toLocaleDateString(),
+        organization_name: ORG_NAME,
+        event_name: data.event?.name ?? "",
+        event_date: data.event?.event_date
+          ? new Date(data.event.event_date).toLocaleDateString()
+          : "",
+        event_location: data.event?.location ?? "",
+        event_organizer: data.event?.organizer ?? "",
+        certificate_title: data.event?.certificate_title ?? "",
+        expiry_date: data.expires_at
+          ? new Date(data.expires_at).toLocaleDateString()
+          : "",
+        qr_code: buildQrReplacement(qrDataUrl),
+      }
+    );
+
+    if (!skipPdf) {
       const { width: certW, height: certH } = extractCanvasDimensions(template.html_content);
       const pdfOrientation = certW >= certH ? "landscape" : "portrait";
       const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
@@ -91,32 +91,12 @@ export async function issueCertificate(
       });
       renderedPdfBase64 = pdfBuffer.toString("base64");
     }
-  } else if (data.template_id && data.skip_pdf) {
-    const { getTemplate } = await import("@/features/templates/server/template.service");
-    const template = await getTemplate(data.template_id);
-    if (template) {
-      renderedHtml = renderTemplate(
-        template.html_content,
-        template.css_content ?? "",
-        {
-          recipient_name: data.recipient_name,
-          certificate_number: number,
-          issued_date: new Date().toLocaleDateString(),
-          organization_name: ORG_NAME,
-          event_name: data.event?.name ?? "",
-          event_date: data.event?.event_date
-            ? new Date(data.event.event_date).toLocaleDateString()
-            : "",
-          event_location: data.event?.location ?? "",
-          event_organizer: data.event?.organizer ?? "",
-          certificate_title: data.event?.certificate_title ?? "",
-          expiry_date: data.expires_at
-            ? new Date(data.expires_at).toLocaleDateString()
-            : "",
-          qr_code: buildQrReplacement(qrDataUrl),
-        }
-      );
-    }
+  }
+
+  if (data.existing_pdf_base64) {
+    renderedPdfBase64 = data.existing_pdf_base64;
+  } else if (data.template_id) {
+    await renderFromTemplate(data.template_id, !!data.skip_pdf);
   }
 
   const metadata: Record<string, unknown> = {
