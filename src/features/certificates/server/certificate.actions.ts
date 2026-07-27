@@ -2,7 +2,9 @@
 
 import * as certService from "./certificate.service";
 import * as emailService from "./certificate-email.service";
+import { env } from "@/lib/env";
 import { requireRole, requireSession } from "@/lib/permissions";
+import { issueCertificateSchema } from "../schemas/certificate.schema";
 import type { Certificate } from "@/types/certificate";
 
 export async function issueCertificateAction(data: {
@@ -16,9 +18,13 @@ export async function issueCertificateAction(data: {
   send_email?: boolean;
 }) {
   const session = await requireRole(["admin", "staff"]);
+  const parsed = issueCertificateSchema.safeParse(data);
+  if (!parsed.success) {
+    return { certificate: null, error: parsed.error.issues.map((e: { message: string }) => e.message).join(", ") };
+  }
   return certService.issueCertificate({
-    ...data,
-    send_email: data.send_email ?? false,
+    ...parsed.data,
+    send_email: parsed.data.send_email ?? false,
     user_id: session.id,
   });
 }
@@ -94,7 +100,7 @@ export async function getMyCertificateAction(id: string) {
 export async function getCertificateQrCodeAction(certificateNumber: string) {
   await requireRole(["admin", "staff", "participant"]);
   const { generateQrCodeDataUrl } = await import("@/lib/qr");
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
   const verifyUrl = `${baseUrl}/verify?number=${encodeURIComponent(certificateNumber)}`;
   return generateQrCodeDataUrl(verifyUrl, { width: 200, margin: 2 });
 }

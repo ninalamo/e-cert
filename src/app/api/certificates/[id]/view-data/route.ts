@@ -4,6 +4,7 @@ import { CertificateRepository } from "@/features/certificates/server/certificat
 import { CertificateTemplateRepository } from "@/features/templates/server/template.repository";
 import { EventRepository } from "@/features/events/server/event.repository";
 import { generateQrCodeDataUrl } from "@/lib/qr";
+import { env } from "@/lib/env";
 import { ORG_NAME } from "@/lib/org";
 
 export async function GET(
@@ -36,7 +37,7 @@ export async function GET(
       : null,
   ]);
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
   const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
   const qrDataUrl = await generateQrCodeDataUrl(verifyUrl, { width: 200, margin: 2 });
 

@@ -1,5 +1,3 @@
-"use client";
-
 import type { RecentActivity } from "../server/dashboard.service";
 
 interface ActivityFeedProps {

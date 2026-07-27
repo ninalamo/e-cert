@@ -1,5 +1,3 @@
-"use client";
-
 import type { DashboardStats } from "../server/dashboard.service";
 
 interface StatsCardsProps {

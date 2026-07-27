@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
 import { EventRepository } from "@/features/events/server/event.repository";
 import { generateQrCodeDataUrl } from "@/lib/qr";
+import { env } from "@/lib/env";
 import { requireRole } from "@/lib/permissions";
 import CertificateDetail from "@/features/certificates/components/certificate-detail";
 
@@ -30,7 +31,7 @@ export default async function CertificateDetailPage({
   const eventToShow = eventId || certificate.event_id;
   const event = eventToShow ? await eventRepo.findById(eventToShow) : null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
   const verifyUrl = `${baseUrl}/verify?number=${encodeURIComponent(certificate.certificate_number)}`;
   const qrDataUrl = await generateQrCodeDataUrl(verifyUrl, { width: 200, margin: 2 });
 

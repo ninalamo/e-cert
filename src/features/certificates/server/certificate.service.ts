@@ -5,6 +5,7 @@ import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { createClient } from "@/lib/supabase/server";
 import { ORG_ID, ORG_NAME } from "@/lib/org";
+import { env } from "@/lib/env";
 import { renderTemplate } from "@/lib/template-renderer";
 import { extractCanvasDimensions, buildQrReplacement } from "@/lib/certificate-renderer";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -45,7 +46,7 @@ export async function issueCertificate(
     client,
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
   const verifyUrl = `${baseUrl}/verify?number=${number}`;
   const qrBuffer = await generateQrCode(verifyUrl, { width: 200, margin: 1 });
   const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;
@@ -53,34 +54,34 @@ export async function issueCertificate(
   let renderedHtml: string | null = null;
   let renderedPdfBase64: string | null = null;
 
-  if (data.existing_pdf_base64) {
-    renderedPdfBase64 = data.existing_pdf_base64;
-  } else if (data.template_id && !data.skip_pdf) {
+  async function renderFromTemplate(templateId: string, skipPdf: boolean) {
     const { getTemplate } = await import("@/features/templates/server/template.service");
-    const template = await getTemplate(data.template_id);
-    if (template) {
-      renderedHtml = renderTemplate(
-        template.html_content,
-        template.css_content ?? "",
-        {
-          recipient_name: data.recipient_name,
-          certificate_number: number,
-          issued_date: new Date().toLocaleDateString(),
-          organization_name: ORG_NAME,
-          event_name: data.event?.name ?? "",
-          event_date: data.event?.event_date
-            ? new Date(data.event.event_date).toLocaleDateString()
-            : "",
-          event_location: data.event?.location ?? "",
-          event_organizer: data.event?.organizer ?? "",
-          certificate_title: data.event?.certificate_title ?? "",
-          expiry_date: data.expires_at
-            ? new Date(data.expires_at).toLocaleDateString()
-            : "",
-          qr_code: buildQrReplacement(qrDataUrl),
-        }
-      );
+    const template = await getTemplate(templateId);
+    if (!template) return;
 
+    renderedHtml = renderTemplate(
+      template.html_content,
+      template.css_content ?? "",
+      {
+        recipient_name: data.recipient_name,
+        certificate_number: number,
+        issued_date: new Date().toLocaleDateString(),
+        organization_name: ORG_NAME,
+        event_name: data.event?.name ?? "",
+        event_date: data.event?.event_date
+          ? new Date(data.event.event_date).toLocaleDateString()
+          : "",
+        event_location: data.event?.location ?? "",
+        event_organizer: data.event?.organizer ?? "",
+        certificate_title: data.event?.certificate_title ?? "",
+        expiry_date: data.expires_at
+          ? new Date(data.expires_at).toLocaleDateString()
+          : "",
+        qr_code: buildQrReplacement(qrDataUrl),
+      }
+    );
+
+    if (!skipPdf) {
       const { width: certW, height: certH } = extractCanvasDimensions(template.html_content);
       const pdfOrientation = certW >= certH ? "landscape" : "portrait";
       const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
@@ -90,32 +91,12 @@ export async function issueCertificate(
       });
       renderedPdfBase64 = pdfBuffer.toString("base64");
     }
-  } else if (data.template_id && data.skip_pdf) {
-    const { getTemplate } = await import("@/features/templates/server/template.service");
-    const template = await getTemplate(data.template_id);
-    if (template) {
-      renderedHtml = renderTemplate(
-        template.html_content,
-        template.css_content ?? "",
-        {
-          recipient_name: data.recipient_name,
-          certificate_number: number,
-          issued_date: new Date().toLocaleDateString(),
-          organization_name: ORG_NAME,
-          event_name: data.event?.name ?? "",
-          event_date: data.event?.event_date
-            ? new Date(data.event.event_date).toLocaleDateString()
-            : "",
-          event_location: data.event?.location ?? "",
-          event_organizer: data.event?.organizer ?? "",
-          certificate_title: data.event?.certificate_title ?? "",
-          expiry_date: data.expires_at
-            ? new Date(data.expires_at).toLocaleDateString()
-            : "",
-          qr_code: buildQrReplacement(qrDataUrl),
-        }
-      );
-    }
+  }
+
+  if (data.existing_pdf_base64) {
+    renderedPdfBase64 = data.existing_pdf_base64;
+  } else if (data.template_id) {
+    await renderFromTemplate(data.template_id, !!data.skip_pdf);
   }
 
   const metadata: Record<string, unknown> = {

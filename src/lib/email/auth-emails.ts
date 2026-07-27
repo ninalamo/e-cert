@@ -1,8 +1,9 @@
+import { env } from "@/lib/env";
 import { getEmailProvider } from "./index";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AuthProcess } from "@/types/template";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+const BASE_URL = env.client.NEXT_PUBLIC_BASE_URL;
 const ORG_NAME = "Lyceum Of Alabang";
 
 function wrap(title: string, body: string): string {
