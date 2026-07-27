@@ -33,7 +33,7 @@ async function getSeededUsersDetail() {
     return {
       email: u.email,
       name: seed?.name ?? u.name ?? null,
-      password: HEALTH_PASSWORD,
+      password: SEED_PASSWORD,
       role: membership?.role ?? "unknown",
       created_at: u.created_at,
       banned_until: u.banned_until,
