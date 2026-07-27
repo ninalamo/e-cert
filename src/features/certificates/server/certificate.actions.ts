@@ -2,6 +2,7 @@
 
 import * as certService from "./certificate.service";
 import * as emailService from "./certificate-email.service";
+import { env } from "@/lib/env";
 import { requireRole, requireSession } from "@/lib/permissions";
 import type { Certificate } from "@/types/certificate";
 
@@ -94,7 +95,7 @@ export async function getMyCertificateAction(id: string) {
 export async function getCertificateQrCodeAction(certificateNumber: string) {
   await requireRole(["admin", "staff", "participant"]);
   const { generateQrCodeDataUrl } = await import("@/lib/qr");
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
   const verifyUrl = `${baseUrl}/verify?number=${encodeURIComponent(certificateNumber)}`;
   return generateQrCodeDataUrl(verifyUrl, { width: 200, margin: 2 });
 }

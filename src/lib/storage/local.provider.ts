@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { env } from "@/lib/env";
 import type { StorageProvider } from "./types";
 
 const STORAGE_ROOT = process.env.LOCAL_STORAGE_PATH ?? "./storage";
@@ -32,7 +33,7 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async getSignedUrl(relativePath: string): Promise<string> {
-    const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+    const appUrl = env.client.NEXT_PUBLIC_BASE_URL;
     return `${appUrl}/api/storage/${relativePath}`;
   }
 

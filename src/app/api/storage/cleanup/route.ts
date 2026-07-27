@@ -4,7 +4,6 @@ import { requireRole } from "@/lib/permissions";
 
 const BUCKET = "certificates";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function DELETE(_request: NextRequest) {
   const session = await requireRole(["admin"]);
   if (!session) {

@@ -5,6 +5,7 @@ import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { createClient } from "@/lib/supabase/server";
 import { ORG_ID, ORG_NAME } from "@/lib/org";
+import { env } from "@/lib/env";
 import { renderTemplate } from "@/lib/template-renderer";
 import { extractCanvasDimensions, buildQrReplacement } from "@/lib/certificate-renderer";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -45,7 +46,7 @@ export async function issueCertificate(
     client,
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
   const verifyUrl = `${baseUrl}/verify?number=${number}`;
   const qrBuffer = await generateQrCode(verifyUrl, { width: 200, margin: 1 });
   const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;

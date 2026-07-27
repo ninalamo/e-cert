@@ -57,7 +57,7 @@ export default function CertificateDetail({
   eventIdParam,
 }: CertificateDetailProps) {
   const [certificate, setCertificate] = useState<Certificate>(initialCertificate);
-  const [event] = useState<Event | null>(initialEvent);
+  const event = initialEvent;
 
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [revokeReason, setRevokeReason] = useState("");

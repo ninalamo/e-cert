@@ -543,7 +543,13 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     w: number;
     h: number;
   } | null>(null);
+  const marqueeRef = useRef(marquee);
+  marqueeRef.current = marquee;
   const marqueeStart = useRef<{ x: number; y: number } | null>(null);
+  const elementsRef = useRef(elements);
+  elementsRef.current = elements;
+  const canvasPointRef = useRef(canvasPoint);
+  canvasPointRef.current = canvasPoint;
   const lastCanvasHtml = useRef("");
   const [gridSize, setGridSize] = useState(20);
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -1214,7 +1220,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
   useEffect(() => {
     function onMove(e: MouseEvent) {
       if (!marqueeStart.current) return;
-      const p = canvasPoint(e);
+      const p = canvasPointRef.current(e);
       const s = marqueeStart.current;
       setMarquee({
         x: Math.min(s.x, p.x),
@@ -1224,12 +1230,16 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
       });
     }
     function onUp() {
-      if (!marqueeStart.current || !marquee) {
+      if (!marqueeStart.current) {
+        return;
+      }
+      const currentElements = elementsRef.current;
+      const m = marqueeRef.current;
+      if (!m) {
         marqueeStart.current = null;
         return;
       }
-      const m = marquee;
-      const hits = elements
+      const hits = currentElements
         .filter(
           (el) =>
             el.x < m.x + m.w &&
@@ -1248,7 +1258,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [marquee, elements, canvasPoint]);
+  }, []);
 
   function handleAlign(type: AlignType) {
     setElements((prev) => alignElements(prev, type, selectedIds, CANVAS_W, CANVAS_H));

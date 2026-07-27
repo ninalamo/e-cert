@@ -4,6 +4,7 @@ import { getCertificatePdfBuffer } from "@/features/certificates/server/certific
 import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { ORG_NAME } from "@/lib/org";
+import { env } from "@/lib/env";
 import { renderTemplate } from "@/lib/template-renderer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getCurrentSession } from "@/lib/permissions";
@@ -93,7 +94,7 @@ export async function GET(
       const { getTemplate } = await import("@/features/templates/server/template.service");
       const { EventRepository } = await import("@/features/events/server/event.repository");
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+      const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
       const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
 
       const [template, qrBuffer, event] = await Promise.all([

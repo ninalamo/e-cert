@@ -85,7 +85,7 @@ export default function EventDetail({
     let active = true;
     getTemplatesAction(orgId)
       .then((t) => { if (active) setTemplates(t); })
-      .catch(() => {});
+      .catch(console.error);
     return () => { active = false; };
   }, [data?.event.organization_id, initialTemplates.length]);
 
@@ -96,7 +96,7 @@ export default function EventDetail({
     let active = true;
     getEmailTemplatesWithLockStateAction(orgId)
       .then((t) => { if (active) setEmailTemplates(t); })
-      .catch(() => {});
+      .catch(console.error);
     return () => { active = false; };
   }, [data?.event.organization_id, initialEmailTemplates.length]);
 

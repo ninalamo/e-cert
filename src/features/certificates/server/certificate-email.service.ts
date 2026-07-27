@@ -6,6 +6,7 @@ import { CertificateTemplateRepository } from "@/features/templates/server/templ
 import { EventRepository } from "@/features/events/server/event.repository";
 import { getCertificatePdfBuffer } from "./certificate.service";
 import { ORG_NAME } from "@/lib/org";
+import { env } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { CertificateEmailLog } from "@/types/certificate-email";
@@ -39,7 +40,7 @@ export async function sendCertificateEmail(
     if (org?.name) orgName = org.name;
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
   const viewUrl = `${baseUrl}/view/${certificate.id}`;
   const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
 
