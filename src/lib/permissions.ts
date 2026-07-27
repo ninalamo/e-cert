@@ -6,6 +6,20 @@ import { ORG_ID } from "@/lib/org";
 import { getSession } from "@/lib/auth/session";
 import type { UserRole } from "@/types/organization";
 
+export type { UserRole };
+
+export interface SessionUser {
+  id: string;
+  email: string | null;
+  name: string | null;
+  role: UserRole;
+}
+
+/**
+ * Default role assigned to newly registered users in the single-org model.
+ */
+export const DEFAULT_ROLE: UserRole = "participant";
+
 /**
  * Resolve the current authenticated user and their role.
  *

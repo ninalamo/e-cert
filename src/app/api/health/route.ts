@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { reseed, SEED_USERS, SEED_PASSWORD, getSeedAdmin } from "@/lib/seed";
+import { reseed, SEED_USERS, SEED_PASSWORD } from "@/lib/seed";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const HEALTH_PASSWORD = process.env.HEALTH_PASSWORD;
 
@@ -11,10 +12,10 @@ function isAuthorized(request: NextRequest): boolean {
   return request.headers.get("x-health-password") === HEALTH_PASSWORD;
 }
 
-async function getSeededUsersDetail(admin: ReturnType<typeof getSeedAdmin>) {
+async function getSeededUsersDetail() {
   const seededEmails = SEED_USERS.map((u) => u.email);
 
-  const { data: users } = await admin
+  const { data: users } = await supabaseAdmin
     .from("users")
     .select("id, email, name, created_at, banned_until")
     .in("email", seededEmails);
@@ -23,7 +24,7 @@ async function getSeededUsersDetail(admin: ReturnType<typeof getSeedAdmin>) {
 
   const userIds = users.map((u) => u.id);
 
-  const { data: memberships } = await admin
+  const { data: memberships } = await supabaseAdmin
     .from("user_memberships")
     .select("user_id, role, created_at, updated_at")
     .in("user_id", userIds);
@@ -52,8 +53,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const admin = getSeedAdmin();
-    const users = await getSeededUsersDetail(admin);
+    const users = await getSeededUsersDetail();
 
     return NextResponse.json({
       status: "ok",
@@ -76,8 +76,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     await reseed();
-    const admin = getSeedAdmin();
-    const users = await getSeededUsersDetail(admin);
+    const users = await getSeededUsersDetail();
     return NextResponse.json({ status: "ok", message: "Reseeded default users", users });
   } catch (err) {
     return NextResponse.json(
