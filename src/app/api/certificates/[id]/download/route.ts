@@ -76,9 +76,10 @@ export async function GET(
     }
   }
 
-  try {
-    const pdfBuffer = await getCertificatePdfBuffer(certificate);
-    if (pdfBuffer.length > 4 && pdfBuffer.subarray(0, 4).toString() === "%PDF") {
+  const { data: pdfBuffer, error: pdfError } = await getCertificatePdfBuffer(certificate);
+  if (!pdfBuffer || pdfError) {
+    // Continue to on-demand generation
+  } else if (pdfBuffer.length > 4 && pdfBuffer.subarray(0, 4).toString() === "%PDF") {
       return new NextResponse(new Uint8Array(pdfBuffer), {
         headers: {
           "Content-Type": "application/pdf",
@@ -86,9 +87,6 @@ export async function GET(
         },
       });
     }
-  } catch {
-    // Continue to on-demand generation
-  }
 
   if (certificate.template_id) {
     try {

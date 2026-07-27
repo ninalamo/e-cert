@@ -1,7 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ORG_ID } from "@/lib/org";
 import { getSession } from "@/lib/auth/session";
 import type { UserRole } from "@/types/organization";
@@ -19,13 +19,6 @@ export interface SessionUser {
  * Default role assigned to newly registered users in the single-org model.
  */
 export const DEFAULT_ROLE: UserRole = "participant";
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
 
 /**
  * Resolve the current authenticated user and their role.
@@ -56,7 +49,7 @@ export async function getCurrentSession(): Promise<SessionUser | null> {
   const jwt = await getSession();
   if (!jwt) return null;
 
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   if (!db) return null;
 
   const { data: membership } = await db

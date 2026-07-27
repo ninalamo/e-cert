@@ -1,3 +1,4 @@
+import { type Certificate } from "@/types/certificate";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
@@ -30,12 +31,12 @@ export async function POST(
     return NextResponse.json({ error: "Missing pdf_base64" }, { status: 400 });
   }
 
-  const metadata = {
+  const metadata: Record<string, unknown> = {
     ...(certificate.metadata ?? {}),
     rendered_pdf: pdf_base64,
   };
 
-  await certRepo.update(id, { metadata } as never);
+  await certRepo.update(id, { metadata } as Partial<Certificate>);
 
   return NextResponse.json({ success: true });
 }
