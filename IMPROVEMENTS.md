@@ -9,10 +9,10 @@ Prioritized findings from a full project scan. Ordered by severity.
 ### 1. No Test Files
 There are zero test files in the project. Add unit tests for `BaseRepository`, `verifyToken`, `comparePassword`, `generateCertificateNumber`, `checkRateLimit`, and integration tests for the API routes before shipping further features.
 
-### 2. Duplicate `supabaseAdmin()` Factories
-The `supabaseAdmin()` function is duplicated independently in at least 7 files — `auth.actions.ts`, `auth.repository.ts`, `permissions.ts`, `proxy.ts`, `seed/index.ts`, `tokens.ts`, and `workflow/issue-certificates.ts` — instead of being imported from the shared `@/lib/supabase/admin`. This creates drift risk and inconsistency.
+### 2. Duplicate `supabaseAdmin()` Factories ✅
+The `supabaseAdmin()` function was duplicated independently in 6 files — `auth.actions.ts`, `auth.repository.ts`, `permissions.ts`, `proxy.ts`, `tokens.ts`, and `seed/index.ts` — instead of importing the shared instance from `@/lib/supabase/admin`. 
 
-**Fix:** Consolidate all Supabase server/admin access through the single exported instances in `@/lib/supabase/admin` and `@/lib/supabase/server`.
+**Fix applied:** Consolidated all local factories to use `import { supabaseAdmin } from "@/lib/supabase/admin"`. Removed `getSeedAdmin()` from `seed/index.ts` in favor of the shared singleton.
 
 ### 3. Weak & Placeholder Secrets
 - `AUTH_JWT_SECRET` in `.env` is `"this-is-a-secret-key-for-jwt-authentication"` — not cryptographically random
@@ -24,8 +24,7 @@ The `supabaseAdmin()` function is duplicated independently in at least 7 files �
 ### 4. `as never` Casts Bypass Type Safety
 `download/route.ts:138` and `save-pdf/route.ts:38` cast `metadata` to `never` to bypass TypeScript checking. Fix the type definitions instead.
 
-### 5. Missing `src/middleware.ts`
-Next.js 16 expects the proxy middleware at `src/middleware.ts`. The proxy exists at `src/proxy.ts` but there is no `middleware.ts` at the app root to wire it up. Verify the proxy is actually being invoked by Next.js routing.
+### ~~5. Missing `src/middleware.ts`~~ ✅ Invalid — Next.js 16 uses `proxy.ts` (not `middleware.ts`) for proxy/middleware wiring. The `next.config.ts` configures the proxy correctly.
 
 ---
 
