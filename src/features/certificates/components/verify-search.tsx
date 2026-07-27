@@ -11,6 +11,7 @@ export interface VerificationResult {
   valid_until?: string;
   status?: string;
   error?: string;
+  recipient_name?: string;
   organization?: {
     name: string;
   } | null;
@@ -159,6 +160,13 @@ function VerifySearchInner() {
                 <span className="text-sm text-tertiary">Certificate Number</span>
                 <span className="font-mono font-medium text-primary text-sm break-all text-right max-w-[65%]">{result.certificate_number}</span>
               </div>
+
+              {result.recipient_name && (
+                <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
+                  <span className="text-sm text-tertiary">Participant</span>
+                  <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.recipient_name}</span>
+                </div>
+              )}
 
               {result.event_name && (
                 <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
