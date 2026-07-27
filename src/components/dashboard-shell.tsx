@@ -1,10 +1,7 @@
 import { ORG_NAME } from "@/lib/org";
 import Sidebar from "@/components/sidebar";
 import MobileNav from "@/components/mobile-nav";
-import Breadcrumbs from "@/components/breadcrumbs";
-
-import { ThemeToggle } from "@/components/theme-toggle";
-import LogoutButton from "@/components/logout-button";
+import UserMenu from "@/components/user-menu";
 import WhatsNew from "@/components/whats-new";
 import type { SessionUser } from "@/lib/permissions";
 
@@ -28,13 +25,10 @@ export default function DashboardShell({
             {session.role !== "participant" && (
               <WhatsNew userKey={session.email ?? session.id} />
             )}
-            <ThemeToggle />
-            <span className="hidden text-xs text-tertiary sm:inline">{session.name ?? session.email}</span>
-            <LogoutButton />
+            <UserMenu name={session.name ?? session.email} />
           </div>
         </header>
         <main className="p-4 pb-safe lg:p-6">
-          <Breadcrumbs />
           {children}
         </main>
       </div>

@@ -153,6 +153,7 @@ export default function MobileNav({
 
   const adminItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard" },
+    { label: "Profile", href: "/my/profile" },
     { label: "Events", href: "/events", roles: ["admin", "staff"] },
     { label: "Certificates", href: "/certificates", roles: ["admin", "staff"] },
     {

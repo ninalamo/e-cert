@@ -105,7 +105,7 @@ export default function CertificateDetail({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{certificate.certificate_number}</BreadcrumbPage>
+            <BreadcrumbPage>{event?.name ?? certificate.certificate_number}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

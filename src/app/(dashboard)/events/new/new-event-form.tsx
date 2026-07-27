@@ -5,6 +5,7 @@ import { ORG_ID } from "@/lib/org";
 import { createEventAction, cloneTemplateForEventAction } from "@/features/events/server/event.actions";
 import type { CertificateTemplate } from "@/types/template";
 import Link from "next/link";
+import { buildCertificateSrcDoc } from "@/lib/certificate-renderer";
 
 function sanitizePrefix(raw: string): string {
   return raw
@@ -58,33 +59,26 @@ export default function NewEventForm({
   const certPattern = buildPattern(certNumberPrefix.trim());
   const sampleNumber = certPattern.replace(/#+$/, (m) => m.replace(/#/g, "0"));
 
-  const certWidth = useMemo(() => {
-    if (!previewTemplate) return 1123;
-    const m = previewTemplate.html_content.match(/class="certificate"[^>]*width:(\d+)px/);
-    return m ? parseInt(m[1], 10) : 1123;
-  }, [previewTemplate]);
-
-  const certHeight = useMemo(() => {
-    if (!previewTemplate) return 794;
-    const m = previewTemplate.html_content.match(/class="certificate"[^>]*height:(\d+)px/);
-    return m ? parseInt(m[1], 10) : 794;
-  }, [previewTemplate]);
-
   const previewSrcDoc = useMemo(() => {
     if (!previewTemplate) return "";
-    return `<!DOCTYPE html><html><head><meta name="viewport" content="width=${certWidth}"><style>html,body{margin:0;padding:0;width:${certWidth}px;height:${certHeight}px;overflow:hidden;}${previewTemplate.css_content ?? ""}</style></head><body>${previewTemplate.html_content
-      .replace(/\{\{recipient_name\}\}/g, "Juan Dela Cruz")
-      .replace(/\{\{certificate_number\}\}/g, sampleNumber)
-      .replace(/\{\{issued_date\}\}/g, eventDate ? new Date(eventDate).toLocaleDateString() : "—")
-      .replace(/\{\{organization_name\}\}/g, "Lyceum Of Alabang")
-      .replace(/\{\{event_name\}\}/g, name || "Sample Event")
-      .replace(/\{\{event_date\}\}/g, eventDate ? new Date(eventDate).toLocaleDateString() : "—")
-      .replace(/\{\{event_location\}\}/g, location || "—")
-      .replace(/\{\{event_organizer\}\}/g, organizer || "—")
-      .replace(/\{\{certificate_title\}\}/g, certTitle || "Certificate of Participation")
-      .replace(/\{\{expiry_date\}\}/g, validUntil ? new Date(validUntil).toLocaleDateString() : "—")
-      .replace(/\{\{qr_code\}\}/g, '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><g fill="#000"><rect x="5" y="5" width="25" height="25"/><rect x="10" y="10" width="15" height="15" fill="#fff"/><rect x="13" y="13" width="9" height="9"/><rect x="70" y="5" width="25" height="25"/><rect x="75" y="10" width="15" height="15" fill="#fff"/><rect x="78" y="13" width="9" height="9"/><rect x="5" y="70" width="25" height="25"/><rect x="10" y="75" width="15" height="15" fill="#fff"/><rect x="13" y="78" width="9" height="9"/><rect x="35" y="5" width="5" height="5"/><rect x="45" y="5" width="5" height="5"/><rect x="55" y="5" width="5" height="5"/><rect x="35" y="15" width="5" height="5"/><rect x="50" y="15" width="5" height="5"/><rect x="60" y="15" width="5" height="5"/><rect x="35" y="25" width="5" height="5"/><rect x="45" y="25" width="5" height="5"/><rect x="55" y="35" width="5" height="5"/><rect x="40" y="40" width="5" height="5"/><rect x="50" y="40" width="5" height="5"/><rect x="60" y="40" width="5" height="5"/><rect x="35" y="50" width="5" height="5"/><rect x="45" y="50" width="5" height="5"/><rect x="55" y="50" width="5" height="5"/><rect x="5" y="35" width="5" height="5"/><rect x="5" y="45" width="5" height="5"/><rect x="15" y="40" width="5" height="5"/><rect x="25" y="35" width="5" height="5"/><rect x="25" y="45" width="5" height="5"/><rect x="5" y="55" width="5" height="5"/><rect x="15" y="60" width="5" height="5"/><rect x="25" y="55" width="5" height="5"/><rect x="35" y="60" width="5" height="5"/><rect x="45" y="55" width="5" height="5"/><rect x="55" y="55" width="5" height="5"/><rect x="65" y="35" width="5" height="5"/><rect x="75" y="35" width="5" height="5"/><rect x="85" y="35" width="5" height="5"/><rect x="70" y="45" width="5" height="5"/><rect x="80" y="45" width="5" height="5"/><rect x="90" y="45" width="5" height="5"/><rect x="65" y="55" width="5" height="5"/><rect x="75" y="60" width="5" height="5"/><rect x="85" y="55" width="5" height="5"/><rect x="35" y="70" width="5" height="5"/><rect x="45" y="75" width="5" height="5"/><rect x="55" y="70" width="5" height="5"/><rect x="40" y="85" width="5" height="5"/><rect x="50" y="80" width="5" height="5"/><rect x="60" y="85" width="5" height="5"/><rect x="70" y="70" width="5" height="5"/><rect x="80" y="75" width="5" height="5"/><rect x="90" y="80" width="5" height="5"/><rect x="75" y="85" width="5" height="5"/><rect x="85" y="90" width="5" height="5"/></g></svg>')}</body></html>`;
-  }, [previewTemplate, eventDate, name, location, organizer, certTitle, validUntil, sampleNumber, certWidth, certHeight]);
+    return buildCertificateSrcDoc(
+      previewTemplate.html_content ?? "",
+      previewTemplate.css_content ?? "",
+      {
+        recipient_name: "Juan Dela Cruz",
+        certificate_number: sampleNumber,
+        issued_date: eventDate ? new Date(eventDate).toLocaleDateString() : "—",
+        organization_name: "Lyceum Of Alabang",
+        event_name: name || "Sample Event",
+        event_date: eventDate ? new Date(eventDate).toLocaleDateString() : "—",
+        event_location: location || "—",
+        event_organizer: organizer || "—",
+        certificate_title: certTitle || "Certificate of Participation",
+        expiry_date: validUntil ? new Date(validUntil).toLocaleDateString() : "—",
+      },
+      { fixedDimensions: true }
+    );
+  }, [previewTemplate, eventDate, name, location, organizer, certTitle, validUntil, sampleNumber]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

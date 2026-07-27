@@ -1,8 +1,7 @@
 import { ORG_NAME } from "@/lib/org";
 import ParticipantSidebar from "@/components/participant-sidebar";
 import MobileNav from "@/components/mobile-nav";
-import { ThemeToggle } from "@/components/theme-toggle";
-import LogoutButton from "@/components/logout-button";
+import UserMenu from "@/components/user-menu";
 import type { SessionUser } from "@/lib/permissions";
 
 export default function ParticipantShell({
@@ -22,9 +21,7 @@ export default function ParticipantShell({
             <span className="text-sm font-medium text-secondary">{ORG_NAME}</span>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <span className="hidden text-xs text-tertiary sm:inline">{session.name ?? session.email}</span>
-            <LogoutButton />
+            <UserMenu name={session.name ?? session.email} />
           </div>
         </header>
         <main className="p-4 pb-safe lg:p-6">{children}</main>

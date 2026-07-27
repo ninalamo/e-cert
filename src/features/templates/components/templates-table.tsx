@@ -6,6 +6,7 @@ import { ORG_ID } from "@/lib/org";
 import { getTemplatesAction, deleteTemplateAction } from "@/features/templates/server/template.actions";
 import type { CertificateTemplate } from "@/types/template";
 import { AUTH_PROCESS_LABELS } from "./email-placeholder-field";
+import { extractCanvasDimensions, buildCertificateSrcDoc } from "@/lib/certificate-renderer";
 
 type TemplateRow = CertificateTemplate & { locked: boolean };
 import { usePagination, Paginator } from "@/components/ui/paginator";
@@ -97,13 +98,8 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
 
   const { certW, certH } = useMemo(() => {
     if (!previewTemplate) return { certW: 1123, certH: 794 };
-    const html = previewTemplate.html_content ?? "";
-    const wMatch = html.match(/width:\s*([\d.]+)px/);
-    const hMatch = html.match(/height:\s*([\d.]+)px/);
-    return {
-      certW: wMatch ? parseFloat(wMatch[1]) : 1123,
-      certH: hMatch ? parseFloat(hMatch[1]) : 794,
-    };
+    const { width, height } = extractCanvasDimensions(previewTemplate.html_content ?? "");
+    return { certW: width, certH: height };
   }, [previewTemplate]);
 
   useEffect(() => {
@@ -120,7 +116,15 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
     return () => window.removeEventListener("resize", calc);
   }, [previewTemplate, certW, certH]);
 
-  const previewSrcDoc = previewTemplate ? buildPreviewSrcDoc(previewTemplate) : "";
+  const previewSrcDoc = useMemo(() => {
+    if (!previewTemplate) return "";
+    return buildCertificateSrcDoc(
+      previewTemplate.html_content ?? "",
+      previewTemplate.css_content ?? "",
+      {},
+      { fixedDimensions: true }
+    );
+  }, [previewTemplate]);
 
   return (
     <div className="space-y-4">
@@ -314,7 +318,8 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
   );
 }
 
-function buildPreviewSrcDoc(template: CertificateTemplate): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _buildPreviewSrcDoc(template: CertificateTemplate): string {
   const replacements = {
     "{{recipient_name}}": "Juan Dela Cruz",
     "{{certificate_number}}": "CERT-000001",
