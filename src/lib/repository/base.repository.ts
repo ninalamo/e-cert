@@ -1,8 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SupabaseInsert = Record<string, any>;
-
 export abstract class BaseRepository<T> {
   protected table: string;
   protected client: SupabaseClient;
@@ -54,7 +51,7 @@ export abstract class BaseRepository<T> {
   async create(data: Partial<T>): Promise<{ data: T | null; error: string | null }> {
     const { data: created, error } = await this.client
       .from(this.table)
-      .insert(data as SupabaseInsert)
+      .insert(data as Record<string, unknown>)
       .select()
       .single();
 
@@ -68,7 +65,7 @@ export abstract class BaseRepository<T> {
   async update(id: string, data: Partial<T>): Promise<T | null> {
     const { data: updated, error } = await this.client
       .from(this.table)
-      .update(data as SupabaseInsert)
+      .update(data as Record<string, unknown>)
       .eq("id", id)
       .select()
       .single();
