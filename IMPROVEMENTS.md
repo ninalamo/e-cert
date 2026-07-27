@@ -35,10 +35,8 @@ The `supabaseAdmin()` function was duplicated independently in 6 files — `auth
 
 **Fix:** Either throw on error or return a typed result union (`{ data: T | null; error: string | null }`) consistently.
 
-### 7. Workflow Logic Duplication
-`src/workflows/issue-certificates.ts` duplicates the core certificate-issuing logic already present in `attendee.service.ts` → `issueCertificatesForCompleted()`.
-
-**Fix:** Extract the shared logic into a shared service function and have both the workflow and the service action call it.
+### 7. Workflow Duplication — Accepted
+`src/workflows/issue-certificates.ts` contains logic similar to `attendee.service.ts` → `issueCertificatesForCompleted()`. However, the workflow has different architectural constraints (step-level granularity, Node.js module restrictions via the `workflow` library) that prevent simply delegating to the service function. The duplication is **accepted as necessary** given these constraints.
 
 ### 8. Password Change Doesn't Invalidate Sessions
 `updatePassword` in `auth.actions.ts` updates the hash but does not invalidate existing refresh tokens or sessions. A user who changes their password can still be logged in on other sessions with the old password.
