@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 import { ORG_ID } from "@/lib/org";
 import { DEFAULT_ROLE, getHomePathForRole, getCurrentSession } from "@/lib/permissions";
 import { loginSchema, type RegisterInput } from "../schemas/auth.schema";
@@ -23,13 +22,7 @@ import {
   sendWelcomeEmail,
   sendEmailConfirmedEmail,
 } from "@/lib/email/auth-emails";
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Missing Supabase env vars");
-  return createClient(url, key);
-}
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function loginAction(
   _prev: { error?: string; success?: boolean; redirectTo?: string } | undefined,
@@ -43,7 +36,7 @@ export async function loginAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   const { data: user, error: fetchError } = await db
     .from("users")
     .select("id, email, name, password_hash, banned_until, email_confirmed_at")
@@ -84,7 +77,7 @@ export async function loginAction(
 }
 
 export async function register(data: RegisterInput) {
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
 
   const { data: existing } = await db
     .from("users")
@@ -130,7 +123,7 @@ export async function logout() {
 }
 
 export async function forgotPassword(data: { email: string }): Promise<{ error?: string; success?: boolean }> {
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
 
   const { data: user } = await db
     .from("users")
@@ -170,7 +163,7 @@ export async function updatePassword(data: { password: string }) {
     return { error: "Not authenticated" };
   }
 
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   const passwordHash = await hashPassword(data.password);
 
   const { error } = await db
@@ -192,7 +185,7 @@ export async function updateEmail(data: { email: string }) {
     return { error: "Not authenticated" };
   }
 
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
 
   const { data: existing } = await db
     .from("users")
@@ -222,7 +215,7 @@ export async function confirmEmail(token: string) {
     return { error: "Invalid or expired confirmation link" };
   }
 
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
 
   const { data: user } = await db
     .from("users")
@@ -249,7 +242,7 @@ export async function resetPassword(token: string, password: string) {
     return { error: "Invalid or expired reset link" };
   }
 
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   const passwordHash = await hashPassword(password);
 
   await db
@@ -266,7 +259,7 @@ export async function getCurrentUser() {
   const session = await getCurrentSession();
   if (!session) return null;
 
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   const { data } = await db
     .from("users")
     .select("id, email, name, created_at")

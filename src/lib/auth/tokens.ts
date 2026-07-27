@@ -1,13 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { authConfig } from "./config";
-
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Missing Supabase env vars");
-  return createClient(url, key);
-}
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -19,7 +12,7 @@ export function generateToken(): string {
 
 export async function createRefreshToken(userId: string): Promise<string> {
   const raw = generateToken();
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   await db.from("refresh_tokens").insert({
     user_id: userId,
     token_hash: hashToken(raw),
@@ -31,7 +24,7 @@ export async function createRefreshToken(userId: string): Promise<string> {
 export async function verifyRefreshToken(
   raw: string,
 ): Promise<{ userId: string } | null> {
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   const hash = hashToken(raw);
   const { data } = await db
     .from("refresh_tokens")
@@ -48,12 +41,12 @@ export async function verifyRefreshToken(
 }
 
 export async function deleteRefreshToken(raw: string): Promise<void> {
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   await db.from("refresh_tokens").delete().eq("token_hash", hashToken(raw));
 }
 
 export async function deleteAllRefreshTokens(userId: string): Promise<void> {
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   await db.from("refresh_tokens").delete().eq("user_id", userId);
 }
 
@@ -61,7 +54,7 @@ export async function createResetToken(
   userId: string,
 ): Promise<string> {
   const raw = generateToken();
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   await db.from("password_resets").insert({
     user_id: userId,
     token_hash: hashToken(raw),
@@ -73,7 +66,7 @@ export async function createResetToken(
 export async function verifyResetToken(
   raw: string,
 ): Promise<{ userId: string } | null> {
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   const hash = hashToken(raw);
   const { data } = await db
     .from("password_resets")
@@ -90,7 +83,7 @@ export async function verifyResetToken(
 }
 
 export async function deleteResetToken(raw: string): Promise<void> {
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   await db.from("password_resets").delete().eq("token_hash", hashToken(raw));
 }
 
@@ -98,7 +91,7 @@ export async function createConfirmToken(
   userId: string,
 ): Promise<string> {
   const raw = generateToken();
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   await db.from("email_confirmations").insert({
     user_id: userId,
     token_hash: hashToken(raw),
@@ -110,7 +103,7 @@ export async function createConfirmToken(
 export async function verifyConfirmToken(
   raw: string,
 ): Promise<{ userId: string } | null> {
-  const db = supabaseAdmin();
+  const db = supabaseAdmin;
   const hash = hashToken(raw);
   const { data } = await db
     .from("email_confirmations")

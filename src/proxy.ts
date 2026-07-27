@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ORG_ID } from "@/lib/org";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { verifyToken } from "@/lib/auth";
@@ -49,13 +49,6 @@ function isCsrfSafe(request: NextRequest): boolean {
   return false;
 }
 
-function supabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
-
 export async function proxy(request: NextRequest) {
   if (!isCsrfSafe(request)) {
     return NextResponse.json(
@@ -89,20 +82,17 @@ export async function proxy(request: NextRequest) {
   const jwtPayload = sessionToken ? await verifyToken(sessionToken) : null;
 
   if (jwtPayload) {
-    const db = supabaseAdmin();
-    if (db) {
-      const { data: membership } = await db
-        .from("user_memberships")
-        .select("role")
-        .eq("user_id", jwtPayload.sub)
-        .eq("organization_id", ORG_ID)
-        .single();
+    const { data: membership } = await supabaseAdmin
+      .from("user_memberships")
+      .select("role")
+      .eq("user_id", jwtPayload.sub)
+      .eq("organization_id", ORG_ID)
+      .single();
 
-      request.headers.set("x-user-id", jwtPayload.sub);
-      request.headers.set("x-user-email", jwtPayload.email ?? "");
-      request.headers.set("x-user-name", jwtPayload.name ?? "");
-      request.headers.set("x-user-role", membership?.role ?? "participant");
-    }
+    request.headers.set("x-user-id", jwtPayload.sub);
+    request.headers.set("x-user-email", jwtPayload.email ?? "");
+    request.headers.set("x-user-name", jwtPayload.name ?? "");
+    request.headers.set("x-user-role", membership?.role ?? "participant");
   }
 
   const isProtectedRoute =

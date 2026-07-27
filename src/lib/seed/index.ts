@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { hashPassword } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const ORG_ID = "d4444444-4444-4444-4444-444444444444";
 export const SEED_PASSWORD = "password123";
@@ -10,34 +10,25 @@ export const SEED_USERS: { id: string; email: string; name: string; role: string
   { id: "cccccccc-cccc-cccc-cccc-ccccccccccc3", email: "participant@lyceumalabang.edu.ph", name: "Participant User", role: "participant" },
 ];
 
-export function getSeedAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-  }
-  return createClient(url, key);
-}
-
-export async function deleteSeededUsers(admin = getSeedAdmin()) {
+export async function deleteSeededUsers() {
   const seededEmails = SEED_USERS.map((u) => u.email);
 
-  await admin
+  await supabaseAdmin
     .from("user_memberships")
     .delete()
     .in("user_id", SEED_USERS.map((u) => u.id));
 
-  await admin
+  await supabaseAdmin
     .from("users")
     .delete()
     .in("email", seededEmails);
 }
 
-export async function seedUsers(admin = getSeedAdmin()) {
+export async function seedUsers() {
   const passwordHash = await hashPassword(SEED_PASSWORD);
 
   for (const user of SEED_USERS) {
-    const { data: existing } = await admin
+    const { data: existing } = await supabaseAdmin
       .from("users")
       .select("id")
       .eq("email", user.email)
@@ -46,7 +37,7 @@ export async function seedUsers(admin = getSeedAdmin()) {
     const userId = existing?.id ?? user.id;
 
     if (!existing) {
-      const { error } = await admin.from("users").insert({
+      const { error } = await supabaseAdmin.from("users").insert({
         id: user.id,
         email: user.email,
         password_hash: passwordHash,
@@ -56,7 +47,7 @@ export async function seedUsers(admin = getSeedAdmin()) {
       if (error) throw new Error(`createUser ${user.email}: ${error.message}`);
     }
 
-    const { error } = await admin.from("user_memberships").upsert(
+    const { error } = await supabaseAdmin.from("user_memberships").upsert(
       {
         user_id: userId,
         organization_id: ORG_ID,
@@ -70,7 +61,6 @@ export async function seedUsers(admin = getSeedAdmin()) {
 }
 
 export async function reseed() {
-  const admin = getSeedAdmin();
-  await deleteSeededUsers(admin);
-  await seedUsers(admin);
+  await deleteSeededUsers();
+  await seedUsers();
 }
