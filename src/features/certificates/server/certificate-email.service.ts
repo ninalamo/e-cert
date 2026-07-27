@@ -48,9 +48,8 @@ export async function sendCertificateEmail(
   let attachments: { filename: string; content: Buffer; contentType: string }[] | undefined;
 
   if (!options?.skip_pdf) {
-    let pdfBuffer: Buffer;
-    try {
-      pdfBuffer = await getCertificatePdfBuffer(certificate);
+    const { data: pdfBuffer, error } = await getCertificatePdfBuffer(certificate);
+    if (pdfBuffer && !error) {
       attachments = [
         {
           filename: `${certificate.certificate_number}.pdf`,
@@ -58,8 +57,8 @@ export async function sendCertificateEmail(
           contentType: "application/pdf",
         },
       ];
-    } catch (err) {
-      console.error("[EmailService] Failed to generate PDF:", err);
+    } else {
+      console.error("[EmailService] Failed to generate PDF:", error);
     }
   }
 

@@ -34,18 +34,18 @@ export async function GET(
     });
   }
 
-  try {
-    const pdfBuffer = await getCertificatePdfBuffer(certificate);
-    return new NextResponse(new Uint8Array(pdfBuffer), {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${certificate.certificate_number}.pdf"`,
-      },
-    });
-  } catch {
+  const { data: pdfBuffer, error } = await getCertificatePdfBuffer(certificate);
+  if (!pdfBuffer || error) {
     return NextResponse.json(
       { error: "PDF not available. Please open the certificate and download from there." },
       { status: 404 }
     );
   }
+
+  return new NextResponse(new Uint8Array(pdfBuffer), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${certificate.certificate_number}.pdf"`,
+    },
+  });
 }

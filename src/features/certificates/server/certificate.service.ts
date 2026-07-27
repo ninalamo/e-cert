@@ -272,18 +272,22 @@ export async function deleteCertificate(id: string, client?: SupabaseClient): Pr
   return { certificate: existing };
 }
 
-export async function getCertificatePdfBuffer(certificate: Certificate): Promise<Buffer> {
+export async function getCertificatePdfBuffer(certificate: Certificate): Promise<{ data: Buffer | null; error: string | null }> {
   if (certificate.file_path) {
     const { getStorageProvider } = await import("@/lib/storage");
     const storage = getStorageProvider();
-    return storage.readFile(certificate.file_path);
+    try {
+      return { data: await storage.readFile(certificate.file_path), error: null };
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+    }
   }
 
   const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
 
   const renderedPdf = meta.rendered_pdf;
   if (typeof renderedPdf === "string") {
-    return Buffer.from(renderedPdf, "base64");
+    return { data: Buffer.from(renderedPdf, "base64"), error: null };
   }
 
   const renderedHtml = meta.rendered_html;
@@ -291,13 +295,17 @@ export async function getCertificatePdfBuffer(certificate: Certificate): Promise
     const { renderHtmlToPdf } = await import("@/lib/pdf");
     const { width: certW, height: certH } = extractCanvasDimensions(renderedHtml);
     const pdfOrientation = certW >= certH ? "landscape" : "portrait";
-    const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
-      format: "A4",
-      landscape: pdfOrientation === "landscape",
-      margin: { top: "0", right: "0", bottom: "0", left: "0" },
-    });
-    return pdfBuffer;
+    try {
+      const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
+        format: "A4",
+        landscape: pdfOrientation === "landscape",
+        margin: { top: "0", right: "0", bottom: "0", left: "0" },
+      });
+      return { data: pdfBuffer, error: null };
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : "Unknown error" };
+    }
   }
 
-  throw new Error("Certificate PDF not found");
+  return { data: null, error: "Certificate PDF not found" };
 }
