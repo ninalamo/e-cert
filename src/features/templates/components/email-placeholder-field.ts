@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/utils";
 import type { AuthProcess } from "@/types/template";
 
 export const EMAIL_PLACEHOLDER_FIELDS = [
@@ -89,10 +90,10 @@ export function renderEmailTemplate(
   }
 ): string {
   return html
-    .replace(/\{\{recipient_name\}\}/g, data.recipient_name)
-    .replace(/\{\{certificate_number\}\}/g, data.certificate_number)
-    .replace(/\{\{issued_date\}\}/g, data.issued_date)
+    .replace(/\{\{recipient_name\}\}/g, sanitizeHtml(data.recipient_name))
+    .replace(/\{\{certificate_number\}\}/g, sanitizeHtml(data.certificate_number))
+    .replace(/\{\{issued_date\}\}/g, sanitizeHtml(data.issued_date))
     .replace(/\{\{download_url\}\}/g, data.download_url)
     .replace(/\{\{verify_url\}\}/g, data.verify_url)
-    .replace(/\{\{org_name\}\}/g, data.org_name);
+    .replace(/\{\{org_name\}\}/g, sanitizeHtml(data.org_name));
 }
