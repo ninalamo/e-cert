@@ -18,7 +18,7 @@ function mockStorageList(files: { name: string }[]) {
 
 describe("DELETE /api/storage/cleanup", () => {
   it("returns 401 when not authenticated", async () => {
-    vi.mocked(requireRole).mockResolvedValue(null as never);
+    vi.mocked(requireRole).mockResolvedValue(null as any);
 
     const req = createNextRequest("http://localhost:3000/api/storage/cleanup", {
       method: "DELETE",

@@ -32,7 +32,7 @@ describe("getMyOrganizationsAction", () => {
 
   it("calls service with session id", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "user-1", email: "u@t.com", name: "U", role: "admin" });
-    vi.mocked(orgService.getUserOrganizations).mockResolvedValue([{ id: "org-1" } as never]);
+    vi.mocked(orgService.getUserOrganizations).mockResolvedValue([{ id: "org-1" } as any]);
     await (await actions()).getMyOrganizationsAction();
     expect(orgService.getUserOrganizations).toHaveBeenCalledWith("user-1");
   });
@@ -41,7 +41,7 @@ describe("getMyOrganizationsAction", () => {
 describe("getOrganizationMembersAction", () => {
   it("calls service", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(orgService.getOrganizationMembers).mockResolvedValue([{ id: "mem-1" } as never]);
+    vi.mocked(orgService.getOrganizationMembers).mockResolvedValue([{ id: "mem-1" } as any]);
     await (await actions()).getOrganizationMembersAction("org-1");
     expect(orgService.getOrganizationMembers).toHaveBeenCalledWith("org-1");
   });
@@ -55,7 +55,7 @@ describe("addMemberAction", () => {
 
   it("adds member", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(orgService.addMember).mockResolvedValue({ id: "mem-1" } as never);
+    vi.mocked(orgService.addMember).mockResolvedValue({ id: "mem-1" } as any);
     await (await actions()).addMemberAction("org-1", "new@t.com", "staff");
     expect(orgService.addMember).toHaveBeenCalledWith("org-1", "new@t.com", "staff", undefined);
   });

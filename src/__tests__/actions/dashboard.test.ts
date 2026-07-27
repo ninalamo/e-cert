@@ -33,7 +33,7 @@ describe("getDashboardStatsAction", () => {
 describe("getRecentActivityAction", () => {
   it("returns recent activity", async () => {
     vi.mocked(requireSession).mockResolvedValue({ id: "user-1", email: "u@t.com", name: "U", role: "staff" });
-    vi.mocked(dashboardService.getRecentActivity).mockResolvedValue([{ id: "act-1" } as never]);
+    vi.mocked(dashboardService.getRecentActivity).mockResolvedValue([{ id: "act-1" } as any]);
     await (await actions()).getRecentActivityAction("org-1");
     expect(dashboardService.getRecentActivity).toHaveBeenCalledWith("org-1");
   });

@@ -21,7 +21,7 @@ async function actions() {
 
 describe("getAttendeesAction", () => {
   it("has no auth guard", async () => {
-    vi.mocked(attendeeService.getAttendees).mockResolvedValue([{ id: "att-1" } as never]);
+    vi.mocked(attendeeService.getAttendees).mockResolvedValue([{ id: "att-1" } as any]);
     const result = await (await actions()).getAttendeesAction("evt-1");
     expect(result).toHaveLength(1);
     expect(requireRole).not.toHaveBeenCalled();
@@ -38,7 +38,7 @@ describe("addAttendeeAction", () => {
 
   it("adds attendee", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(attendeeService.addAttendee).mockResolvedValue({ id: "att-1" } as never);
+    vi.mocked(attendeeService.addAttendee).mockResolvedValue({ id: "att-1" } as any);
     await (await actions()).addAttendeeAction({ event_id: "evt-1", organization_id: "org-1", name: "A", email: "a@t.com" });
     expect(attendeeService.addAttendee).toHaveBeenCalled();
   });
@@ -47,7 +47,7 @@ describe("addAttendeeAction", () => {
 describe("updateAttendeeAction", () => {
   it("updates attendee fields", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(attendeeService.updateAttendee).mockResolvedValue({ id: "att-1" } as never);
+    vi.mocked(attendeeService.updateAttendee).mockResolvedValue({ id: "att-1" } as any);
     await (await actions()).updateAttendeeAction("att-1", { name: "Updated", completed: true });
     expect(attendeeService.updateAttendee).toHaveBeenCalledWith("att-1", { name: "Updated", completed: true });
   });
@@ -63,7 +63,7 @@ describe("removeAttendeeAction", () => {
 describe("bulkAddAttendeesAction", () => {
   it("bulk adds attendees", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(attendeeService.bulkAddAttendees).mockResolvedValue([{ id: "att-1" } as never]);
+    vi.mocked(attendeeService.bulkAddAttendees).mockResolvedValue([{ id: "att-1" } as any]);
     await (await actions()).bulkAddAttendeesAction({
       event_id: "evt-1", organization_id: "org-1",
       attendees: [{ name: "A", email: "a@t.com" }],

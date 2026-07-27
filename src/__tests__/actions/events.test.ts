@@ -36,7 +36,7 @@ describe("getEventsAction", () => {
 
   it("returns events", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(eventService.getEvents).mockResolvedValue([{ id: "evt-1" } as never]);
+    vi.mocked(eventService.getEvents).mockResolvedValue([{ id: "evt-1" } as any]);
     const result = await (await actions()).getEventsAction("org-1");
     expect(result).toHaveLength(1);
   });
@@ -54,7 +54,7 @@ describe("getEventsPaginatedAction", () => {
 describe("getEventAction", () => {
   it("allows participant access", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "user-1", email: "u@t.com", name: "U", role: "participant" });
-    vi.mocked(eventService.getEvent).mockResolvedValue({ id: "evt-1" } as never);
+    vi.mocked(eventService.getEvent).mockResolvedValue({ id: "evt-1" } as any);
     const result = await (await actions()).getEventAction("evt-1");
     expect(result).toMatchObject({ id: "evt-1" });
   });
@@ -70,7 +70,7 @@ describe("getEventWithStatsAction", () => {
 describe("createEventAction", () => {
   it("calls createEvent with data", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "staff-1", email: "s@t.com", name: "S", role: "staff" });
-    vi.mocked(eventService.createEvent).mockResolvedValue({ id: "new-evt" } as never);
+    vi.mocked(eventService.createEvent).mockResolvedValue({ id: "new-evt" } as any);
     const data = { organization_id: "org-1", name: "Test Event" };
     const result = await (await actions()).createEventAction(data);
     expect(eventService.createEvent).toHaveBeenCalled();
@@ -81,7 +81,7 @@ describe("createEventAction", () => {
 describe("updateEventAction", () => {
   it("calls updateEvent", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(eventService.updateEvent).mockResolvedValue({ id: "evt-1" } as never);
+    vi.mocked(eventService.updateEvent).mockResolvedValue({ id: "evt-1" } as any);
     await (await actions()).updateEventAction("evt-1", { name: "Updated" });
     expect(eventService.updateEvent).toHaveBeenCalled();
   });
@@ -113,8 +113,8 @@ describe("cloneEmailTemplateForEventAction", () => {
 describe("issueEventCertificateAction", () => {
   it("fetches event and issues certificate", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "staff-1", email: "s@t.com", name: "S", role: "staff" });
-    vi.mocked(eventService.getEvent).mockResolvedValue({ id: "evt-1", name: "Event", event_date: null, location: null, organizer: null, certificate_title: null, certificate_number_pattern: null } as never);
-    vi.mocked(certService.issueCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as never });
+    vi.mocked(eventService.getEvent).mockResolvedValue({ id: "evt-1", name: "Event", event_date: null, location: null, organizer: null, certificate_title: null, certificate_number_pattern: null } as any);
+    vi.mocked(certService.issueCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as any });
 
     await (await actions()).issueEventCertificateAction({
       event_id: "evt-1", organization_id: "org-1",
@@ -127,8 +127,8 @@ describe("issueEventCertificateAction", () => {
 describe("bulkIssueEventCertificatesAction", () => {
   it("issues for each recipient", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "staff-1", email: "s@t.com", name: "S", role: "staff" });
-    vi.mocked(eventService.getEvent).mockResolvedValue({ id: "evt-1", name: "Event", event_date: null, location: null, organizer: null, certificate_title: null, certificate_number_pattern: null } as never);
-    vi.mocked(certService.issueCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as never });
+    vi.mocked(eventService.getEvent).mockResolvedValue({ id: "evt-1", name: "Event", event_date: null, location: null, organizer: null, certificate_title: null, certificate_number_pattern: null } as any);
+    vi.mocked(certService.issueCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as any });
 
     const result = await (await actions()).bulkIssueEventCertificatesAction({
       event_id: "evt-1", organization_id: "org-1",

@@ -33,7 +33,7 @@ describe("GET /api/workflow-status", () => {
       exists: Promise.resolve(true),
       status: Promise.resolve("completed"),
       returnValue: Promise.resolve({ issued: 5, failed: 0 }),
-    } as unknown as ReturnType<typeof getRun>);
+    } as any);
 
     const req = createNextRequest("http://localhost:3000/api/workflow-status?runId=run-1");
     const res = await GET(req);
@@ -50,7 +50,7 @@ describe("GET /api/workflow-status", () => {
     vi.mocked(getRun).mockReturnValue({
       exists: Promise.resolve(true),
       status: Promise.resolve("failed"),
-    } as unknown as ReturnType<typeof getRun>);
+    } as any);
 
     const req = createNextRequest("http://localhost:3000/api/workflow-status?runId=run-1");
     const res = await GET(req);
@@ -64,7 +64,7 @@ describe("GET /api/workflow-status", () => {
     vi.mocked(getRun).mockReturnValue({
       exists: Promise.resolve(true),
       status: Promise.resolve("running"),
-    } as unknown as ReturnType<typeof getRun>);
+    } as any);
 
     const req = createNextRequest("http://localhost:3000/api/workflow-status?runId=run-1");
     const res = await GET(req);
