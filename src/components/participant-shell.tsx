@@ -21,7 +21,7 @@ export default function ParticipantShell({
             <span className="text-sm font-medium text-secondary">{ORG_NAME}</span>
           </div>
           <div className="flex items-center gap-2">
-            <UserMenu name={session.name ?? session.email} role="participant" />
+            <UserMenu name={session.name ?? session.email} />
           </div>
         </header>
         <main className="p-4 pb-safe lg:p-6">{children}</main>
