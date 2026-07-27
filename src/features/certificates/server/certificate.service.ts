@@ -6,6 +6,7 @@ import { generateQrCode } from "@/lib/qr";
 import { createClient } from "@/lib/supabase/server";
 import { ORG_NAME } from "@/lib/org";
 import { renderTemplate } from "@/lib/template-renderer";
+import { extractCanvasDimensions, buildQrReplacement } from "@/lib/certificate-renderer";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function repo(client: SupabaseClient) {
@@ -46,7 +47,7 @@ export async function issueCertificate(
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const verifyUrl = `${baseUrl}/verify?number=${number}`;
-  const qrBuffer = await generateQrCode(verifyUrl, { width: 128, margin: 1 });
+  const qrBuffer = await generateQrCode(verifyUrl, { width: 200, margin: 1 });
   const qrDataUrl = `data:image/png;base64,${qrBuffer.toString("base64")}`;
 
   let renderedHtml: string | null = null;
@@ -76,13 +77,15 @@ export async function issueCertificate(
           expiry_date: data.expires_at
             ? new Date(data.expires_at).toLocaleDateString()
             : "",
-          qr_code: `<img src="${qrDataUrl}" width="128" height="128" />`,
+          qr_code: buildQrReplacement(qrDataUrl),
         }
       );
 
+      const { width: certW, height: certH } = extractCanvasDimensions(template.html_content);
+      const pdfOrientation = certW >= certH ? "landscape" : "portrait";
       const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
         format: "A4",
-        landscape: true,
+        landscape: pdfOrientation === "landscape",
         margin: { top: "0", right: "0", bottom: "0", left: "0" },
       });
       renderedPdfBase64 = pdfBuffer.toString("base64");
@@ -109,7 +112,7 @@ export async function issueCertificate(
           expiry_date: data.expires_at
             ? new Date(data.expires_at).toLocaleDateString()
             : "",
-          qr_code: `<img src="${qrDataUrl}" width="128" height="128" />`,
+          qr_code: buildQrReplacement(qrDataUrl),
         }
       );
     }
@@ -288,9 +291,11 @@ export async function getCertificatePdfBuffer(certificate: Certificate): Promise
   const renderedHtml = meta.rendered_html;
   if (typeof renderedHtml === "string") {
     const { renderHtmlToPdf } = await import("@/lib/pdf");
+    const { width: certW, height: certH } = extractCanvasDimensions(renderedHtml);
+    const pdfOrientation = certW >= certH ? "landscape" : "portrait";
     const pdfBuffer = await renderHtmlToPdf(renderedHtml, {
       format: "A4",
-      landscape: true,
+      landscape: pdfOrientation === "landscape",
       margin: { top: "0", right: "0", bottom: "0", left: "0" },
     });
     return pdfBuffer;

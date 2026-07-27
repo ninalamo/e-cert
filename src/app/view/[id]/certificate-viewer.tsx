@@ -1,10 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import { sanitizeHtml } from "@/lib/utils";
+import {
+  extractCanvasDimensions,
+  buildQrReplacement,
+  computeUniformScale,
+} from "@/lib/certificate-renderer";
 
 interface Props {
   certificate: Certificate;
@@ -26,31 +32,42 @@ export default function CertificateViewer({
   const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
   const cachedHtml = typeof meta.rendered_html === "string" ? meta.rendered_html : null;
 
-  const certWidth = (() => {
-    const m = template?.html_content?.match(/width:\s*(\d+)px/);
-    return m ? parseInt(m[1], 10) : 1123;
-  })();
-  const certHeight = (() => {
-    const m = template?.html_content?.match(/height:\s*(\d+)px/);
-    return m ? parseInt(m[1], 10) : 794;
-  })();
+  const { width: certWidth, height: certHeight } = useMemo(
+    () => extractCanvasDimensions(template?.html_content ?? ""),
+    [template?.html_content]
+  );
 
-  const certHtml = template
-    ? template.html_content
-        .replace(/\{\{recipient_name\}\}/g, sanitizeHtml(certificate.recipient_name))
-        .replace(/\{\{certificate_number\}\}/g, sanitizeHtml(certificate.certificate_number))
-        .replace(/\{\{issued_date\}\}/g, sanitizeHtml(new Date(certificate.issued_at).toLocaleDateString()))
-        .replace(/\{\{organization_name\}\}/g, sanitizeHtml(orgName))
-        .replace(/\{\{event_name\}\}/g, sanitizeHtml(event?.name ?? ""))
-        .replace(/\{\{event_date\}\}/g, sanitizeHtml(event?.event_date ? new Date(event.event_date).toLocaleDateString() : ""))
-        .replace(/\{\{event_location\}\}/g, sanitizeHtml(event?.location ?? ""))
-        .replace(/\{\{event_organizer\}\}/g, sanitizeHtml(event?.organizer ?? ""))
-        .replace(/\{\{certificate_title\}\}/g, sanitizeHtml(event?.certificate_title ?? ""))
-        .replace(/\{\{expiry_date\}\}/g, sanitizeHtml(certificate.expires_at ? new Date(certificate.expires_at).toLocaleDateString() : ""))
-        .replace(/\{\{qr_code\}\}/g, `<img src="${qrDataUrl}" width="128" height="128" />`)
-    : cachedHtml;
+  const certHtml = useMemo(() => {
+    if (!template) return cachedHtml;
+    return template.html_content
+      .replace(/\{\{recipient_name\}\}/g, sanitizeHtml(certificate.recipient_name))
+      .replace(/\{\{certificate_number\}\}/g, sanitizeHtml(certificate.certificate_number))
+      .replace(/\{\{issued_date\}\}/g, sanitizeHtml(new Date(certificate.issued_at).toLocaleDateString()))
+      .replace(/\{\{organization_name\}\}/g, sanitizeHtml(orgName))
+      .replace(/\{\{event_name\}\}/g, sanitizeHtml(event?.name ?? ""))
+      .replace(/\{\{event_date\}\}/g, sanitizeHtml(event?.event_date ? new Date(event.event_date).toLocaleDateString() : ""))
+      .replace(/\{\{event_location\}\}/g, sanitizeHtml(event?.location ?? ""))
+      .replace(/\{\{event_organizer\}\}/g, sanitizeHtml(event?.organizer ?? ""))
+      .replace(/\{\{certificate_title\}\}/g, sanitizeHtml(event?.certificate_title ?? ""))
+      .replace(/\{\{expiry_date\}\}/g, sanitizeHtml(certificate.expires_at ? new Date(certificate.expires_at).toLocaleDateString() : ""))
+      .replace(/\{\{qr_code\}\}/g, buildQrReplacement(qrDataUrl));
+  }, [template, certificate, event, qrDataUrl, orgName, cachedHtml]);
 
   const certCss = template?.css_content ?? "";
+
+  const [scale, setScale] = useState(1);
+
+  const calcScale = useCallback(() => {
+    const maxW = window.innerWidth * 0.65;
+    const maxH = window.innerHeight * 0.85;
+    setScale(computeUniformScale(certWidth, certHeight, maxW, maxH));
+  }, [certWidth, certHeight]);
+
+  useEffect(() => {
+    calcScale();
+    window.addEventListener("resize", calcScale);
+    return () => window.removeEventListener("resize", calcScale);
+  }, [calcScale]);
 
   function handlePrint() {
     if (!certHtml) return;
@@ -64,8 +81,8 @@ export default function CertificateViewer({
 <head>
   <title>${certificate.certificate_number}</title>
   <style>
-    @page { size: A4 ${orientation}; margin: 0; }
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+    @page { size: ${certWidth}px ${certHeight}px ${orientation}; margin: 0; }
+    html, body { margin: 0; padding: 0; width: ${certWidth}px; height: ${certHeight}px; overflow: hidden; }
     ${certCss}
   </style>
 </head>
@@ -108,30 +125,41 @@ export default function CertificateViewer({
       </div>
 
       {certHtml ? (
-        <div
-          className="bg-white shadow-2xl rounded-lg overflow-hidden flex-shrink-0 relative"
-          style={{ width: certWidth, height: certHeight, maxWidth: "65vw", maxHeight: "85vh" }}
-        >
+        <div className="relative flex-shrink-0">
           <div
-            dangerouslySetInnerHTML={{ __html: certHtml }}
             style={{
               width: certWidth,
               height: certHeight,
+              transformOrigin: "center center",
+              transform: `scale(${scale})`,
             }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none flex items-center justify-center"
-            aria-hidden="true"
           >
-            <span
-              className="select-none whitespace-nowrap font-bold uppercase tracking-widest text-gray-900/10"
-              style={{
-                fontSize: Math.min(certWidth, certHeight) * 0.18,
-                transform: "rotate(-35deg)",
-              }}
+            <div
+              className="bg-white shadow-2xl rounded-lg overflow-hidden relative"
+              style={{ width: certWidth, height: certHeight }}
             >
-              PREVIEW
-            </span>
+              <div
+                dangerouslySetInnerHTML={{ __html: certHtml }}
+                style={{
+                  width: certWidth,
+                  height: certHeight,
+                }}
+              />
+              <div
+                className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <span
+                  className="select-none whitespace-nowrap font-bold uppercase tracking-widest text-gray-900/10"
+                  style={{
+                    fontSize: Math.min(certWidth, certHeight) * 0.18,
+                    transform: "rotate(-35deg)",
+                  }}
+                >
+                  PREVIEW
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
