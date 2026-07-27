@@ -4,7 +4,7 @@ import type { Certificate } from "@/types/certificate";
 import { renderHtmlToPdf } from "@/lib/pdf";
 import { generateQrCode } from "@/lib/qr";
 import { createClient } from "@/lib/supabase/server";
-import { ORG_NAME } from "@/lib/org";
+import { ORG_ID, ORG_NAME } from "@/lib/org";
 import { renderTemplate } from "@/lib/template-renderer";
 import { extractCanvasDimensions, buildQrReplacement } from "@/lib/certificate-renderer";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -188,7 +188,6 @@ export async function getMyCertificates(
 ): Promise<Certificate[]> {
   const c = client ?? (await createClient());
   const certRepo = repo(c);
-  const { ORG_ID } = await import("@/lib/org");
   return certRepo.findByRecipientEmail(email, ORG_ID, columns);
 }
 
@@ -199,7 +198,6 @@ export async function getMyCertificatesWithEvent(
 ): Promise<Array<Certificate & { events: { name: string } | null }>> {
   const c = client ?? (await createClient());
   const certRepo = repo(c);
-  const { ORG_ID } = await import("@/lib/org");
   return certRepo.findByRecipientEmailWithEvent(email, ORG_ID, columns);
 }
 
