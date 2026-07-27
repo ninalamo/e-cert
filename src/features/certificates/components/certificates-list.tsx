@@ -238,6 +238,7 @@ export default function CertificatesList({
                       <th className="text-left">Recipient</th>
                       <th className="text-left">Email</th>
                       <th className="text-left">Issued</th>
+                      <th className="text-left">Expiry Date</th>
                       <th className="text-left">Status</th>
                       <th className="text-right">Actions</th>
                     </tr>
@@ -252,6 +253,11 @@ export default function CertificatesList({
                         <td className="text-tertiary">{cert.recipient_email}</td>
                         <td className="text-tertiary">
                           {new Date(cert.issued_at).toLocaleDateString()}
+                        </td>
+                        <td className="text-tertiary">
+                          {cert.expires_at
+                            ? new Date(cert.expires_at).toLocaleDateString()
+                            : "—"}
                         </td>
                         <td>
                           {cert.revoked_at ? (
