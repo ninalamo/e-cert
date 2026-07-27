@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import EventDetail from "./event-detail";
 import { getCurrentSession, canDelete } from "@/lib/permissions";
 import { getEventWithStats } from "@/features/events/server/event.service";
-import { getTemplates, getEmailTemplates } from "@/features/templates/server/template.service";
+import { getCertificateTemplatesWithLockState, getEmailTemplatesWithLockState } from "@/features/templates/server/template.service";
 import { SkeletonEventDetail } from "@/components/ui/skeleton";
 import { ORG_ID } from "@/lib/org";
 
@@ -19,8 +19,8 @@ export default async function EventDetailPage({
   const [session, initialData, initialTemplates, initialEmailTemplates] = await Promise.all([
     getCurrentSession(),
     getEventWithStats(id),
-    getTemplates(ORG_ID),
-    getEmailTemplates(ORG_ID),
+    getCertificateTemplatesWithLockState(ORG_ID),
+    getEmailTemplatesWithLockState(ORG_ID),
   ]);
 
   const canUserDelete = canDelete(session?.role ?? "participant");

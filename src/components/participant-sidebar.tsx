@@ -7,7 +7,6 @@ import { ORG_NAME } from "@/lib/org";
 const navItems = [
   { label: "My Dashboard", href: "/my" },
   { label: "My Certificates", href: "/my/certificates" },
-  { label: "Profile", href: "/my/profile" },
 ];
 
 function isActivePath(pathname: string, href: string, exact = false) {

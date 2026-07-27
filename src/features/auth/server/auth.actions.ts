@@ -148,6 +148,18 @@ export async function forgotPassword(data: { email: string }): Promise<{ error?:
   return { success: true };
 }
 
+export async function requestPasswordChange(): Promise<{ error?: string; success?: boolean }> {
+  const session = await getCurrentSession();
+  if (!session) {
+    return { error: "Not authenticated" };
+  }
+
+  const resetToken = await createResetToken(session.id);
+  await sendPasswordResetEmail(session.email, resetToken);
+
+  return { success: true };
+}
+
 export async function updatePassword(data: { password: string }) {
   const session = await getCurrentSession();
   if (!session) {

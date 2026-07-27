@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   getEventWithStatsAction,
 } from "@/features/events/server/event.actions";
-import { getTemplatesAction, getEmailTemplatesAction } from "@/features/templates/server/template.actions";
+import { getTemplatesAction, getEmailTemplatesWithLockStateAction } from "@/features/templates/server/template.actions";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonEventDetail } from "@/components/ui/skeleton";
@@ -85,7 +85,7 @@ export default function EventDetail({
     const orgId = data?.event.organization_id;
     if (!orgId) return;
     let active = true;
-    getEmailTemplatesAction(orgId)
+    getEmailTemplatesWithLockStateAction(orgId)
       .then((t) => { if (active) setEmailTemplates(t); })
       .catch(() => {});
     return () => { active = false; };
@@ -282,9 +282,9 @@ export default function EventDetail({
 
           <TemplateCard
             event={event}
-            templates={templates}
+            templates={templates.filter((t) => !t.locked)}
             currentTemplate={template}
-            emailTemplates={emailTemplates}
+            emailTemplates={emailTemplates.filter((t) => !t.locked)}
             currentEmailTemplate={emailTemplate}
             onUpdated={handleTemplateUpdated}
             onEmailTemplateUpdated={handleEmailTemplateUpdated}
