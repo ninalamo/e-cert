@@ -167,3 +167,10 @@ export async function recreateAdmin() {
 
   return { message: "Created new admin user", id: newUser.id };
 }
+
+export async function seedAllUsers() {
+  await recreateAdmin();
+  await reseed();
+}
+
+export { recreateAdmin };
