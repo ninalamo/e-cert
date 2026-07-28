@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { SEED_USERS, SEED_PASSWORD } from "@/lib/seed";
+import { SEED_USERS } from "@/lib/seed";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "password123";
@@ -86,21 +86,6 @@ function renderResult(data: unknown) {
   );
 }
 
-function renderMessage(message: string) {
-  return new Response(
-    html(`<div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:12px;border-radius:6px;margin-bottom:16px">${message}</div>
-<form method="POST" action="/api/health">
-  <input type="hidden" name="action" value="login" />
-  <input type="password" name="password" required placeholder="Enter admin password"
-    style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;width:250px" />
-  <button type="submit" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;margin-left:8px">
-    Reset Admin Password
-  </button>
-</form>`),
-    { status: 200, headers: { "Content-Type": "text/html" } }
-  );
-}
-
 export async function GET() {
   return renderForm();
 }
@@ -110,7 +95,7 @@ export async function POST(request: NextRequest) {
   const password = formData.get("password");
 
   if (password !== DEFAULT_ADMIN_PASSWORD) {
-    return renderForm("Incorrect password.");
+    return renderForm("password is wrong");
   }
 
   try {
@@ -120,6 +105,7 @@ export async function POST(request: NextRequest) {
       auth: "up",
       users,
       missing: SEED_USERS.map((u) => u.email).filter((e) => !users.some((u) => u.email === e)),
+      remark: "The environment variables DEFAULT_ADMIN_PASSWORD and DEFAULT_ADMIN_EMAIL are used as the default admin account",
     });
   } catch (err) {
     return renderResult({

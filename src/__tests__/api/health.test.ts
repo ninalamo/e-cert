@@ -14,7 +14,12 @@ function createPostRequest(url: string, data: Record<string, string>) {
   for (const [key, value] of Object.entries(data)) {
     formData.set(key, value);
   }
-  return new Request(url, { method: "POST", body: formData }) as unknown as NextRequest;
+  const req = new Request(url, { method: "POST", body: formData });
+  // Prevent caching of password in the form
+  req.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+  req.headers.set("Pragma", "no-cache");
+  req.headers.set("Expires", "0");
+  return req as unknown as NextRequest;
 }
 
 beforeEach(() => {
