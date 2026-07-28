@@ -106,77 +106,63 @@ export async function recreateAdmin() {
   const adminUser = SEED_USERS.find((u) => u.role === "admin");
   if (!adminUser) throw new Error("Could not find admin user in SEED_USERS");
 
-  const { data: existing } = await supabaseAdmin
+  const { data: existingAdminByEmail } = await supabaseAdmin
     .from("users")
     .select("id")
     .eq("email", adminUser.email)
     .single();
 
-  if (existing) {
-    if (existing.id !== adminUser.id) {
-      await supabaseAdmin
-        .from("users")
-        .delete()
-        .eq("id", existing.id);
+  const { data: existingByUuid } = await supabaseAdmin
+    .from("users")
+    .select("id")
+    .eq("id", adminUser.id)
+    .single();
 
-      await supabaseAdmin
-        .from("user_memberships")
-        .delete()
-        .eq("user_id", existing.id);
-    } else {
-      const passwordHash = await hashPassword(SEED_PASSWORD);
-      await supabaseAdmin
-        .from("users")
-        .update({
-          password_hash: passwordHash,
-          name: adminUser.name,
-          email_confirmed_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id);
+  const uuidExists = !!existingByUuid;
+  const emailExists = !!existingAdminByEmail;
 
-      await supabaseAdmin.from("user_memberships").upsert(
-        {
-          user_id: existing.id,
-          organization_id: ORG_ID,
-          role: adminUser.role,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,organization_id" }
-      );
+  if (emailExists && existingAdminByEmail.id !== adminUser.id) {
+    await supabaseAdmin
+      .from("users")
+      .delete()
+      .eq("id", existingAdminByEmail.id);
 
-      return { message: "Updated existing admin user", id: existing.id };
-    }
+    await supabaseAdmin
+      .from("user_memberships")
+      .delete()
+      .eq("user_id", existingAdminByEmail.id);
   }
 
   try {
     const passwordHash = await hashPassword(SEED_PASSWORD);
-    const { error } = await supabaseAdmin.from("users").insert({
-      id: adminUser.id,
-      email: adminUser.email,
-      password_hash: passwordHash,
-      name: adminUser.name,
-      email_confirmed_at: new Date().toISOString(),
-    });
+    const { error } = await supabaseAdmin.from("users").upsert(
+      {
+        id: adminUser.id,
+        email: adminUser.email,
+        password_hash: passwordHash,
+        name: adminUser.name,
+        email_confirmed_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    );
     
     if (error && !error.message.includes("duplicate key")) {
       throw new Error(`createUser ${adminUser.email}: ${error.message}`);
     }
 
-    const { data: newUser } = await supabaseAdmin
+    const { data: adminUserByUuid } = await supabaseAdmin
       .from("users")
       .select("id")
-      .eq("email", adminUser.email)
+      .eq("id", adminUser.id)
       .single();
 
-    if (!newUser && !error?.message.includes("duplicate key")) {
+    if (!adminUserByUuid) {
       throw new Error("Failed to create admin user");
     }
 
-    const id = adminUser.id;
-
     const { error: membershipError } = await supabaseAdmin.from("user_memberships").upsert(
       {
-        user_id: id,
+        user_id: adminUser.id,
         organization_id: ORG_ID,
         role: adminUser.role,
         updated_at: new Date().toISOString(),
@@ -187,7 +173,10 @@ export async function recreateAdmin() {
       throw new Error(`membership ${adminUser.email}: ${membershipError.message}`);
     }
 
-    return { message: existing ? "Updated existing admin user" : "Created new admin user", id };
+    const action = uuidExists && emailExists ? "Updated existing admin user" : 
+                   uuidExists ? "Updated admin user by UUID" : 
+                   "Created new admin user";
+    return { message: action, id: adminUser.id };
   } catch (err) {
     console.warn(`Recreate admin error for ${adminUser.email}:`, err);
     throw err;
@@ -198,5 +187,3 @@ export async function seedAllUsers() {
   await recreateAdmin();
   await reseed();
 }
-
-export { recreateAdmin };

@@ -19,8 +19,8 @@ async function main() {
   const emailArg = args.find((arg) => arg.startsWith("--email"));
   const passwordArg = args.find((arg) => arg.startsWith("--password"));
   
-  let email = emailArg ? emailArg.split("=")[1] : process.env.DEFAULT_ADMIN_EMAIL;
-  let password = passwordArg ? passwordArg.split("=")[1] : process.env.DEFAULT_ADMIN_PASSWORD;
+  const email = emailArg ? emailArg.split("=")[1] : process.env.DEFAULT_ADMIN_EMAIL;
+  const password = passwordArg ? passwordArg.split("=")[1] : process.env.DEFAULT_ADMIN_PASSWORD;
 
   if (!email || !password) {
     console.log("Usage: npx tsx scripts/seed-users.ts --email=<email> --password=<password>");
