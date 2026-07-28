@@ -89,8 +89,8 @@ export default function UserMenu({
           disabled={isPending}
           onSelect={(e) => {
             e.preventDefault();
-            startTransition(() => {
-              logout();
+            startTransition(async () => {
+              await logout();
             });
           }}
         >
