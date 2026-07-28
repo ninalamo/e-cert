@@ -1,6 +1,40 @@
 import { NextRequest } from "next/server";
-import { recreateAdmin, seedUsers } from "@/lib/seed";
+import { SEED_USERS, recreateAdmin, seedUsers } from "@/lib/seed";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+
+async function getSeededUsersDetail() {
+  const seededEmails = SEED_USERS.map((user) => user.email);
+
+  const { data: users } = await supabaseAdmin
+    .from("users")
+    .select("id, email, name, created_at, banned_until")
+    .in("email", seededEmails);
+
+  if (!users || users.length === 0) return [];
+
+  const userIds = users.map((user: { id: string }) => user.id);
+
+  const { data: memberships } = await supabaseAdmin
+    .from("user_memberships")
+    .select("user_id, role, created_at, updated_at")
+    .in("user_id", userIds);
+
+  const membershipMap = new Map((memberships ?? []).map((membership: { user_id: string }) => [membership.user_id, membership]));
+
+  return users.map((user: { id: string; email: string; name: string; created_at: string; banned_until: string | null }) => {
+    const seed = SEED_USERS.find((seedUser) => seedUser.email === user.email);
+    const membership = membershipMap.get(user.id);
+    return {
+      email: user.email,
+      name: seed?.name ?? user.name ?? null,
+      role: membership?.role ?? "unknown",
+      created_at: user.created_at,
+      banned_until: user.banned_until,
+      membership_created_at: membership?.created_at ?? null,
+      membership_updated_at: membership?.updated_at ?? null,
+    };
+  });
+}
 
 function html(body: string) {
   return `<!DOCTYPE html>
@@ -38,7 +72,11 @@ function renderForm(error?: string) {
   );
 }
 
-function renderSuccess() {
+function renderSuccess(seededUsers?: unknown[]) {
+  const seededUsersHtml = seededUsers?.length
+    ? `<pre style="background:#f0fdf4;border:1px solid #bbf7d0;padding:16px;border-radius:6px;overflow:auto;max-height:70vh;margin-top:16px">${JSON.stringify(seededUsers, null, 2)}</pre>`
+    : "";
+
   return new Response(
     html(`<div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:16px;border-radius:6px;margin-bottom:16px">
   <h2>✓ Admin credentials verified and all users re-seeded successfully!</h2>
@@ -58,7 +96,8 @@ function renderSuccess() {
   <button type="submit" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;width: 100%">
     Reset Admin Password
   </button>
-</form>`),
+</form>
+${seededUsersHtml}`),
     { status: 200, headers: { "Content-Type": "text/html" } }
   );
 }
@@ -121,11 +160,19 @@ export async function POST(request: NextRequest) {
 
     // Recreate admin with environment variables
     await recreateAdmin();
-    
+
     // Create staff and participant users if they don't exist
     await seedUsers();
-    
-    return renderSuccess();
+
+    const seededUsers = await getSeededUsersDetail();
+    if (!seededUsers.length) {
+      return renderResult({
+        status: "missing",
+        error: "No seeded users found",
+      });
+    }
+
+    return renderSuccess(seededUsers);
   } catch (err) {
     return renderResult({
       status: "error",
