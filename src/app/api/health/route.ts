@@ -1,37 +1,44 @@
 import { NextRequest } from "next/server";
-import { SEED_USERS } from "@/lib/seed";
+import { SEED_USERS, recreateAdmin, seedUsers } from "@/lib/seed";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "password123";
-
 async function getSeededUsersDetail() {
-  const seededEmails = SEED_USERS.map((u) => u.email);
+  const seededEmails = SEED_USERS.map((user) => user.email);
 
   const { data: users } = await supabaseAdmin
     .from("users")
     .select("id, email, name, created_at, banned_until")
     .in("email", seededEmails);
 
-  if (!users) return [];
+  if (!users || users.length === 0) return [];
 
-  const userIds = users.map((u) => u.id);
+  const userIds = users.map((user: { id: string }) => user.id);
 
   const { data: memberships } = await supabaseAdmin
     .from("user_memberships")
     .select("user_id, role, created_at, updated_at")
     .in("user_id", userIds);
 
-  const membershipMap = new Map((memberships ?? []).map((m) => [m.user_id, m]));
+  type MembershipRow = {
+    user_id: string;
+    role?: string;
+    created_at?: string | null;
+    updated_at?: string | null;
+  };
 
-  return users.map((u) => {
-    const seed = SEED_USERS.find((s) => s.email === u.email);
-    const membership = membershipMap.get(u.id);
+  const membershipMap = new Map<string, MembershipRow>(
+    (memberships as MembershipRow[] | null ?? []).map((membership) => [membership.user_id, membership])
+  );
+
+  return users.map((user: { id: string; email: string; name: string; created_at: string; banned_until: string | null }) => {
+    const seed = SEED_USERS.find((seedUser) => seedUser.email === user.email);
+    const membership = membershipMap.get(user.id);
     return {
-      email: u.email,
-      name: seed?.name ?? u.name ?? null,
+      email: user.email,
+      name: seed?.name ?? user.name ?? null,
       role: membership?.role ?? "unknown",
-      created_at: u.created_at,
-      banned_until: u.banned_until,
+      created_at: user.created_at,
+      banned_until: user.banned_until,
       membership_created_at: membership?.created_at ?? null,
       membership_updated_at: membership?.updated_at ?? null,
     };
@@ -53,20 +60,53 @@ function renderForm(error?: string) {
   return new Response(
     html(`${errorHtml}
 <p style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:12px;border-radius:6px;margin-bottom:16px">
-  Note: The <code>DEFAULT_ADMIN_PASSWORD</code> environment variable must be set and the app redeployed before updating.
+  Note: The <code>DEFAULT_ADMIN_PASSWORD</code> environment variable must be set before updating.
 </p>
 <form method="POST" action="/api/health">
-  <input type="hidden" name="action" value="login" />
-  <input type="password" name="password" required placeholder="Enter admin password"
-    style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;width:250px" />
-  <button type="submit" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;margin-left:8px">
+  <div style="margin-bottom: 16px;">
+    <label style="display: block;margin-bottom: 8px;font-size: 14px;font-weight: 500;">Admin Email</label>
+    <input type="email" name="email" required placeholder="Enter admin email"
+      style="width: 100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px" />
+  </div>
+  <div style="margin-bottom: 16px;">
+    <label style="display: block;margin-bottom: 8px;font-size: 14px;font-weight: 500;">Admin Password</label>
+    <input type="password" name="password" required placeholder="Enter admin password"
+      style="width: 100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px" />
+  </div>
+  <button type="submit" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;width: 100%">
+    Reset Admin Password
+  </button>
+</form>`),
+    { status: 200, headers: { "Content-Type": "text/html" } }
+  );
+}
+
+function renderSuccess(seededUsers?: unknown[]) {
+  const seededUsersHtml = seededUsers?.length
+    ? `<pre style="background:#f0fdf4;border:1px solid #bbf7d0;padding:16px;border-radius:6px;overflow:auto;max-height:70vh;margin-top:16px">${JSON.stringify(seededUsers, null, 2)}</pre>`
+    : "";
+
+  return new Response(
+    html(`<div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:16px;border-radius:6px;margin-bottom:16px">
+  <h2>✓ Admin credentials verified and all users re-seeded successfully!</h2>
+  <p>All seeded users (admin, staff, participant) have been recreated with current environment variables.</p>
+</div>
+<form method="POST" action="/api/health">
+  <div style="margin-bottom: 16px;">
+    <label style="display: block;margin-bottom: 8px;font-size: 14px;font-weight: 500;">Admin Email</label>
+    <input type="email" name="email" required placeholder="Enter admin email"
+      style="width: 100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px" />
+  </div>
+  <div style="margin-bottom: 16px;">
+    <label style="display: block;margin-bottom: 8px;font-size: 14px;font-weight: 500;">Admin Password</label>
+    <input type="password" name="password" required placeholder="Enter admin password"
+      style="width: 100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px" />
+  </div>
+  <button type="submit" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;width: 100%">
     Reset Admin Password
   </button>
 </form>
-<p style="margin-top:12px"><button type="submit" form="forgot-form" style="background:none;border:none;color:#2563eb;cursor:pointer;padding:0;font-size:14px">Forgot password?</button></p>
-<form id="forgot-form" method="POST" action="/api/health">
-  <input type="hidden" name="action" value="forgot" />
-</form>`),
+${seededUsersHtml}`),
     { status: 200, headers: { "Content-Type": "text/html" } }
   );
 }
@@ -74,10 +114,17 @@ function renderForm(error?: string) {
 function renderResult(data: unknown) {
   return new Response(
     html(`<form method="POST" action="/api/health">
-  <input type="hidden" name="action" value="login" />
-  <input type="password" name="password" required placeholder="Enter admin password"
-    style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;width:250px" />
-  <button type="submit" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;margin-left:8px">
+  <div style="margin-bottom: 16px;">
+    <label style="display: block;margin-bottom: 8px;font-size: 14px;font-weight: 500;">Admin Email</label>
+    <input type="email" name="email" required placeholder="Enter admin email"
+      style="width: 100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px" />
+  </div>
+  <div style="margin-bottom: 16px;">
+    <label style="display: block;margin-bottom: 8px;font-size: 14px;font-weight: 500;">Admin Password</label>
+    <input type="password" name="password" required placeholder="Enter admin password"
+      style="width: 100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px" />
+  </div>
+  <button type="submit" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;width: 100%">
     Reset Admin Password
   </button>
 </form>
@@ -92,24 +139,52 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  const password = formData.get("password");
+  const email = formData.get("email") as string | null;
+  const password = formData.get("password") as string | null;
 
-  if (password !== DEFAULT_ADMIN_PASSWORD) {
+  if (!email || !password) {
+    return renderForm("Please provide both email and password");
+  }
+
+  const envEmail = process.env.DEFAULT_ADMIN_EMAIL || "admin@lyceumalabang.edu.ph";
+  const envPassword = process.env.DEFAULT_ADMIN_PASSWORD || "password123";
+
+  if (email !== envEmail) {
+    return renderForm("email is wrong");
+  }
+
+  if (password !== envPassword) {
     return renderForm("password is wrong");
   }
 
   try {
-    const users = await getSeededUsersDetail();
-    return renderResult({
-      status: "ok",
-      auth: "up",
-      users,
-      missing: SEED_USERS.map((u) => u.email).filter((e) => !users.some((u) => u.email === e)),
-      remark: "The environment variables DEFAULT_ADMIN_PASSWORD and DEFAULT_ADMIN_EMAIL are used as the default admin account",
-    });
+    // Verify Supabase connection
+    const { error } = await supabaseAdmin.from("users").select("id").limit(1);
+    if (error) {
+      return renderResult({
+        status: "degraded",
+        error: `Database connection error: ${error.message}`, 
+      });
+    }
+
+    // Recreate admin with environment variables
+    await recreateAdmin();
+
+    // Create staff and participant users if they don't exist
+    await seedUsers();
+
+    const seededUsers = await getSeededUsersDetail();
+    if (!seededUsers.length) {
+      return renderResult({
+        status: "missing",
+        error: "No seeded users found",
+      });
+    }
+
+    return renderSuccess(seededUsers);
   } catch (err) {
     return renderResult({
-      status: "degraded",
+      status: "error",
       error: err instanceof Error ? err.message : String(err),
     });
   }

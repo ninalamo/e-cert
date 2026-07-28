@@ -36,6 +36,7 @@ vi.mock("@/lib/seed", () => ({
     { id: "cccccccc-cccc-cccc-cccc-ccccccccccc3", email: "participant@lyceumalabang.edu.ph", name: "Participant User", role: "participant" },
   ],
   reseed: vi.fn(),
+  recreateAdmin: vi.fn(),
   seedUsers: vi.fn(),
   deleteSeededUsers: vi.fn(),
 }));
