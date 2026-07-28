@@ -65,7 +65,7 @@ function renderForm(error?: string) {
   Note: The <code>DEFAULT_ADMIN_PASSWORD</code> environment variable must be set before updating.
 </p>
 <form method="POST" action="/api/health" id="health-form">
-  <div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,0.8);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:9999;">
+  <div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,0.8);backdrop-filter:blur(2px);align-items:center;justify-content:center;z-index:9999;">
     <div style="background:white;border:1px solid #d1d5db;border-radius:8px;padding:20px;font-weight:600;color:#111827;box-shadow:0 10px 30px rgba(0,0,0,0.12);">Processing...</div>
   </div>
   <div style="margin-bottom: 16px;">
