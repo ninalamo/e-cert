@@ -11,6 +11,7 @@ export interface ManagedUser {
   banned_until: string | null;
   role: UserRole | null;
   is_attendee: boolean;
+  is_main_admin: boolean;
 }
 
 export async function listUsers(): Promise<ManagedUser[]> {
@@ -40,6 +41,7 @@ export async function listUsers(): Promise<ManagedUser[]> {
     .eq("organization_id", ORG_ID)
     .in("email", emails);
 
+  const mainAdminEmail = (process.env.DEFAULT_ADMIN_EMAIL || "").toLowerCase();
   const attendeeEmails = new Set((attendees ?? []).map((a) => a.email));
 
   return users.map((u) => ({
@@ -51,6 +53,7 @@ export async function listUsers(): Promise<ManagedUser[]> {
     banned_until: u.banned_until,
     role: roleMap.get(u.id) ?? null,
     is_attendee: attendeeEmails.has(u.email),
+    is_main_admin: u.email.toLowerCase() === mainAdminEmail,
   }));
 }
 

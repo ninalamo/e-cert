@@ -20,6 +20,7 @@ interface ManagedUser {
   banned_until: string | null;
   role: UserRole | null;
   is_attendee: boolean;
+  is_main_admin: boolean;
 }
 
 interface UsersListProps {
@@ -122,25 +123,25 @@ export default function UsersList({ initialUsers, currentUserId }: UsersListProp
                   <tr key={user.id}>
                     <td className="text-sm">{user.email}</td>
                     <td className="text-sm text-tertiary">{user.name || "—"}</td>
-                    <td>
-                      {user.id === currentUserId ? (
-                        <span className="status-pill status-draft">
-                          {user.role ?? "none"}
-                        </span>
-                      ) : (
-                        <select
-                          value={user.role ?? "participant"}
-                          onChange={(e) =>
-                            handleRoleChange(user.id, e.target.value as UserRole)
-                          }
-                          className="rounded-md border px-2 py-1 text-sm"
-                        >
-                          <option value="participant">participant</option>
-                          <option value="staff">staff</option>
-                          <option value="admin">admin</option>
-                        </select>
-                      )}
-                    </td>
+<td>
+  {user.id === currentUserId || user.is_main_admin ? (
+    <span className="status-pill status-draft">
+      {user.role ?? "none"}
+    </span>
+  ) : (
+    <select
+      value={user.role ?? "participant"}
+      onChange={(e) =>
+        handleRoleChange(user.id, e.target.value as UserRole)
+      }
+      className="rounded-md border px-2 py-1 text-sm"
+    >
+      <option value="participant">participant</option>
+      <option value="staff">staff</option>
+      <option value="admin">admin</option>
+    </select>
+  )}
+</td>
                     <td>
                       {user.is_attendee ? (
                         <span className="status-pill status-active">Yes</span>
@@ -163,35 +164,35 @@ export default function UsersList({ initialUsers, currentUserId }: UsersListProp
                         <span className="status-pill status-active">Active</span>
                       )}
                     </td>
-                    <td className="text-right whitespace-nowrap">
-                      {user.id !== currentUserId && (
-                        <>
-                          {user.banned_until ? (
-                            <button
-                              onClick={() => handleUnban(user.id)}
-                              className="text-xs text-info hover:underline mr-3"
-                            >
-                              Unban
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleBan(user.id)}
-                              className="text-xs text-amber-600 hover:underline mr-3"
-                            >
-                              Ban
-                            </button>
-                          )}
-                          {user.role !== "admin" && (
-                            <button
-                              onClick={() => handleDelete(user.id)}
-                              className="text-xs text-danger hover:underline"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </td>
+<td className="text-right whitespace-nowrap">
+  {user.id !== currentUserId && !user.is_main_admin && (
+    <>
+      {user.banned_until ? (
+        <button
+          onClick={() => handleUnban(user.id)}
+          className="text-xs text-info hover:underline mr-3"
+        >
+          Unban
+        </button>
+      ) : (
+        <button
+          onClick={() => handleBan(user.id)}
+          className="text-xs text-amber-600 hover:underline mr-3"
+        >
+          Ban
+        </button>
+      )}
+      {user.role !== "admin" && (
+        <button
+          onClick={() => handleDelete(user.id)}
+          className="text-xs text-danger hover:underline"
+        >
+          Delete
+        </button>
+      )}
+    </>
+  )}
+</td>
                   </tr>
                 ))}
               </tbody>
