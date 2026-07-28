@@ -76,7 +76,7 @@ describe("createEventAction", () => {
     const data = { organization_id: "org-1", name: "Test Event" };
     const result = await (await actions()).createEventAction(data);
     expect(eventService.createEvent).toHaveBeenCalled();
-    expect(result).toMatchObject({ id: "new-evt" });
+    expect(result).toMatchObject({ event: { id: "new-evt" } });
   });
 });
 
