@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { SEED_USERS, recreateAdmin, seedUsers } from "@/lib/seed";
+import { SEED_PASSWORD, SEED_USERS, recreateAdmin, seedUsers } from "@/lib/seed";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 async function getSeededUsersDetail() {
@@ -146,14 +146,16 @@ export async function POST(request: NextRequest) {
     return renderForm("Please provide both email and password");
   }
 
-  const envEmail = process.env.DEFAULT_ADMIN_EMAIL || "admin@lyceumalabang.edu.ph";
-  const envPassword = process.env.DEFAULT_ADMIN_PASSWORD || "password123";
+  const envEmail = (process.env.DEFAULT_ADMIN_EMAIL || SEED_USERS.find((user) => user.role === "admin")?.email || "admin@lyceumalabang.edu.ph").trim();
+  const envPassword = (process.env.DEFAULT_ADMIN_PASSWORD || SEED_PASSWORD || "password123").trim();
+  const submittedEmail = (email ?? "").trim();
+  const submittedPassword = (password ?? "").trim();
 
-  if (email !== envEmail) {
+  if (submittedEmail !== envEmail) {
     return renderForm("email is wrong");
   }
 
-  if (password !== envPassword) {
+  if (submittedPassword !== envPassword) {
     return renderForm("password is wrong");
   }
 
