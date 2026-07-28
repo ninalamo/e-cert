@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as dashboardService from "@/features/dashboard/server/dashboard.service";
 import { requireSession } from "@/lib/permissions";
+import type { RecentActivity } from "@/features/dashboard/server/dashboard.service";
 
 vi.mock("@/features/dashboard/server/dashboard.service", () => ({
   getDashboardStats: vi.fn(),
@@ -33,7 +34,7 @@ describe("getDashboardStatsAction", () => {
 describe("getRecentActivityAction", () => {
   it("returns recent activity", async () => {
     vi.mocked(requireSession).mockResolvedValue({ id: "user-1", email: "u@t.com", name: "U", role: "staff" });
-    vi.mocked(dashboardService.getRecentActivity).mockResolvedValue([{ id: "act-1" } as any]);
+    vi.mocked(dashboardService.getRecentActivity).mockResolvedValue([{ id: "act-1" } as unknown as RecentActivity]);
     await (await actions()).getRecentActivityAction("org-1");
     expect(dashboardService.getRecentActivity).toHaveBeenCalledWith("org-1");
   });

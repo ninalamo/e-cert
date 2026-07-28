@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as certService from "@/features/certificates/server/certificate.service";
 import * as emailService from "@/features/certificates/server/certificate-email.service";
 import { requireRole, requireSession } from "@/lib/permissions";
+import type { Certificate } from "@/types/certificate";
+import type { CertificateEmailLog } from "@/types/certificate-email";
 
 vi.mock("@/features/certificates/server/certificate.service", () => ({
   issueCertificate: vi.fn(),
@@ -46,7 +48,7 @@ describe("issueCertificateAction", () => {
 
   it("calls issueCertificate with admin role", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "admin@test.com", name: "Admin", role: "admin" });
-    vi.mocked(certService.issueCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as any });
+    vi.mocked(certService.issueCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as unknown as Certificate });
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     const result = await actions.issueCertificateAction(data);
@@ -60,7 +62,7 @@ describe("issueCertificateAction", () => {
 
   it("calls issueCertificate with staff role", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "staff-1", email: "staff@test.com", name: "Staff", role: "staff" });
-    vi.mocked(certService.issueCertificate).mockResolvedValue({ certificate: { id: "cert-2" } as any });
+    vi.mocked(certService.issueCertificate).mockResolvedValue({ certificate: { id: "cert-2" } as unknown as Certificate });
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     await actions.issueCertificateAction({ ...data, send_email: true });
@@ -104,7 +106,7 @@ describe("getCertificatesAction", () => {
 
   it("returns certificates list", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "admin@test.com", name: "Admin", role: "admin" });
-    vi.mocked(certService.getCertificates).mockResolvedValue([{ id: "cert-1" } as any]);
+    vi.mocked(certService.getCertificates).mockResolvedValue([{ id: "cert-1" } as unknown as Certificate]);
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     const result = await actions.getCertificatesAction("org-1");
@@ -127,7 +129,7 @@ describe("getCertificatesWithEventAction", () => {
 describe("getCertificateAction", () => {
   it("admin can get any certificate", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "admin@test.com", name: "Admin", role: "admin" });
-    vi.mocked(certService.getCertificate).mockResolvedValue({ id: "cert-1" } as any);
+    vi.mocked(certService.getCertificate).mockResolvedValue({ id: "cert-1" } as unknown as Certificate);
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     await actions.getCertificateAction("cert-1");
@@ -137,7 +139,7 @@ describe("getCertificateAction", () => {
 
   it("participant can only get own certificate", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "user-1", email: "user@test.com", name: "User", role: "participant" });
-    vi.mocked(certService.getMyCertificate).mockResolvedValue({ id: "cert-1" } as any);
+    vi.mocked(certService.getMyCertificate).mockResolvedValue({ id: "cert-1" } as unknown as Certificate);
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     await actions.getCertificateAction("cert-1");
@@ -155,7 +157,7 @@ describe("revokeCertificateAction", () => {
 
   it("calls service revoke", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "admin@test.com", name: "Admin", role: "admin" });
-    vi.mocked(certService.revokeCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as any });
+    vi.mocked(certService.revokeCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as unknown as Certificate });
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     await actions.revokeCertificateAction("cert-1", "test reason");
@@ -173,7 +175,7 @@ describe("deleteCertificateAction", () => {
 
   it("calls service delete", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "admin@test.com", name: "Admin", role: "admin" });
-    vi.mocked(certService.deleteCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as any });
+    vi.mocked(certService.deleteCertificate).mockResolvedValue({ certificate: { id: "cert-1" } as unknown as Certificate });
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     await actions.deleteCertificateAction("cert-1");
@@ -202,7 +204,7 @@ describe("sendCertificateEmailAction", () => {
 describe("getEmailLogsAction", () => {
   it("calls email service", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "admin@test.com", name: "Admin", role: "admin" });
-    vi.mocked(emailService.getEmailLogs).mockResolvedValue([{ id: "log-1" } as any]);
+    vi.mocked(emailService.getEmailLogs).mockResolvedValue([{ id: "log-1" } as unknown as CertificateEmailLog]);
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     await actions.getEmailLogsAction("cert-1");
@@ -234,7 +236,7 @@ describe("getMyCertificatesAction", () => {
 describe("getMyCertificateAction", () => {
   it("calls getMyCertificate with user email", async () => {
     vi.mocked(requireSession).mockResolvedValue({ id: "user-1", email: "user@test.com", name: "User", role: "participant" });
-    vi.mocked(certService.getMyCertificate).mockResolvedValue({ id: "cert-1" } as any);
+    vi.mocked(certService.getMyCertificate).mockResolvedValue({ id: "cert-1" } as unknown as Certificate);
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     await actions.getMyCertificateAction("cert-1");
