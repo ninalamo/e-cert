@@ -97,9 +97,9 @@ export default function Sidebar({ role }: { role: UserRole }) {
     >
       <div className={`mb-6 flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
         <Link href="/dashboard" className={`font-bold text-brand-700 ${collapsed ? "text-sm" : "text-lg"}`}>
-          {collapsed ? "E" : "E-Cert"}
+          {collapsed ? "" : "LOA VERICERT"}
         </Link>
-        {!collapsed && <p className="text-xs text-tertiary mt-1">{ORG_NAME}</p>}
+        {/* {!collapsed && <p className="text-xs text-tertiary mt-1">{ORG_NAME}</p>} */}
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
