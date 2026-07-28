@@ -39,7 +39,7 @@ describe("GET /api/health", () => {
 });
 
 describe("POST /api/health", () => {
-  it("shows incorrect password when password is wrong", async () => {
+  it("shows password is wrong when password is wrong", async () => {
     const req = createPostRequest("http://localhost:3000/api/health", {
       action: "login",
       password: "wrong-password",
@@ -47,17 +47,17 @@ describe("POST /api/health", () => {
     const res = await POST(req);
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain("Incorrect password");
+    expect(html).toContain("password is wrong");
   });
 
-  it("shows incorrect password when password is missing", async () => {
+  it("shows password is wrong when password is missing", async () => {
     const req = createPostRequest("http://localhost:3000/api/health", {
       action: "login",
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain("Incorrect password");
+    expect(html).toContain("password is wrong");
   });
 
   it("returns seeded users when authorized", async () => {
