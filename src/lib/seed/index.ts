@@ -11,8 +11,6 @@ export const SEED_USERS: { id: string; email: string; name: string; role: string
 ];
 
 export async function initializeDbWithSeededUsers() {
-  const seededEmails = SEED_USERS.map((u) => u.email);
-
   for (const user of SEED_USERS) {
     const { data: existing } = await supabaseAdmin
       .from("users")

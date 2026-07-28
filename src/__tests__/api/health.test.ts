@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/health/route";
 import { mockQueryResult } from "../helpers";
