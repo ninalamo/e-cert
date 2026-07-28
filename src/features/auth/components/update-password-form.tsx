@@ -59,7 +59,7 @@ export default function UpdatePasswordForm({ token }: { token?: string }) {
             htmlFor="password"
             className="block text-sm font-medium text-secondary"
           >
-            New Password
+            New Password *
           </label>
           <input
             id="password"

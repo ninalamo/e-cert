@@ -23,6 +23,12 @@ export default function RegisterForm() {
       confirmPassword: formData.get("confirmPassword") as string,
     };
 
+    if (data.password !== data.confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
     const result = await register(data);
 
     if (result?.error) {
@@ -59,20 +65,21 @@ export default function RegisterForm() {
 
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-secondary">
-            Name
+            Name *
           </label>
           <input
             id="name"
             name="name"
             type="text"
             required
+            minLength={2}
             className="input mt-1"
           />
         </div>
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-secondary">
-            Email
+            Email *
           </label>
           <input
             id="email"
@@ -85,7 +92,7 @@ export default function RegisterForm() {
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-secondary">
-            Password
+            Password *
           </label>
           <input
             id="password"
@@ -99,7 +106,7 @@ export default function RegisterForm() {
 
         <div>
           <label htmlFor="confirmPassword" className="block text-sm font-medium text-secondary">
-            Confirm Password
+            Confirm Password *
           </label>
           <input
             id="confirmPassword"

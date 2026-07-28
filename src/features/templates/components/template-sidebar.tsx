@@ -54,7 +54,7 @@ export default function TemplateSidebar({
           <div className="px-4 pt-4 pb-4 space-y-4">
             <div className="pt-4">
               <label htmlFor="canvas-name" className="block text-xs font-semibold mb-1.5 text-[var(--color-text-secondary)]">
-                Template Name
+                Template Name *
               </label>
               <input
                 id="canvas-name"
