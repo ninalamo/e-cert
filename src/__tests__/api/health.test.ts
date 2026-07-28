@@ -1,31 +1,66 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET, PUT } from "@/app/api/health/route";
-import { createNextRequest, mockQueryResult } from "../helpers";
+import type { NextRequest } from "next/server";
+import { GET, POST } from "@/app/api/health/route";
+import { mockQueryResult } from "../helpers";
 import { getMockSupabase } from "../setup";
+
+const mockSendEmail = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/email", () => ({
+  getEmailProvider: () => ({ sendEmail: mockSendEmail }),
+}));
+
+function createPostRequest(url: string, data: Record<string, string>) {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(data)) {
+    formData.set(key, value);
+  }
+  const req = new Request(url, { method: "POST", body: formData });
+  // Prevent caching of password in the form
+  req.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+  req.headers.set("Pragma", "no-cache");
+  req.headers.set("Expires", "0");
+  return req as unknown as NextRequest;
+}
 
 beforeEach(() => {
   getMockSupabase()._resetHandlers();
-  vi.clearAllMocks();
+  mockSendEmail.mockClear();
 });
 
 describe("GET /api/health", () => {
-  it("returns 403 when x-health-password header is missing", async () => {
-    const req = createNextRequest("http://localhost:3000/api/health");
-    const res = await GET(req);
-    expect(res.status).toBe(403);
-    const body = await res.json();
-    expect(body).toEqual({ error: "Forbidden" });
+  it("returns an HTML form with forgot password link", async () => {
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("<form");
+    expect(html).toContain('type="password"');
+    expect(html).toContain("Forgot password?");
   });
+});
 
-  it("returns 403 when x-health-password is wrong", async () => {
-    const req = createNextRequest("http://localhost:3000/api/health", {
-      headers: { "x-health-password": "wrong-password" },
+describe("POST /api/health", () => {
+  it("shows password is wrong when password is wrong", async () => {
+    const req = createPostRequest("http://localhost:3000/api/health", {
+      action: "login",
+      password: "wrong-password",
     });
-    const res = await GET(req);
-    expect(res.status).toBe(403);
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("password is wrong");
   });
 
-  it("returns 200 with seeded users when authorized", async () => {
+  it("shows password is wrong when password is missing", async () => {
+    const req = createPostRequest("http://localhost:3000/api/health", {
+      action: "login",
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("password is wrong");
+  });
+
+  it("returns seeded users when authorized", async () => {
     const users = [
       { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", email: "admin@lyceumalabang.edu.ph", name: "Admin User", created_at: "2024-01-01T00:00:00Z", banned_until: null },
       { id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2", email: "staff@lyceumalabang.edu.ph", name: "Staff User", created_at: "2024-01-01T00:00:00Z", banned_until: null },
@@ -41,74 +76,33 @@ describe("GET /api/health", () => {
     getMockSupabase()._setHandler("users", mockQueryResult(users));
     getMockSupabase()._setHandler("user_memberships", mockQueryResult(memberships));
 
-    const req = createNextRequest("http://localhost:3000/api/health", {
-      headers: { "x-health-password": "password123" },
+    const req = createPostRequest("http://localhost:3000/api/health", {
+      action: "login",
+      password: "password123",
     });
-    const res = await GET(req);
+    const res = await POST(req);
     expect(res.status).toBe(200);
 
-    const body = await res.json();
-    expect(body).toMatchObject({
-      status: "ok",
-      auth: "up",
-    });
-    expect(body.users).toHaveLength(3);
-    expect(body.users[0]).toMatchObject({
-      email: "admin@lyceumalabang.edu.ph",
-      name: "Admin User",
-      role: "admin",
-    });
-    expect(body.missing).toEqual([]);
+    const html = await res.text();
+    expect(html).toContain("admin@lyceumalabang.edu.ph");
+    expect(html).toContain("staff@lyceumalabang.edu.ph");
+    expect(html).toContain("participant@lyceumalabang.edu.ph");
+    expect(html).toContain("admin");
+    expect(html).toContain("staff");
+    expect(html).toContain("participant");
   });
 
-  it("returns 500 when supabase query fails", async () => {
+  it("shows missing users when supabase query fails", async () => {
     getMockSupabase()._setHandler("users", mockQueryResult(null));
     getMockSupabase()._setHandler("user_memberships", mockQueryResult([]));
 
-    const req = createNextRequest("http://localhost:3000/api/health", {
-      headers: { "x-health-password": "password123" },
+    const req = createPostRequest("http://localhost:3000/api/health", {
+      action: "login",
+      password: "password123",
     });
-    const res = await GET(req);
+    const res = await POST(req);
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.missing).toHaveLength(3);
-  });
-});
-
-describe("PUT /api/health", () => {
-  it("returns 403 when x-health-password header is missing", async () => {
-    const req = createNextRequest("http://localhost:3000/api/health", {
-      method: "PUT",
-    });
-    const res = await PUT(req);
-    expect(res.status).toBe(403);
-  });
-
-  it("returns 200 and reseeds when authorized", async () => {
-    const { reseed } = await import("@/lib/seed");
-
-    const users = [
-      { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", email: "admin@lyceumalabang.edu.ph", name: "Admin User", created_at: "2024-01-01T00:00:00Z", banned_until: null },
-    ];
-    const memberships = [
-      { user_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", role: "admin", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
-    ];
-
-    getMockSupabase()._setHandler("users", mockQueryResult(users));
-    getMockSupabase()._setHandler("user_memberships", mockQueryResult(memberships));
-
-    const req = createNextRequest("http://localhost:3000/api/health", {
-      method: "PUT",
-      headers: { "x-health-password": "password123" },
-    });
-    const res = await PUT(req);
-    expect(res.status).toBe(200);
-    expect(reseed).toHaveBeenCalledOnce();
-
-    const body = await res.json();
-    expect(body).toMatchObject({
-      status: "ok",
-      message: "Reseeded default users",
-    });
+    const html = await res.text();
+    expect(html).toContain("missing");
   });
 });

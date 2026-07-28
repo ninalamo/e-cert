@@ -2,11 +2,11 @@ import { hashPassword } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const ORG_ID = "d4444444-4444-4444-4444-444444444444";
-export const SEED_PASSWORD = process.env.HEALTH_PASSWORD || "password123";
+export const SEED_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "password123";
 
 export const SEED_USERS: { id: string; email: string; name: string; role: string }[] = [
-  { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", email: "admin@lyceumalabang.edu.ph",      name: "Admin User",      role: "admin" },
-  { id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2", email: "staff@lyceumalabang.edu.ph",      name: "Staff User",      role: "staff" },
+  { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", email: "admin@lyceumalabang.edu.ph", name: "Admin User", role: "admin" },
+  { id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2", email: "staff@lyceumalabang.edu.ph", name: "Staff User", role: "staff" },
   { id: "cccccccc-cccc-cccc-cccc-ccccccccccc3", email: "participant@lyceumalabang.edu.ph", name: "Participant User", role: "participant" },
 ];
 

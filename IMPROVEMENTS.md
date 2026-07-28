@@ -16,7 +16,7 @@ The `supabaseAdmin()` function was duplicated independently in 6 files — `auth
 
 ### 3. Weak & Placeholder Secrets
 - `AUTH_JWT_SECRET` in `.env` is `"this-is-a-secret-key-for-jwt-authentication"` — not cryptographically random
-- `HEALTH_PASSWORD` is `"password123"`
+- `DEFAULT_ADMIN_PASSWORD` is `"password123"`
 - `SEED_PASSWORD` is `"password123"`
 
 **Fix:** Generate strong random values for all secrets and store them in a secrets manager for production.

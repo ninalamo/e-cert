@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ORG_NAME } from "@/lib/org";
 import { useDashboardStats } from "@/features/dashboard/components/use-dashboard-stats";
 import type { UserRole } from "@/types/organization";
 
