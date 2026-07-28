@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/health/route";
+import { clearSession } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/permissions";
 import { mockQueryResult } from "../helpers";
 import { getMockSupabase } from "../setup";
 
@@ -30,6 +32,47 @@ describe("GET /api/health", () => {
     expect(html).toContain('type="email"');
     expect(html).toContain('type="password"');
     expect(html).toContain("Reset Admin Password");
+  });
+
+  it("renders a loading indicator for the reset action", async () => {
+    const res = await GET();
+    const html = await res.text();
+    expect(html).toContain("loading-overlay");
+    expect(html).toContain("Processing...");
+  });
+});
+
+describe("POST /api/health invalidation", () => {
+  it("invalidates the current admin session after a successful reset", async () => {
+    vi.mocked(getCurrentSession).mockResolvedValueOnce({
+      id: "admin-id",
+      email: "admin@lyceumalabang.edu.ph",
+      name: "Admin User",
+      role: "admin",
+    });
+
+    const users = [
+      { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", email: "admin@lyceumalabang.edu.ph", name: "Admin User", created_at: "2024-01-01T00:00:00Z", banned_until: null },
+      { id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2", email: "staff@lyceumalabang.edu.ph", name: "Staff User", created_at: "2024-01-01T00:00:00Z", banned_until: null },
+      { id: "cccccccc-cccc-cccc-cccc-ccccccccccc3", email: "participant@lyceumalabang.edu.ph", name: "Participant User", created_at: "2024-01-01T00:00:00Z", banned_until: null },
+    ];
+    const memberships = [
+      { user_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", role: "admin", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+      { user_id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2", role: "staff", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+      { user_id: "cccccccc-cccc-cccc-cccc-ccccccccccc3", role: "participant", created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
+    ];
+
+    getMockSupabase()._setHandler("users", mockQueryResult(users));
+    getMockSupabase()._setHandler("user_memberships", mockQueryResult(memberships));
+
+    const req = createPostRequest("http://localhost:3000/api/health", {
+      email: "admin@lyceumalabang.edu.ph",
+      password: "password123",
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    expect(clearSession).toHaveBeenCalled();
   });
 });
 
