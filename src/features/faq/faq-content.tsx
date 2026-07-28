@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { renderMarkdown } from "@/lib/markdown";
-import { requireSession } from "@/lib/permissions";
+import { getCurrentSession } from "@/lib/permissions";
 
 const HIDDEN_FOR_PARTICIPANT = ["## Admin", "## Staff"];
 const HIDDEN_FLOWS_FOR_PARTICIPANT = [
@@ -60,10 +60,10 @@ function filterMarkdown(markdown: string, role: string): string {
 }
 
 export default async function FaqContent() {
-  const session = await requireSession();
+  const session = await getCurrentSession();
   const filePath = path.join(process.cwd(), "faq.md");
   const raw = await readFile(filePath, "utf8");
-  const markdown = filterMarkdown(raw, session.role);
+  const markdown = filterMarkdown(raw, session?.role ?? "admin");
   const content = renderMarkdown(markdown);
 
   return (

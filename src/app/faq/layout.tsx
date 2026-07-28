@@ -1,11 +1,14 @@
 import DashboardShell from "@/components/dashboard-shell";
-import { requireSession } from "@/lib/permissions";
+import { getCurrentSession } from "@/lib/permissions";
 
 export default async function FaqLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireSession();
-  return <DashboardShell session={session}>{children}</DashboardShell>;
+  const session = await getCurrentSession();
+  if (session) {
+    return <DashboardShell session={session}>{children}</DashboardShell>;
+  }
+  return <>{children}</>;
 }

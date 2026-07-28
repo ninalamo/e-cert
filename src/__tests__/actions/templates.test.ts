@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as templateService from "@/features/templates/server/template.service";
 import { requireRole, getCurrentSession } from "@/lib/permissions";
+import type { CertificateTemplate, AuthProcess } from "@/types/template";
 
 vi.mock("@/features/templates/server/template.service", () => ({
   getTemplatesWithLockState: vi.fn(),
@@ -65,7 +66,7 @@ describe("list actions", () => {
 describe("createTemplateAction", () => {
   it("creates certificate template", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(templateService.createTemplate).mockResolvedValue({ id: "tpl-1" } as any);
+    vi.mocked(templateService.createTemplate).mockResolvedValue({ template: { id: "tpl-1" } as unknown as CertificateTemplate });
     const data = { organization_id: "org-1", name: "New Cert", html_content: "<div></div>" };
     await (await actions()).createTemplateAction(data);
     expect(templateService.createTemplate).toHaveBeenCalledWith({
@@ -79,7 +80,7 @@ describe("createTemplateAction", () => {
 describe("createEmailTemplateAction", () => {
   it("creates email template", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(templateService.createEmailTemplate).mockResolvedValue({ id: "tpl-1" } as any);
+    vi.mocked(templateService.createEmailTemplate).mockResolvedValue({ template: { id: "tpl-1" } as unknown as CertificateTemplate });
     await (await actions()).createEmailTemplateAction({ organization_id: "org-1", name: "New Email", html_content: "<p></p>" });
     expect(templateService.createEmailTemplate).toHaveBeenCalled();
   });
@@ -88,8 +89,8 @@ describe("createEmailTemplateAction", () => {
 describe("createAuthTemplateAction", () => {
   it("creates auth template", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(templateService.createAuthTemplate).mockResolvedValue({ id: "tpl-1" } as any);
-    await (await actions()).createAuthTemplateAction({ organization_id: "org-1", name: "Auth Email", html_content: "<p></p>", auth_process: "welcome" as any });
+    vi.mocked(templateService.createAuthTemplate).mockResolvedValue({ template: { id: "tpl-1" } as unknown as CertificateTemplate });
+    await (await actions()).createAuthTemplateAction({ organization_id: "org-1", name: "Auth Email", html_content: "<p></p>", auth_process: "welcome" as AuthProcess });
     expect(templateService.createAuthTemplate).toHaveBeenCalled();
   });
 });
@@ -98,7 +99,7 @@ describe("updateTemplateAction", () => {
   it("returns error when template is locked", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
     vi.mocked(templateService.isTemplateLocked).mockResolvedValue(true);
-    vi.mocked(templateService.getTemplate).mockResolvedValue({ id: "tpl-1", type: "certificate" } as any);
+    vi.mocked(templateService.getTemplate).mockResolvedValue({ id: "tpl-1", type: "certificate" } as unknown as CertificateTemplate);
 
     const result = await (await actions()).updateTemplateAction("tpl-1", { name: "New" });
     expect(result.error).toContain("locked");
@@ -108,8 +109,8 @@ describe("updateTemplateAction", () => {
   it("updates when not locked", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
     vi.mocked(templateService.isTemplateLocked).mockResolvedValue(false);
-    vi.mocked(templateService.getTemplate).mockResolvedValue({ id: "tpl-1", type: "certificate" } as any);
-    vi.mocked(templateService.updateTemplate).mockResolvedValue({ id: "tpl-1" } as any);
+    vi.mocked(templateService.getTemplate).mockResolvedValue({ id: "tpl-1", type: "certificate" } as unknown as CertificateTemplate);
+    vi.mocked(templateService.updateTemplate).mockResolvedValue({ template: { id: "tpl-1" } as unknown as CertificateTemplate });
 
     await (await actions()).updateTemplateAction("tpl-1", { name: "Updated" });
     expect(templateService.updateTemplate).toHaveBeenCalled();
@@ -125,7 +126,7 @@ describe("deleteTemplateAction", () => {
   it("returns error when locked", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
     vi.mocked(templateService.isTemplateLocked).mockResolvedValue(true);
-    vi.mocked(templateService.getTemplate).mockResolvedValue({ id: "tpl-1", type: "certificate" } as any);
+    vi.mocked(templateService.getTemplate).mockResolvedValue({ id: "tpl-1", type: "certificate" } as unknown as CertificateTemplate);
 
     const result = await (await actions()).deleteTemplateAction("tpl-1");
     expect(result.error).toContain("locked");

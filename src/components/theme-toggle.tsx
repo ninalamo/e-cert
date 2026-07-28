@@ -5,20 +5,21 @@ import { MoonIcon, SunIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
-  const [mounted, setMounted] = React.useState(false);
-  const [dark, setDark] = React.useState(false);
-
-  React.useEffect(() => {
+  const mounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  const [dark, setDark] = React.useState(() => {
+    if (typeof window === "undefined") return false;
     const stored = localStorage.getItem("theme");
-    setDark(
+    return (
       stored === "dark" ||
-        (!stored && window.matchMedia("(prefers-color-scheme:dark)").matches)
+      (!stored && window.matchMedia("(prefers-color-scheme:dark)").matches)
     );
-    setMounted(true);
-  }, []);
+  });
 
   React.useEffect(() => {
-    if (!mounted) return;
     if (dark) {
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
@@ -26,7 +27,7 @@ export function ThemeToggle() {
       document.documentElement.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
-  }, [dark, mounted]);
+  }, [dark]);
 
   const toggleTheme = () => {
     setDark((prev) => !prev);

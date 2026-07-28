@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as orgService from "@/features/organizations/server/organization.service";
 import { requireRole } from "@/lib/permissions";
+import type { Organization, UserMembership } from "@/types/organization";
 
 vi.mock("@/features/organizations/server/organization.service", () => ({
   getUserOrganizations: vi.fn(),
@@ -32,7 +33,7 @@ describe("getMyOrganizationsAction", () => {
 
   it("calls service with session id", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "user-1", email: "u@t.com", name: "U", role: "admin" });
-    vi.mocked(orgService.getUserOrganizations).mockResolvedValue([{ id: "org-1" } as any]);
+    vi.mocked(orgService.getUserOrganizations).mockResolvedValue([{ id: "org-1" } as unknown as Organization]);
     await (await actions()).getMyOrganizationsAction();
     expect(orgService.getUserOrganizations).toHaveBeenCalledWith("user-1");
   });
@@ -41,7 +42,7 @@ describe("getMyOrganizationsAction", () => {
 describe("getOrganizationMembersAction", () => {
   it("calls service", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(orgService.getOrganizationMembers).mockResolvedValue([{ id: "mem-1" } as any]);
+    vi.mocked(orgService.getOrganizationMembers).mockResolvedValue([{ id: "mem-1" } as unknown as UserMembership]);
     await (await actions()).getOrganizationMembersAction("org-1");
     expect(orgService.getOrganizationMembers).toHaveBeenCalledWith("org-1");
   });
@@ -55,7 +56,7 @@ describe("addMemberAction", () => {
 
   it("adds member", async () => {
     vi.mocked(requireRole).mockResolvedValue({ id: "admin-1", email: "a@t.com", name: "A", role: "admin" });
-    vi.mocked(orgService.addMember).mockResolvedValue({ id: "mem-1" } as any);
+    vi.mocked(orgService.addMember).mockResolvedValue({});
     await (await actions()).addMemberAction("org-1", "new@t.com", "staff");
     expect(orgService.addMember).toHaveBeenCalledWith("org-1", "new@t.com", "staff", undefined);
   });
