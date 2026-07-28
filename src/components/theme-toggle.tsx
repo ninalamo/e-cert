@@ -9,28 +9,27 @@ export function ThemeToggle() {
   const [dark, setDark] = React.useState(false);
 
   React.useEffect(() => {
-    React.startTransition(() => {
-      setMounted(true);
-      const stored = localStorage.getItem("theme");
-      setDark(
-        stored === "dark" ||
-          (!stored && window.matchMedia("(prefers-color-scheme:dark)").matches)
-      );
-    });
+    const stored = localStorage.getItem("theme");
+    setDark(
+      stored === "dark" ||
+        (!stored && window.matchMedia("(prefers-color-scheme:dark)").matches)
+    );
+    setMounted(true);
   }, []);
 
+  React.useEffect(() => {
+    if (!mounted) return;
+    if (dark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [dark, mounted]);
+
   const toggleTheme = () => {
-    setDark((prev) => {
-      const next = !prev;
-      if (next) {
-        document.documentElement.classList.add("dark");
-        localStorage.setItem("theme", "dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-        localStorage.setItem("theme", "light");
-      }
-      return next;
-    });
+    setDark((prev) => !prev);
   };
 
   if (!mounted) {
