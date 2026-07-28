@@ -95,6 +95,17 @@ export async function register(data: RegisterInput) {
     return { error: "Email already registered" };
   }
 
+  const { data: attendee } = await db
+    .from("event_attendees")
+    .select("id")
+    .eq("email", parsed.data.email)
+    .eq("organization_id", ORG_ID)
+    .limit(1);
+
+  if (!attendee) {
+    return { error: "Registration is only allowed for invited attendees" };
+  }
+
   const passwordHash = await hashPassword(parsed.data.password);
 
   const { data: user, error: insertError } = await db
