@@ -19,7 +19,16 @@ async function getSeededUsersDetail() {
     .select("user_id, role, created_at, updated_at")
     .in("user_id", userIds);
 
-  const membershipMap = new Map((memberships ?? []).map((membership: { user_id: string }) => [membership.user_id, membership]));
+  type MembershipRow = {
+    user_id: string;
+    role?: string;
+    created_at?: string | null;
+    updated_at?: string | null;
+  };
+
+  const membershipMap = new Map<string, MembershipRow>(
+    (memberships as MembershipRow[] | null ?? []).map((membership) => [membership.user_id, membership])
+  );
 
   return users.map((user: { id: string; email: string; name: string; created_at: string; banned_until: string | null }) => {
     const seed = SEED_USERS.find((seedUser) => seedUser.email === user.email);
