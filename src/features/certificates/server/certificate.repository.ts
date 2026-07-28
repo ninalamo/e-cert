@@ -28,6 +28,21 @@ export class CertificateRepository extends BaseRepository<Certificate> {
     return data as Certificate;
   }
 
+  async findByEventAndEmail(
+    eventId: string,
+    email: string
+  ): Promise<Certificate | null> {
+    const { data, error } = await this.client
+      .from(this.table)
+      .select("*")
+      .eq("event_id", eventId)
+      .eq("recipient_email", email)
+      .maybeSingle();
+
+    if (error) return null;
+    return data as Certificate;
+  }
+
   async findByEventId(eventId: string): Promise<Certificate[]> {
     return this.findMany(
       { event_id: eventId },

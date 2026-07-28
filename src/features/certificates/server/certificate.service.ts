@@ -105,6 +105,19 @@ export async function issueCertificate(
     ...(renderedPdfBase64 ? { rendered_pdf: renderedPdfBase64 } : {}),
   };
 
+  if (data.event_id) {
+    const existing = await certRepo.findByEventAndEmail(
+      data.event_id,
+      data.recipient_email
+    );
+    if (existing) {
+      return {
+        certificate: null,
+        error: "A certificate for this recipient already exists for this event",
+      };
+    }
+  }
+
   const { data: certificate, error } = await certRepo.create({
     organization_id: data.organization_id,
     event_id: data.event_id ?? null,
