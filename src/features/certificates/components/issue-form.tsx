@@ -153,7 +153,7 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="recipient_name" className="block text-sm font-medium">
-            Recipient Name
+            Recipient Name *
           </label>
           <input
             id="recipient_name"
@@ -165,7 +165,7 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
         </div>
         <div>
           <label htmlFor="recipient_email" className="block text-sm font-medium">
-            Recipient Email
+            Recipient Email *
           </label>
           <input
             id="recipient_email"

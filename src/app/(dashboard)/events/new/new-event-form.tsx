@@ -150,7 +150,7 @@ export default function NewEventForm({
         <div className="app-card space-y-4 rounded-2xl p-5 shadow-[var(--shadow-ios)]">
           <div>
             <label htmlFor="name" className="mb-1.5 block text-[13px] font-semibold text-tertiary">
-              Event Name
+              Event Name *
             </label>
             <input
               id="name"

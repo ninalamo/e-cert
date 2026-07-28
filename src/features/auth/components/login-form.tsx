@@ -46,7 +46,7 @@ export default function LoginForm({
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-secondary">
-            Email
+            Email *
           </label>
           <input
             id="email"
@@ -59,7 +59,7 @@ export default function LoginForm({
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-secondary">
-            Password
+            Password *
           </label>
           <input
             id="password"

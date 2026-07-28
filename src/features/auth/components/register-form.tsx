@@ -65,7 +65,7 @@ export default function RegisterForm() {
 
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-secondary">
-            Name
+            Name *
           </label>
           <input
             id="name"
@@ -79,7 +79,7 @@ export default function RegisterForm() {
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-secondary">
-            Email
+            Email *
           </label>
           <input
             id="email"
@@ -92,7 +92,7 @@ export default function RegisterForm() {
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-secondary">
-            Password
+            Password *
           </label>
           <input
             id="password"
@@ -106,7 +106,7 @@ export default function RegisterForm() {
 
         <div>
           <label htmlFor="confirmPassword" className="block text-sm font-medium text-secondary">
-            Confirm Password
+            Confirm Password *
           </label>
           <input
             id="confirmPassword"

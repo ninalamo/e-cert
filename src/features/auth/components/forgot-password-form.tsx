@@ -59,7 +59,7 @@ export default function ForgotPasswordForm() {
             htmlFor="email"
             className="block text-sm font-medium text-secondary"
           >
-            Email
+            Email *
           </label>
           <input
             id="email"
