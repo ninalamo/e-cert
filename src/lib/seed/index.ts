@@ -112,7 +112,29 @@ export async function recreateAdmin() {
     .eq("email", adminUser.email)
     .single();
 
-  if (existing) throw new Error(`Admin user ${adminUser.email} already exists`);
+  if (existing) {
+    const passwordHash = await hashPassword(SEED_PASSWORD);
+    await supabaseAdmin
+      .from("users")
+      .update({
+        password_hash: passwordHash,
+        name: adminUser.name,
+        email_confirmed_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+
+    await supabaseAdmin.from("user_memberships").upsert(
+      {
+        user_id: existing.id,
+        organization_id: ORG_ID,
+        role: adminUser.role,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,organization_id" }
+    );
+
+    return { message: "Updated existing admin user", id: existing.id };
+  }
 
   const passwordHash = await hashPassword(SEED_PASSWORD);
   const { error } = await supabaseAdmin.from("users").insert({
@@ -124,9 +146,17 @@ export async function recreateAdmin() {
   });
   if (error) throw new Error(`createUser ${adminUser.email}: ${error.message}`);
 
+  const { data: newUser } = await supabaseAdmin
+    .from("users")
+    .select("id")
+    .eq("email", adminUser.email)
+    .single();
+
+  if (!newUser) throw new Error("Failed to create admin user");
+
   const { error: membershipError } = await supabaseAdmin.from("user_memberships").upsert(
     {
-      user_id: adminUser.id,
+      user_id: newUser.id,
       organization_id: ORG_ID,
       role: adminUser.role,
       updated_at: new Date().toISOString(),
@@ -134,4 +164,6 @@ export async function recreateAdmin() {
     { onConflict: "user_id,organization_id" }
   );
   if (membershipError) throw new Error(`membership ${adminUser.email}: ${membershipError.message}`);
+
+  return { message: "Created new admin user", id: newUser.id };
 }
