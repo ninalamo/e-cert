@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/health/route";
 import { mockQueryResult } from "../helpers";
 import { getMockSupabase } from "../setup";
@@ -13,7 +14,7 @@ function createPostRequest(url: string, data: Record<string, string>) {
   for (const [key, value] of Object.entries(data)) {
     formData.set(key, value);
   }
-  return new Request(url, { method: "POST", body: formData }) as any;
+  return new Request(url, { method: "POST", body: formData }) as unknown as NextRequest;
 }
 
 beforeEach(() => {

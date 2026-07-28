@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { SEED_USERS, SEED_PASSWORD } from "@/lib/seed";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmailProvider } from "@/lib/email";
