@@ -62,16 +62,7 @@ function filterMarkdown(markdown: string, role: string): string {
 export default async function FaqContent() {
   const session = await getCurrentSession();
   const filePath = path.join(process.cwd(), "faq.md");
-  let raw: string;
-  try {
-    raw = await readFile(filePath, "utf8");
-  } catch {
-    return (
-      <article className="app-card rounded-xl bg-surface p-6 sm:p-10">
-        <p className="text-secondary">FAQ content is not available yet.</p>
-      </article>
-    );
-  }
+  const raw = await readFile(filePath, "utf8");
   const markdown = filterMarkdown(raw, session?.role ?? "admin");
   const content = renderMarkdown(markdown);
 
