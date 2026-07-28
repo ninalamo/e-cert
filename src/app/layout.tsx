@@ -19,7 +19,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "E-Cert",
+  title: "LOA VERICERT",
   description: "Certificate Management System",
   other: {
     "apple-mobile-web-app-capable": "yes",

@@ -1,6 +1,6 @@
 # FAQ
 
-This FAQ explains the rules and flows of the E-Cert system based on the role of the
+This FAQ explains the rules and flows of the LOA VERICERT system based on the role of the
 currently logged-in user. Your role is determined when you log in by looking up your
 membership in the organization (`user_memberships.role`). If you are not logged in you
 are treated as a **Guest**.
@@ -22,8 +22,8 @@ are treated as a **Guest**.
 
 ## General questions
 
-### What is E-Cert?
-E-Cert is a digital certificate management system for organizations. It lets authorized
+### What is LOA VERICERT?
+LOA VERICERT is a digital certificate management system for organizations. It lets authorized
 users create events, design certificate templates, issue certificates, and lets
 recipients view and verify their own certificates.
 

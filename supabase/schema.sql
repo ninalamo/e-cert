@@ -1,5 +1,5 @@
 -- ============================================================
--- E-Cert — Idempotent Schema
+-- LOA VERICERT — Idempotent Schema
 -- Safe to run on an existing database at any time.
 -- No data is dropped. All statements use IF NOT EXISTS / OR REPLACE.
 -- ============================================================
