@@ -100,23 +100,4 @@ describe("POST /api/health", () => {
     const html = await res.text();
     expect(html).toContain("missing");
   });
-
-  it("sends password email on forgot action", async () => {
-    const req = createPostRequest("http://localhost:3000/api/health", {
-      action: "forgot",
-    });
-    const res = await POST(req);
-    expect(res.status).toBe(200);
-
-    expect(mockSendEmail).toHaveBeenCalledOnce();
-    expect(mockSendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: expect.any(String),
-        subject: "Admin Master Reset Password Reminder",
-      })
-    );
-
-    const html = await res.text();
-    expect(html).toContain("Password has been emailed");
-  });
 });

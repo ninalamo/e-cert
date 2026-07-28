@@ -1,10 +1,8 @@
 import { NextRequest } from "next/server";
 import { SEED_USERS, SEED_PASSWORD } from "@/lib/seed";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getEmailProvider } from "@/lib/email";
 
 const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "password123";
-const DEFAULT_ADMIN_EMAIL = process.env.DEFAULT_ADMIN_EMAIL || "admin@lyceumalabang.edu.ph";
 
 async function getSeededUsersDetail() {
   const seededEmails = SEED_USERS.map((u) => u.email);
@@ -110,19 +108,6 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  const action = formData.get("action");
-
-  if (action === "forgot") {
-    const emailProvider = getEmailProvider();
-    await emailProvider.sendEmail({
-      to: DEFAULT_ADMIN_EMAIL,
-      subject: "Admin Master Reset Password Reminder",
-      html: `<p>Your admin password is:</p><p style="font-size:18px;font-weight:bold">${DEFAULT_ADMIN_PASSWORD}</p>`,
-      text: `Your admin password is: ${DEFAULT_ADMIN_PASSWORD}`,
-    });
-    return renderMessage(`Password has been emailed to ${DEFAULT_ADMIN_EMAIL}.`);
-  }
-
   const password = formData.get("password");
 
   if (password !== DEFAULT_ADMIN_PASSWORD) {
