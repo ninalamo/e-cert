@@ -21,7 +21,7 @@ export default function ParticipantSidebar() {
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-r border-default bg-surface-muted p-4 lg:block">
       <div className="mb-6">
         <Link href="/my" className="text-lg font-bold text-brand-700">
-          E-Cert
+          LOA VERICERT
         </Link>
         <p className="text-xs text-tertiary mt-1">{ORG_NAME}</p>
       </div>

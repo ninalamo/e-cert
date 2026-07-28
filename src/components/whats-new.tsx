@@ -68,7 +68,7 @@ export default function WhatsNew({ userKey }: { userKey: string }) {
       <Button
         variant="ghost"
         size="icon"
-        aria-label="How to use E-Cert"
+        aria-label="How to use LOA VERICERT"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className="size-8"
@@ -80,12 +80,12 @@ export default function WhatsNew({ userKey }: { userKey: string }) {
         <div
           ref={panelRef}
           role="dialog"
-          aria-label="How to use E-Cert"
+          aria-label="How to use LOA VERICERT"
           className="absolute right-0 top-10 z-50 w-80 rounded-xl border border-border bg-surface p-4 shadow-lg"
         >
           <div className="mb-3 flex items-start justify-between gap-2">
             <div>
-              <h2 className="text-sm font-bold text-primary">Welcome to E-Cert</h2>
+              <h2 className="text-sm font-bold text-primary">Welcome to LOA VERICERT</h2>
               <p className="text-xs text-tertiary">
                 A quick tour of what you can do.
               </p>

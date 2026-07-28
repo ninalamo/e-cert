@@ -1,4 +1,4 @@
-# E-Cert
+# LOA VERICERT
 
 Digital certificate management system for organizations. Built with Next.js (App Router) and Supabase.
 

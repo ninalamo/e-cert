@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { revokeCertificateAction } from "@/features/certificates/server/certificate.actions";
 import EmailHistory from "@/features/certificates/components/email-history";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";

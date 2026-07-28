@@ -225,7 +225,7 @@ export default function MobileNav({
                   href={role === "participant" ? "/my" : "/dashboard"}
                   className="text-lg font-bold text-brand-700"
                 >
-                  E-Cert
+                  LOA VERICERT
                 </Link>
                 <p className="text-xs text-tertiary mt-0.5">{ORG_NAME}</p>
               </div>

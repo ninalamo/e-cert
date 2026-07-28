@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
 import {
   getCertificatesWithEventAction,
-  revokeCertificateAction,
   deleteCertificateAction,
 } from "../server/certificate.actions";
 import type { Certificate } from "@/types/certificate";
@@ -23,7 +22,6 @@ import {
   SearchIcon,
   FilterIcon,
   ChevronRightIcon,
-  ShieldOffIcon,
   Trash2Icon,
   EyeIcon,
 } from "lucide-react";
@@ -45,11 +43,6 @@ export default function CertificatesList({
   const [search, setSearch] = useState(initialQuery);
   const [eventFilter, setEventFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
-  const [revokeTarget, setRevokeTarget] = useState<CertificateWithEvent | null>(null);
-  const [revokeReason, setRevokeReason] = useState("");
-  const [revoking, setRevoking] = useState(false);
-  const [revokeError, setRevokeError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CertificateWithEvent | null>(null);
@@ -65,39 +58,6 @@ export default function CertificatesList({
       return [];
     }
   }
-
-  async function handleRevoke() {
-    if (!revokeTarget || !revokeReason.trim()) return;
-    setRevoking(true);
-    setRevokeError(null);
-    const result = await revokeCertificateAction(revokeTarget.id, revokeReason.trim());
-    setRevoking(false);
-    if (result?.error) {
-      setRevokeError(result.error);
-      return;
-    }
-    setRevokeDialogOpen(false);
-    setRevokeReason("");
-    setRevokeTarget(null);
-    const updated = await loadCertificates();
-    if (updated.length > 0) {
-      setCertificates(updated);
-    }
-  }
-
-  const openRevokeDialog = (cert: CertificateWithEvent) => {
-    setRevokeTarget(cert);
-    setRevokeReason("");
-    setRevokeError(null);
-    setRevokeDialogOpen(true);
-  };
-
-  const closeRevokeDialog = () => {
-    setRevokeDialogOpen(false);
-    setRevokeTarget(null);
-    setRevokeReason("");
-    setRevokeError(null);
-  };
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -278,15 +238,6 @@ export default function CertificatesList({
                             <EyeIcon className="size-3 inline mr-1" />
                             View
                           </Link>
-                          {!cert.revoked_at && (
-                            <button
-                              onClick={() => openRevokeDialog(cert)}
-                              className="text-xs text-danger hover:underline"
-                            >
-                              <ShieldOffIcon className="size-3 inline mr-1" />
-                              Revoke
-                            </button>
-                          )}
                           {cert.revoked_at && (
                             <button
                               onClick={() => openDeleteDialog(cert)}
@@ -348,64 +299,6 @@ export default function CertificatesList({
         </div>
       )}
 
-      {/* Revoke Confirmation Dialog */}
-      <Dialog open={revokeDialogOpen} onOpenChange={closeRevokeDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Revoke Certificate</DialogTitle>
-            <DialogDescription>
-              This will permanently revoke{" "}
-              <strong>
-                {revokeTarget?.certificate_number ?? "this certificate"}
-              </strong>
-              .
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
-              <ShieldOffIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
-              <p className="text-[var(--color-danger-text)]">
-                This cannot be undone. The certificate will show as invalid on
-                verification.
-              </p>
-            </div>
-            <div>
-              <label
-                htmlFor="revoke-reason"
-                className="block text-sm font-medium"
-              >
-                Reason *
-              </label>
-              <textarea
-                id="revoke-reason"
-                value={revokeReason}
-                onChange={(e) => setRevokeReason(e.target.value)}
-                rows={3}
-                required
-                placeholder="Why is this certificate being revoked?"
-                className="input mt-1"
-              />
-            </div>
-          </div>
-          {revokeError && (
-            <p className="text-xs text-[var(--color-danger-text)]">
-              {revokeError}
-            </p>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={closeRevokeDialog}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRevoke}
-              disabled={revoking || !revokeReason.trim()}
-            >
-              {revoking ? "Revoking..." : "Revoke"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={closeDeleteDialog}>
         <DialogContent>
