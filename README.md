@@ -97,40 +97,27 @@ Reseed via `PUT http://localhost:3000/api/health` (see [Health API](#health-api)
 
 ---
 
-## Health API
+## Admin Master Reset
 
-The health endpoint (`/api/health`) provides system status and seed user management.
+The `/api/health` endpoint provides an admin password reset interface.
 
-### Authentication
+### Usage
 
-All requests require the `x-health-password` header matching the `HEALTH_PASSWORD` environment variable.
+Navigate to `/api/health` in the browser. Enter the admin password to view seed user details.
 
-```bash
-curl -X GET http://localhost:3000/api/health -H "x-health-password: YOUR_PASSWORD"
-```
+### Environment Variables
 
-### Endpoints
+| Variable | Description |
+|----------|-------------|
+| `DEFAULT_ADMIN_PASSWORD` | Password required to access the admin reset page (must be set and app redeployed before use) |
+| `DEFAULT_ADMIN_EMAIL` | Email address that receives the forgot-password reminder |
 
-| Method | Description | Response |
-|--------|-------------|----------|
-| `GET /api/health` | Returns system status and seed user details | `{ status, auth, users, missing }` |
-| `PUT /api/health` | Deletes then recreates seed users and memberships | `{ status, message, users }` |
+### Actions
 
-### Response Fields
-
-| Field | Description |
-|-------|-------------|
-| `status` | `"ok"` or `"degraded"` |
-| `auth` | `"up"` if Supabase Auth is reachable |
-| `users` | Array of seeded user details (email, name, role, timestamps) |
-| `missing` | Array of seed emails not found in Auth |
-
-### Errors
-
-| Status | Cause |
-|--------|-------|
-| `403` | Missing or invalid `x-health-password` header, or `HEALTH_PASSWORD` env var not set |
-| `500` | Supabase or database error |
+| Action | Description |
+|--------|-------------|
+| Login | Enter password to view seed user details |
+| Forgot password | Emails the current `DEFAULT_ADMIN_PASSWORD` to `DEFAULT_ADMIN_EMAIL` |
 
 ---
 
