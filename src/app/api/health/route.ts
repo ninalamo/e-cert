@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { clearSession } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/permissions";
 import { SEED_PASSWORD, SEED_USERS, recreateAdmin, seedUsers } from "@/lib/seed";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -62,7 +64,10 @@ function renderForm(error?: string) {
 <p style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:12px;border-radius:6px;margin-bottom:16px">
   Note: The <code>DEFAULT_ADMIN_PASSWORD</code> environment variable must be set before updating.
 </p>
-<form method="POST" action="/api/health">
+<form method="POST" action="/api/health" id="health-form">
+  <div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,0.8);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:9999;">
+    <div style="background:white;border:1px solid #d1d5db;border-radius:8px;padding:20px;font-weight:600;color:#111827;box-shadow:0 10px 30px rgba(0,0,0,0.12);">Processing...</div>
+  </div>
   <div style="margin-bottom: 16px;">
     <label style="display: block;margin-bottom: 8px;font-size: 14px;font-weight: 500;">Admin Email</label>
     <input type="email" name="email" required placeholder="Enter admin email"
@@ -76,7 +81,17 @@ function renderForm(error?: string) {
   <button type="submit" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;width: 100%">
     Reset Admin Password
   </button>
-</form>`),
+</form>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('health-form');
+    const overlay = document.getElementById('loading-overlay');
+    if (!form || !overlay) return;
+    form.addEventListener('submit', () => {
+      overlay.style.display = 'flex';
+    });
+  });
+</script>`),
     { status: 200, headers: { "Content-Type": "text/html" } }
   );
 }
@@ -181,6 +196,11 @@ export async function POST(request: NextRequest) {
         status: "missing",
         error: "No seeded users found",
       });
+    }
+
+    const session = await getCurrentSession();
+    if (session?.role === "admin") {
+      await clearSession();
     }
 
     return renderSuccess(seededUsers);
