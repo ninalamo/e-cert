@@ -7,20 +7,10 @@ import EmailHistory from "@/features/certificates/components/email-history";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
   ArrowLeftIcon,
   CalendarIcon,
   MapPinIcon,
   UserIcon,
-  InfoIcon,
   PrinterIcon,
 } from "lucide-react";
 import {
@@ -55,33 +45,8 @@ export default function CertificateDetail({
   isAdmin,
   eventIdParam,
 }: CertificateDetailProps) {
-  const [certificate, setCertificate] = useState<Certificate>(initialCertificate);
+  const [certificate] = useState<Certificate>(initialCertificate);
   const event = initialEvent;
-
-  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
-  const [revokeReason, setRevokeReason] = useState("");
-  const [revoking, setRevoking] = useState(false);
-  const [revokeError, setRevokeError] = useState<string | null>(null);
-
-  async function handleRevoke() {
-    if (!revokeReason.trim()) return;
-    setRevoking(true);
-    setRevokeError(null);
-    const result = await revokeCertificateAction(
-      certificate.id,
-      revokeReason.trim()
-    );
-    setRevoking(false);
-    if (result?.error) {
-      setRevokeError(result.error);
-      return;
-    }
-    if (result?.certificate) {
-      setCertificate(result.certificate);
-      setRevokeDialogOpen(false);
-      setRevokeReason("");
-    }
-  }
 
   return (
     <div className="space-y-4 pb-8">
@@ -119,15 +84,6 @@ export default function CertificateDetail({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {/* {isAdmin && !certificate.revoked_at && (
-            <button
-              onClick={() => setRevokeDialogOpen(true)}
-              className="btn-danger"
-            >
-              <ShieldOffIcon className="size-4" />
-              <span className="hidden sm:inline">Revoke</span>
-            </button>
-          )} */}
           <button
             onClick={() => window.open(`/view/${certificate.id}`, "_blank")}
             className="btn-brand"
@@ -262,73 +218,10 @@ export default function CertificateDetail({
         </div>
       )}
 
-      {isAdmin && !certificate.revoked_at && (
+      {isAdmin && (
         <div className="app-card p-4">
           <EmailHistory certificateId={certificate.id} />
         </div>
-      )}
-
-      {isAdmin && (
-        <Dialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Revoke Certificate</DialogTitle>
-              <DialogDescription>
-                This will permanently revoke{" "}
-                <strong>{certificate.certificate_number}</strong>.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
-                <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
-                <p className="text-[var(--color-danger-text)]">
-                  This cannot be undone. The certificate will show as invalid on
-                  verification.
-                </p>
-              </div>
-              <div>
-                <label
-                  htmlFor="revoke-reason"
-                  className="block text-sm font-medium"
-                >
-                  Reason *
-                </label>
-                <textarea
-                  id="revoke-reason"
-                  value={revokeReason}
-                  onChange={(e) => setRevokeReason(e.target.value)}
-                  rows={3}
-                  required
-                  placeholder="Why is this certificate being revoked?"
-                  className="input mt-1"
-                />
-              </div>
-            </div>
-            {revokeError && (
-              <p className="text-xs text-[var(--color-danger-text)]">
-                {revokeError}
-              </p>
-            )}
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setRevokeDialogOpen(false);
-                  setRevokeReason("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleRevoke}
-                disabled={revoking || !revokeReason.trim()}
-              >
-                {revoking ? "Revoking..." : "Revoke"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   );
