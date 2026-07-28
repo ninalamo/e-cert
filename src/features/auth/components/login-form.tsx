@@ -66,6 +66,7 @@ export default function LoginForm({
             name="password"
             type="password"
             required
+            minLength={6}
             className="input mt-1"
           />
         </div>

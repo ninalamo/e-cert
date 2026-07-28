@@ -18,3 +18,15 @@ export const registerSchema = z.object({
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const updatePasswordSchema = z.object({
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export const updateEmailSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});

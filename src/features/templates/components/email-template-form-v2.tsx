@@ -43,10 +43,21 @@ export default function EmailTemplateFormV2({
 
   async function handleSave() {
     setError(null);
-    setLoading(true);
+
+    if (!name?.trim()) {
+      setError("Template name is required");
+      return;
+    }
+
     const finalHtml = builderRef.current?.getHtml() ?? htmlContent;
+    if (!finalHtml?.trim()) {
+      setError("Template content is required");
+      return;
+    }
+
+    setLoading(true);
     const result = await onSubmit({
-      name,
+      name: name.trim(),
       description,
       html_content: finalHtml,
       css_content: "",

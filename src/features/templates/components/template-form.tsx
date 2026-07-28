@@ -69,13 +69,24 @@ export default function TemplateForm({
   async function confirmSave() {
     setShowSaveConfirm(false);
     setError(null);
-    setLoading(true);
+
+    if (!name?.trim()) {
+      setError("Template name is required");
+      return;
+    }
 
     const html = isEmail ? htmlContent : (canvasRef.current?.getHtml() ?? htmlContent);
+    if (!html?.trim()) {
+      setError("Template content is required");
+      return;
+    }
+
+    setLoading(true);
+
     const css = isEmail ? "" : (canvasRef.current?.getCss() ?? cssContent);
 
     const result = await onSubmit({
-      name,
+      name: name.trim(),
       description,
       type: templateType,
       html_content: html,

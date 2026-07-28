@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { ORG_ID } from "@/lib/org";
 import { DEFAULT_ROLE, getHomePathForRole, getCurrentSession } from "@/lib/permissions";
-import { loginSchema, type RegisterInput } from "../schemas/auth.schema";
+import { loginSchema, registerSchema, updatePasswordSchema, updateEmailSchema, forgotPasswordSchema, type RegisterInput } from "../schemas/auth.schema";
 import {
   hashPassword,
   comparePassword,
@@ -78,26 +78,31 @@ export async function loginAction(
 }
 
 export async function register(data: RegisterInput) {
+  const parsed = registerSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const db = supabaseAdmin;
 
   const { data: existing } = await db
     .from("users")
     .select("id")
-    .eq("email", data.email)
+    .eq("email", parsed.data.email)
     .single();
 
   if (existing) {
     return { error: "Email already registered" };
   }
 
-  const passwordHash = await hashPassword(data.password);
+  const passwordHash = await hashPassword(parsed.data.password);
 
   const { data: user, error: insertError } = await db
     .from("users")
     .insert({
-      email: data.email,
+      email: parsed.data.email,
       password_hash: passwordHash,
-      name: data.name,
+      name: parsed.data.name,
     })
     .select("id")
     .single();
@@ -113,7 +118,7 @@ export async function register(data: RegisterInput) {
   });
 
   const confirmToken = await createConfirmToken(user.id);
-  await sendConfirmationEmail(data.email, confirmToken);
+  await sendConfirmationEmail(parsed.data.email, confirmToken);
 
   return { success: true };
 }
@@ -124,12 +129,17 @@ export async function logout() {
 }
 
 export async function forgotPassword(data: { email: string }): Promise<{ error?: string; success?: boolean }> {
+  const parsed = forgotPasswordSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const db = supabaseAdmin;
 
   const { data: user } = await db
     .from("users")
     .select("id")
-    .eq("email", data.email)
+    .eq("email", parsed.data.email)
     .single();
 
   if (!user) {
@@ -137,7 +147,7 @@ export async function forgotPassword(data: { email: string }): Promise<{ error?:
   }
 
   const resetToken = await createResetToken(user.id);
-  await sendPasswordResetEmail(data.email, resetToken);
+  await sendPasswordResetEmail(parsed.data.email, resetToken);
 
   return { success: true };
 }
@@ -159,13 +169,18 @@ export async function requestPasswordChange(): Promise<{ error?: string; success
 }
 
 export async function updatePassword(data: { password: string }) {
+  const parsed = updatePasswordSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const session = await getCurrentSession();
   if (!session) {
     return { error: "Not authenticated" };
   }
 
   const db = supabaseAdmin;
-  const passwordHash = await hashPassword(data.password);
+  const passwordHash = await hashPassword(parsed.data.password);
 
   const { error } = await db
     .from("users")
@@ -183,6 +198,11 @@ export async function updatePassword(data: { password: string }) {
 }
 
 export async function updateEmail(data: { email: string }) {
+  const parsed = updateEmailSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const session = await getCurrentSession();
   if (!session) {
     return { error: "Not authenticated" };
@@ -193,7 +213,7 @@ export async function updateEmail(data: { email: string }) {
   const { data: existing } = await db
     .from("users")
     .select("id")
-    .eq("email", data.email)
+    .eq("email", parsed.data.email)
     .single();
 
   if (existing) {
@@ -202,7 +222,7 @@ export async function updateEmail(data: { email: string }) {
 
   const { error } = await db
     .from("users")
-    .update({ email: data.email })
+    .update({ email: parsed.data.email })
     .eq("id", session.id);
 
   if (error) {
@@ -240,13 +260,18 @@ export async function confirmEmail(token: string) {
 }
 
 export async function resetPassword(token: string, password: string) {
+  const parsed = updatePasswordSchema.safeParse({ password });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const result = await verifyResetToken(token);
   if (!result) {
     return { error: "Invalid or expired reset link" };
   }
 
   const db = supabaseAdmin;
-  const passwordHash = await hashPassword(password);
+  const passwordHash = await hashPassword(parsed.data.password);
 
   await db
     .from("users")
