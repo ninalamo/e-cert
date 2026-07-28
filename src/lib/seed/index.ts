@@ -113,59 +113,85 @@ export async function recreateAdmin() {
     .single();
 
   if (existing) {
-    const passwordHash = await hashPassword(SEED_PASSWORD);
-    await supabaseAdmin
-      .from("users")
-      .update({
-        password_hash: passwordHash,
-        name: adminUser.name,
-        email_confirmed_at: new Date().toISOString(),
-      })
-      .eq("id", existing.id);
+    if (existing.id !== adminUser.id) {
+      await supabaseAdmin
+        .from("users")
+        .delete()
+        .eq("id", existing.id);
 
-    await supabaseAdmin.from("user_memberships").upsert(
+      await supabaseAdmin
+        .from("user_memberships")
+        .delete()
+        .eq("user_id", existing.id);
+    } else {
+      const passwordHash = await hashPassword(SEED_PASSWORD);
+      await supabaseAdmin
+        .from("users")
+        .update({
+          password_hash: passwordHash,
+          name: adminUser.name,
+          email_confirmed_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+
+      await supabaseAdmin.from("user_memberships").upsert(
+        {
+          user_id: existing.id,
+          organization_id: ORG_ID,
+          role: adminUser.role,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,organization_id" }
+      );
+
+      return { message: "Updated existing admin user", id: existing.id };
+    }
+  }
+
+  try {
+    const passwordHash = await hashPassword(SEED_PASSWORD);
+    const { error } = await supabaseAdmin.from("users").insert({
+      id: adminUser.id,
+      email: adminUser.email,
+      password_hash: passwordHash,
+      name: adminUser.name,
+      email_confirmed_at: new Date().toISOString(),
+    });
+    
+    if (error && !error.message.includes("duplicate key")) {
+      throw new Error(`createUser ${adminUser.email}: ${error.message}`);
+    }
+
+    const { data: newUser } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("email", adminUser.email)
+      .single();
+
+    if (!newUser && !error?.message.includes("duplicate key")) {
+      throw new Error("Failed to create admin user");
+    }
+
+    const id = adminUser.id;
+
+    const { error: membershipError } = await supabaseAdmin.from("user_memberships").upsert(
       {
-        user_id: existing.id,
+        user_id: id,
         organization_id: ORG_ID,
         role: adminUser.role,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,organization_id" }
     );
+    if (membershipError && !membershipError.message.includes("duplicate key")) {
+      throw new Error(`membership ${adminUser.email}: ${membershipError.message}`);
+    }
 
-    return { message: "Updated existing admin user", id: existing.id };
+    return { message: existing ? "Updated existing admin user" : "Created new admin user", id };
+  } catch (err) {
+    console.warn(`Recreate admin error for ${adminUser.email}:`, err);
+    throw err;
   }
-
-  const passwordHash = await hashPassword(SEED_PASSWORD);
-  const { error } = await supabaseAdmin.from("users").insert({
-    id: adminUser.id,
-    email: adminUser.email,
-    password_hash: passwordHash,
-    name: adminUser.name,
-    email_confirmed_at: new Date().toISOString(),
-  });
-  if (error) throw new Error(`createUser ${adminUser.email}: ${error.message}`);
-
-  const { data: newUser } = await supabaseAdmin
-    .from("users")
-    .select("id")
-    .eq("email", adminUser.email)
-    .single();
-
-  if (!newUser) throw new Error("Failed to create admin user");
-
-  const { error: membershipError } = await supabaseAdmin.from("user_memberships").upsert(
-    {
-      user_id: newUser.id,
-      organization_id: ORG_ID,
-      role: adminUser.role,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,organization_id" }
-  );
-  if (membershipError) throw new Error(`membership ${adminUser.email}: ${membershipError.message}`);
-
-  return { message: "Created new admin user", id: newUser.id };
 }
 
 export async function seedAllUsers() {
