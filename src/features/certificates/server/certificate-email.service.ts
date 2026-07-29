@@ -53,7 +53,12 @@ export async function sendCertificateEmail(
   const viewUrl = `${baseUrl}/view/${certificate.id}`;
   const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
 
-  const subject = `Your Certificate ${certificate.certificate_number} is Ready`;
+  let eventName = "Certificate";
+  if (certificate.event_id) {
+    const event = await eventRepo.findById(certificate.event_id);
+    if (event?.name) eventName = event.name;
+  }
+  const subject = `Your ${eventName} Certificate is Ready`;
 
   let attachments: { filename: string; content: Buffer; contentType: string }[] | undefined;
 
