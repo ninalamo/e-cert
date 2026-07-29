@@ -7,11 +7,19 @@ import { EventRepository } from "@/features/events/server/event.repository";
 import { getCertificatePdfBuffer } from "./certificate.service";
 import { ORG_NAME } from "@/lib/org";
 import { env } from "@/lib/env";
-import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAudit } from "@/features/audit/server/audit.service";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+async function getDefaultClient(): Promise<SupabaseClient> {
+  const { createClient } = await import("@/lib/supabase/server");
+  return createClient();
+}
+
+async function getAdminClient(): Promise<SupabaseClient> {
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
+  return supabaseAdmin;
+}
 
 export async function sendCertificateEmail(
   certificateId: string,
@@ -19,9 +27,9 @@ export async function sendCertificateEmail(
   client?: SupabaseClient,
   options?: { skip_pdf?: boolean }
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = client ?? (await createClient());
+  const supabase = client ?? await getDefaultClient();
   const certRepo = new CertificateRepository(supabase);
-  const emailRepo = new CertificateEmailRepository(supabaseAdmin);
+  const emailRepo = new CertificateEmailRepository(await getAdminClient());
   const eventRepo = new EventRepository(supabase);
   const templateRepo = new CertificateTemplateRepository(supabase);
   const existingLog = await emailRepo.findLatestByCertificateId(certificateId);
@@ -191,6 +199,6 @@ export async function getEmailLogs(
   certificateId: string,
   client?: SupabaseClient
 ): Promise<CertificateEmailLog[]> {
-  const emailRepo = new CertificateEmailRepository(client ?? (await createClient()));
+  const emailRepo = new CertificateEmailRepository(client ?? await getDefaultClient());
   return emailRepo.findByCertificateId(certificateId);
 }

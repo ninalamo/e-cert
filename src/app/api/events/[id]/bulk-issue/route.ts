@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { start } from "workflow/api";
 import { issueCertificatesWorkflow } from "@/workflows/issue-certificates";
 import { getCurrentSession } from "@/lib/permissions";
 
@@ -31,12 +30,20 @@ export async function POST(
     );
   }
 
-  const run = await start(issueCertificatesWorkflow, [
-    eventId,
-    attendeeIds,
-    session.id,
-    sendEmail ?? true,
-  ]);
+  try {
+    const result = await issueCertificatesWorkflow(
+      eventId,
+      attendeeIds,
+      session.id,
+      sendEmail ?? true
+    );
 
-  return NextResponse.json({ runId: run.runId }, { status: 202 });
+    return NextResponse.json(result, { status: 200 });
+  } catch (err) {
+    console.error("[BulkIssue] Failed:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Certificate issuance failed" },
+      { status: 500 }
+    );
+  }
 }

@@ -1,7 +1,11 @@
 import { AuditLogRepository } from "./audit.repository";
 import type { AuditLog, AuditAction, AuditSource } from "@/types/audit-log";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+
+async function getDefaultClient(): Promise<SupabaseClient> {
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
+  return supabaseAdmin;
+}
 
 export async function logAudit(params: {
   organization_id: string;
@@ -17,7 +21,8 @@ export async function logAudit(params: {
   client?: SupabaseClient;
 }): Promise<void> {
   try {
-    const repo = new AuditLogRepository(params.client ?? supabaseAdmin);
+    const client = params.client ?? await getDefaultClient();
+    const repo = new AuditLogRepository(client);
     await repo.create({
       organization_id: params.organization_id,
       user_id: params.user_id ?? null,
@@ -47,16 +52,16 @@ export async function getAuditLogs(
   },
   options?: { orderBy?: string; ascending?: boolean; limit?: number; offset?: number }
 ): Promise<{ data: AuditLog[]; total: number }> {
-  const repo = new AuditLogRepository(supabaseAdmin);
+  const repo = new AuditLogRepository(await getDefaultClient());
   return repo.findByOrganizationId(organizationId, filters, options);
 }
 
 export async function getEntityAuditLog(entityType: string, entityId: string): Promise<AuditLog[]> {
-  const repo = new AuditLogRepository(supabaseAdmin);
+  const repo = new AuditLogRepository(await getDefaultClient());
   return repo.findByEntity(entityType, entityId);
 }
 
 export async function getUserAuditLog(userId: string, organizationId: string): Promise<AuditLog[]> {
-  const repo = new AuditLogRepository(supabaseAdmin);
+  const repo = new AuditLogRepository(await getDefaultClient());
   return repo.findByUserId(userId, organizationId);
 }

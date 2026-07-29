@@ -1,16 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import type { Event } from "@/types/event";
-import { PlusIcon, UploadIcon } from "lucide-react";
+import { PlusIcon, UploadIcon, Loader2Icon, InfoIcon, XIcon, DownloadIcon, CheckCircle2Icon, XCircleIcon } from "lucide-react";
 
 const AttendeesManager = dynamic(
   () => import("@/features/events/components/attendees-manager"),
   { ssr: false }
 );
+
+interface IssueResult {
+  name: string;
+  email: string;
+  success: boolean;
+  emailed?: boolean;
+  certNumber?: string;
+  error?: string;
+}
+
+interface IssueSummary {
+  issued: number;
+  emailed: number;
+  results: IssueResult[];
+}
 
 export default function AttendeesTab({
   event,
@@ -25,10 +40,21 @@ export default function AttendeesTab({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [issueBusy, setIssueBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const [issueSummary, setIssueSummary] = useState<IssueSummary | null>(null);
+
+  useEffect(() => {
+    if (!issueBusy) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [issueBusy]);
 
   async function handleIssueSelected() {
     const count = selectedAttendeeIds.length;
     setIssueBusy(true);
+    setIssueSummary(null);
     try {
       const res = await fetch(`/api/events/${event.id}/bulk-issue`, {
         method: "POST",
@@ -41,13 +67,17 @@ export default function AttendeesTab({
         throw new Error(body?.error ?? `Request failed (${res.status})`);
       }
 
-      const { runId } = await res.json();
+      const result: IssueSummary = await res.json();
+      setIssueSummary(result);
       setSelectedAttendeeIds([]);
-      toast.loading(`Issuing ${count} certificate${count > 1 ? "s" : ""}...`, {
-        id: `bulk-issue-${runId}`,
-      });
+      setRefresh((n) => n + 1);
 
-      pollWorkflow(runId);
+      const failed = result.results.filter((r) => !r.success).length;
+      if (failed > 0) {
+        toast.warning(`${result.issued} issued, ${failed} failed`, { duration: 8000 });
+      } else {
+        toast.success(`${result.issued} issued, ${result.emailed} emailed`, { duration: 8000 });
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to start certificate issuance");
     } finally {
@@ -55,48 +85,116 @@ export default function AttendeesTab({
     }
   }
 
-  function pollWorkflow(runId: string) {
-    const toastId = `bulk-issue-${runId}`;
-    let attempts = 0;
-    const maxAttempts = 120;
+  function downloadCsv() {
+    if (!issueSummary) return;
+    const header = "Name,Email,Issued,Emailed,Error\n";
+    const rows = issueSummary.results.map((r) =>
+      [
+        `"${r.name}"`,
+        `"${r.email}"`,
+        r.success ? "Yes" : "No",
+        r.emailed ? "Yes" : r.success ? "No" : "N/A",
+        r.error ? `"${r.error.replace(/"/g, '""')}"` : "",
+      ].join(",")
+    ).join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `certificate-issuance-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
-    const interval = setInterval(async () => {
-      attempts++;
-      if (attempts > maxAttempts) {
-        clearInterval(interval);
-        toast.error("Timed out waiting for certificate issuance", { id: toastId });
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/workflow-status?runId=${runId}`);
-        if (!res.ok) return;
-
-        const data = await res.json();
-
-        if (data.status === "completed" && data.result) {
-          clearInterval(interval);
-          const { issued, emailed, results } = data.result;
-          const failed = results.filter((r: { success: boolean }) => !r.success).length;
-          toast.success(
-            `${issued} issued, ${emailed} emailed` + (failed ? `, ${failed} failed` : ""),
-            { id: toastId, duration: 8000 }
-          );
-          setSelectedAttendeeIds([]);
-          setRefresh((n) => n + 1);
-        } else if (data.status === "failed") {
-          clearInterval(interval);
-          toast.error("Certificate issuance failed", { id: toastId });
-          setRefresh((n) => n + 1);
-        }
-      } catch {
-        // Retry on network errors
-      }
-    }, 3000);
+  if (issueBusy) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-lg">
+          <Loader2Icon className="size-10 animate-spin text-brand-600" />
+          <div className="text-center">
+            <p className="text-lg font-semibold">Issuing certificates...</p>
+            <p className="text-sm text-muted-foreground">Please do not close or navigate away.</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
+      {issueSummary && (
+        <div className="rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-4 text-sm">
+          <div className="flex items-start gap-3">
+            <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-info-text)]" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium text-[var(--color-info-text)]">
+                  Certificate issuance completed
+                </p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={downloadCsv}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-info-border)] bg-[var(--color-info-bg)] px-2.5 py-1 text-xs font-medium text-[var(--color-info-text)] hover:opacity-80"
+                  >
+                    <DownloadIcon className="size-3" />
+                    Download CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIssueSummary(null)}
+                    className="text-[var(--color-info-text)] hover:opacity-70"
+                  >
+                    <XIcon className="size-4" />
+                  </button>
+                </div>
+              </div>
+              <p className="mt-1 text-[var(--color-info-text)] opacity-80">
+                {issueSummary.issued} issued, {issueSummary.emailed} emailed
+                {issueSummary.results.filter((r) => !r.success).length > 0 &&
+                  `, ${issueSummary.results.filter((r) => !r.success).length} failed`}
+              </p>
+
+              {issueSummary.results.some((r) => !r.success) && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs font-medium text-[var(--color-info-text)] opacity-70">Failed:</p>
+                  {issueSummary.results.filter((r) => !r.success).map((r, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-xs text-[var(--color-info-text)] opacity-80">
+                      <XCircleIcon className="size-3 shrink-0 text-red-500" />
+                      <span className="truncate">{r.email}</span>
+                      <span className="shrink-0 opacity-60">— {r.error}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {issueSummary.results.some((r) => r.success && r.emailed) && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs font-medium text-[var(--color-info-text)] opacity-70">Emailed:</p>
+                  {issueSummary.results.filter((r) => r.success && r.emailed).map((r, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-xs text-[var(--color-info-text)] opacity-80">
+                      <CheckCircle2Icon className="size-3 shrink-0 text-green-600" />
+                      <span className="truncate">{r.email}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {issueSummary.results.some((r) => r.success && !r.emailed) && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs font-medium text-[var(--color-info-text)] opacity-70">Issued (no email):</p>
+                  {issueSummary.results.filter((r) => r.success && !r.emailed).map((r, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-xs text-[var(--color-info-text)] opacity-80">
+                      <CheckCircle2Icon className="size-3 shrink-0 text-amber-500" />
+                      <span className="truncate">{r.email}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
