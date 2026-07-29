@@ -170,6 +170,7 @@ export default function MobileNav({
       href: "/settings",
       children: [
         { label: "Users", href: "/users" },
+        { label: "Audit Log", href: "/audit", roles: ["admin"] },
         { label: "Auth Emails", href: "/templates/auth-emails", roles: ["admin"] },
       ],
       roles: ["admin"],
