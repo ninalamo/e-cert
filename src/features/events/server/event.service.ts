@@ -2,6 +2,7 @@ import { EventRepository } from "./event.repository";
 import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
 import { CertificateTemplateRepository } from "@/features/templates/server/template.repository";
 import { createClient } from "@/lib/supabase/server";
+import { logAudit } from "@/features/audit/server/audit.service";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -89,6 +90,16 @@ export async function createEvent(
   if (!event) {
     return { event: null, error: error ?? "Failed to create event" };
   }
+
+  await logAudit({
+    organization_id: data.organization_id,
+    action: "event.created",
+    source: "ui",
+    entity_type: "event",
+    entity_id: event.id,
+    details: { event_name: event.name },
+  });
+
   return { event };
 }
 
@@ -112,7 +123,8 @@ export async function updateEvent(
 
 export async function deleteEvent(
   id: string,
-  client?: SupabaseClient
+  client?: SupabaseClient,
+  userId?: string
 ): Promise<{ error?: string }> {
   const { eventRepo, certRepo } = repos(client ?? (await createClient()));
   const existing = await eventRepo.findById(id);
@@ -138,6 +150,17 @@ export async function deleteEvent(
   if (!deleted) {
     return { error: "Failed to delete event" };
   }
+
+  await logAudit({
+    organization_id: existing.organization_id,
+    user_id: userId,
+    action: "event.deleted",
+    source: "ui",
+    entity_type: "event",
+    entity_id: id,
+    details: { event_name: existing.name },
+  });
+
   return {};
 }
 

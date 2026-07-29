@@ -65,13 +65,13 @@ export async function getCertificateAction(id: string) {
 }
 
 export async function revokeCertificateAction(id: string, reason: string) {
-  await requireRole(["admin"]);
-  return certService.revokeCertificate(id, reason);
+  const session = await requireRole(["admin"]);
+  return certService.revokeCertificate(id, reason, session.id);
 }
 
 export async function deleteCertificateAction(id: string) {
-  await requireRole(["admin"]);
-  return certService.deleteCertificate(id);
+  const session = await requireRole(["admin"]);
+  return certService.deleteCertificate(id, session.id);
 }
 
 export async function sendCertificateEmailAction(certificateId: string) {

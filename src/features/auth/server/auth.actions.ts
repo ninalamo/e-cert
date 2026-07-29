@@ -24,6 +24,7 @@ import {
   sendEmailConfirmedEmail,
 } from "@/lib/email/auth-emails";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logAudit } from "@/features/audit/server/audit.service";
 
 export async function loginAction(
   _prev: { error?: string; success?: boolean; redirectTo?: string } | undefined,
@@ -73,6 +74,17 @@ export async function loginAction(
 
   const role = (membership?.role ?? DEFAULT_ROLE) as import("@/types/organization").UserRole;
   const redirectTo = getHomePathForRole(role);
+
+  await logAudit({
+    organization_id: ORG_ID,
+    user_id: user.id,
+    user_email: user.email,
+    action: "auth.login",
+    source: "ui",
+    entity_type: "user",
+    entity_id: user.id,
+    details: { role },
+  });
 
   return { success: true, redirectTo };
 }
@@ -131,10 +143,33 @@ export async function register(data: RegisterInput) {
   const confirmToken = await createConfirmToken(user.id);
   await sendConfirmationEmail(parsed.data.email, confirmToken);
 
+  await logAudit({
+    organization_id: ORG_ID,
+    user_id: user.id,
+    user_email: parsed.data.email,
+    action: "auth.registered",
+    source: "ui",
+    entity_type: "user",
+    entity_id: user.id,
+    details: { name: parsed.data.name },
+  });
+
   return { success: true };
 }
 
 export async function logout() {
+  const session = await getCurrentSession();
+  if (session) {
+    await logAudit({
+      organization_id: ORG_ID,
+      user_id: session.id,
+      user_email: session.email ?? undefined,
+      action: "auth.logout",
+      source: "ui",
+      entity_type: "user",
+      entity_id: session.id,
+    });
+  }
   await clearSession();
   redirect("/login");
 }
@@ -160,6 +195,16 @@ export async function forgotPassword(data: { email: string }): Promise<{ error?:
   const resetToken = await createResetToken(user.id);
   await sendPasswordResetEmail(parsed.data.email, resetToken);
 
+  await logAudit({
+    organization_id: ORG_ID,
+    user_id: user.id,
+    user_email: parsed.data.email,
+    action: "auth.password_reset_requested",
+    source: "ui",
+    entity_type: "user",
+    entity_id: user.id,
+  });
+
   return { success: true };
 }
 
@@ -175,6 +220,16 @@ export async function requestPasswordChange(): Promise<{ error?: string; success
 
   const resetToken = await createResetToken(session.id);
   await sendPasswordResetEmail(session.email, resetToken);
+
+  await logAudit({
+    organization_id: ORG_ID,
+    user_id: session.id,
+    user_email: session.email,
+    action: "auth.password_reset_requested",
+    source: "ui",
+    entity_type: "user",
+    entity_id: session.id,
+  });
 
   return { success: true };
 }
@@ -203,6 +258,16 @@ export async function updatePassword(data: { password: string }) {
   }
 
   await deleteAllRefreshTokens(session.id);
+
+  await logAudit({
+    organization_id: ORG_ID,
+    user_id: session.id,
+    user_email: session.email ?? undefined,
+    action: "auth.password_changed",
+    source: "ui",
+    entity_type: "user",
+    entity_id: session.id,
+  });
 
   const redirectTo = getHomePathForRole(session.role);
   return { success: true, redirectTo };
@@ -267,6 +332,16 @@ export async function confirmEmail(token: string) {
     await sendWelcomeEmail(user.email, user.name);
   }
 
+  await logAudit({
+    organization_id: ORG_ID,
+    user_id: result.userId,
+    user_email: user?.email ?? undefined,
+    action: "auth.email_confirmed",
+    source: "ui",
+    entity_type: "user",
+    entity_id: result.userId,
+  });
+
   return { success: true };
 }
 
@@ -290,6 +365,15 @@ export async function resetPassword(token: string, password: string) {
     .eq("id", result.userId);
 
   await deleteResetToken(token);
+
+  await logAudit({
+    organization_id: ORG_ID,
+    user_id: result.userId,
+    action: "auth.password_reset",
+    source: "ui",
+    entity_type: "user",
+    entity_id: result.userId,
+  });
 
   return { success: true, redirectTo: "/login" };
 }
