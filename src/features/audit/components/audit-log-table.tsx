@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import {
   Table,
   TableHeader,
@@ -26,6 +26,7 @@ const ACTION_LABELS: Record<string, string> = {
   "certificate.issued": "Certificate Issued",
   "certificate.revoked": "Certificate Revoked",
   "certificate.deleted": "Certificate Deleted",
+  "certificate.viewed": "Certificate Viewed",
   "email.sent": "Email Sent",
   "email.failed": "Email Failed",
   "event.created": "Event Created",
@@ -34,6 +35,7 @@ const ACTION_LABELS: Record<string, string> = {
   "member.removed": "Member Removed",
   "member.role_changed": "Role Changed",
   "sql.error": "SQL Error",
+  "workflow.error": "Workflow Error",
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -75,8 +77,9 @@ function SourceBadge({ source }: { source: string }) {
 const ACTIONS_FILTER = [
   "", "auth.login", "auth.logout", "auth.registered", "auth.email_confirmed",
   "auth.password_reset_requested", "auth.password_reset", "auth.password_changed",
-  "certificate.issued", "certificate.revoked", "certificate.deleted",
+  "certificate.issued", "certificate.revoked", "certificate.deleted", "certificate.viewed",
   "email.sent", "email.failed", "event.created", "event.deleted",
+  "workflow.error",
 ];
 
 const SOURCES_FILTER = ["", "ui", "api", "workflow", "system"];
@@ -96,6 +99,27 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
   const [serverData, setServerData] = useState(initialData);
 
   const { page, pageSize, paginatedItems } = usePagination(serverData.data, 20);
+
+  const refreshData = useCallback(async () => {
+    const { getAuditLogsAction } = await import("../server/audit.actions");
+    const result = await getAuditLogsAction({
+      action: filters.action || undefined,
+      source: filters.source || undefined,
+      fromDate: filters.fromDate || undefined,
+      toDate: filters.toDate || undefined,
+      limit: 200,
+      offset: 0,
+    });
+    setServerData(result);
+  }, [filters.action, filters.source, filters.fromDate, filters.toDate]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      refreshData();
+    }, 20000);
+
+    return () => clearInterval(intervalId);
+  }, [refreshData]);
 
   function applyFilters() {
     startTransition(async () => {

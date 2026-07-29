@@ -2,7 +2,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/events/[id]/bulk-issue/route";
 import { createNextRequest } from "../helpers";
 import { getCurrentSession } from "@/lib/permissions";
-import { start } from "workflow/api";
+import { issueCertificatesWorkflow } from "@/workflows/issue-certificates";
+
+vi.mock("@/workflows/issue-certificates", () => ({
+  issueCertificatesWorkflow: vi.fn(() =>
+    Promise.resolve({
+      issued: 2,
+      emailed: 2,
+      results: [
+        { name: "Alice", email: "alice@test.com", success: true, emailed: true },
+        { name: "Bob", email: "bob@test.com", success: true, emailed: true },
+      ],
+    })
+  ),
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -62,7 +75,7 @@ describe("POST /api/events/[id]/bulk-issue", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 202 and starts workflow when admin issues", async () => {
+  it("returns results and calls workflow when admin issues", async () => {
     vi.mocked(getCurrentSession).mockResolvedValue({
       id: "admin-1", email: "admin@test.com", name: "Admin", role: "admin",
     });
@@ -72,14 +85,21 @@ describe("POST /api/events/[id]/bulk-issue", () => {
       body: JSON.stringify({ attendeeIds: ["a1", "a2"], sendEmail: true }),
     });
     const res = await POST(req, { params: Promise.resolve({ id: "event-1" }) });
-    expect(res.status).toBe(202);
+    expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toMatchObject({ runId: "mock-run-id" });
-    expect(start).toHaveBeenCalledOnce();
+    expect(body).toEqual({
+      issued: 2,
+      emailed: 2,
+      results: [
+        { name: "Alice", email: "alice@test.com", success: true, emailed: true },
+        { name: "Bob", email: "bob@test.com", success: true, emailed: true },
+      ],
+    });
+    expect(issueCertificatesWorkflow).toHaveBeenCalledOnce();
   });
 
-  it("returns 202 when staff issues", async () => {
+  it("returns 200 when staff issues", async () => {
     vi.mocked(getCurrentSession).mockResolvedValue({
       id: "staff-1", email: "staff@test.com", name: "Staff", role: "staff",
     });
@@ -89,6 +109,6 @@ describe("POST /api/events/[id]/bulk-issue", () => {
       body: JSON.stringify({ attendeeIds: ["a1"] }),
     });
     const res = await POST(req, { params: Promise.resolve({ id: "event-1" }) });
-    expect(res.status).toBe(202);
+    expect(res.status).toBe(200);
   });
 });

@@ -17,6 +17,7 @@
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@sparticuz/chromium": "^149.0.0",
+    "@supabase/postgrest-js": "^2.110.9",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.6",
     "@tiptap/core": "^3.28.0",

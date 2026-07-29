@@ -161,7 +161,7 @@ describe("revokeCertificateAction", () => {
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     await actions.revokeCertificateAction("cert-1", "test reason");
-    expect(certService.revokeCertificate).toHaveBeenCalledWith("cert-1", "test reason");
+    expect(certService.revokeCertificate).toHaveBeenCalledWith("cert-1", "test reason", "admin-1");
   });
 });
 
@@ -179,7 +179,7 @@ describe("deleteCertificateAction", () => {
 
     const actions = await import("@/features/certificates/server/certificate.actions");
     await actions.deleteCertificateAction("cert-1");
-    expect(certService.deleteCertificate).toHaveBeenCalledWith("cert-1");
+    expect(certService.deleteCertificate).toHaveBeenCalledWith("cert-1", "admin-1");
   });
 });
 

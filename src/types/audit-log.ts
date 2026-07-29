@@ -25,6 +25,7 @@ export type AuditAction =
   | "certificate.issued"
   | "certificate.revoked"
   | "certificate.deleted"
+  | "certificate.viewed"
   | "email.sent"
   | "email.failed"
   | "event.created"
@@ -32,6 +33,7 @@ export type AuditAction =
   | "member.added"
   | "member.removed"
   | "member.role_changed"
-  | "sql.error";
+  | "sql.error"
+  | "workflow.error";
 
 export type AuditSource = "ui" | "api" | "workflow" | "system";

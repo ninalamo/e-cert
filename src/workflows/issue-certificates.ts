@@ -1,4 +1,9 @@
-"use workflow";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logAudit } from "@/features/audit/server/audit.service";
+import { EventRepository } from "@/features/events/server/event.repository";
+import { EventAttendeeRepository } from "@/features/events/server/attendee.repository";
+import * as certService from "@/features/certificates/server/certificate.service";
+import { sendCertificateEmail } from "@/features/certificates/server/certificate-email.service";
 
 type AttendeeResult = {
   name: string;
@@ -18,7 +23,22 @@ export async function issueCertificatesWorkflow(
   emailed: number;
   results: AttendeeResult[];
 }> {
-  const event = await fetchEvent(eventId);
+  const eventRepo = new EventRepository(supabaseAdmin);
+  const event = await eventRepo.findById(eventId);
+
+  if (!event) {
+    await logAudit({
+      organization_id: "",
+      user_id: userId,
+      action: "workflow.error",
+      source: "workflow",
+      entity_type: "certificate",
+      entity_id: eventId,
+      details: { workflow: "issueCertificates", error: "Event not found" },
+      client: supabaseAdmin,
+    });
+    throw new Error(`Event ${eventId} not found`);
+  }
 
   const results: AttendeeResult[] = [];
   let issued = 0;
@@ -47,34 +67,25 @@ export async function issueCertificatesWorkflow(
     }
   }
 
+  const failed = results.filter((r) => !r.success).length;
+  await logAudit({
+    organization_id: event.organization_id ?? "",
+    user_id: userId,
+    action: "certificate.issued",
+    source: "workflow",
+    entity_type: "event",
+    entity_id: eventId,
+    details: {
+      issued,
+      emailed,
+      failed,
+      total: attendeeIds.length,
+      results,
+    },
+    client: supabaseAdmin,
+  });
+
   return { issued, emailed, results };
-}
-
-async function fetchEvent(eventId: string) {
-  "use step";
-
-  const { supabaseAdmin } = await import("@/lib/supabase/admin");
-  const { EventRepository } = await import(
-    "@/features/events/server/event.repository"
-  );
-
-  const repo = new EventRepository(supabaseAdmin);
-  const event = await repo.findById(eventId);
-
-  if (!event) {
-    throw new Error(`Event ${eventId} not found`);
-  }
-
-  return {
-    name: event.name,
-    template_id: event.template_id,
-    valid_until: event.valid_until,
-    event_date: event.event_date,
-    location: event.location,
-    organizer: event.organizer,
-    certificate_title: event.certificate_title,
-    certificate_number_pattern: event.certificate_number_pattern,
-  };
 }
 
 async function issueForAttendee(
@@ -91,16 +102,6 @@ async function issueForAttendee(
   userId: string,
   sendEmail: boolean
 ): Promise<AttendeeResult & { emailed?: boolean }> {
-  "use step";
-
-  const { supabaseAdmin } = await import("@/lib/supabase/admin");
-  const { EventAttendeeRepository } = await import(
-    "@/features/events/server/attendee.repository"
-  );
-  const certService = await import(
-    "@/features/certificates/server/certificate.service"
-  );
-
   const attendeeRepo = new EventAttendeeRepository(supabaseAdmin);
   const attendee = await attendeeRepo.findById(attendeeId);
 
@@ -142,30 +143,56 @@ async function issueForAttendee(
       );
 
       if (result.error || !result.certificate) {
-        return {
-          name: attendee.name,
-          email: attendee.email,
-          success: false,
-          error: result.error ?? "Failed to issue",
-        };
+        if (result.error?.includes("already exists")) {
+          const { CertificateRepository } = await import(
+            "@/features/certificates/server/certificate.repository"
+          );
+          const certRepo = new CertificateRepository(supabaseAdmin);
+          const existing = await certRepo.findByEventAndEmail(eventId, attendee.email);
+          if (existing) {
+            certId = existing.id;
+            await attendeeRepo.update(attendee.id, {
+              certificate_id: certId,
+            } as Partial<typeof attendee>);
+          }
+        }
+        if (!certId) {
+          return {
+            name: attendee.name,
+            email: attendee.email,
+            success: false,
+            error: result.error ?? "Failed to issue",
+          };
+        }
+      } else {
+        certId = result.certificate.id;
+        await attendeeRepo.update(attendee.id, {
+          certificate_id: certId,
+        } as Partial<typeof attendee>);
       }
-
-      certId = result.certificate.id;
-      await attendeeRepo.update(attendee.id, {
-        certificate_id: certId,
-      } as Partial<typeof attendee>);
     }
 
     let emailed = false;
     if (sendEmail && certId) {
-      const { sendCertificateEmail } = await import(
-        "@/features/certificates/server/certificate-email.service"
-      );
       const emailResult = await sendCertificateEmail(certId, userId, supabaseAdmin, {
         skip_pdf: true,
       });
       emailed = emailResult.success;
       if (!emailResult.success) {
+        await logAudit({
+          organization_id: attendee.organization_id,
+          user_id: userId,
+          action: "email.failed",
+          source: "workflow",
+          entity_type: "certificate",
+          entity_id: certId,
+          details: {
+            attendee_id: attendee.id,
+            attendee_email: attendee.email,
+            error: emailResult.error ?? "Email failed",
+          },
+          client: supabaseAdmin,
+        });
         return {
           name: attendee.name,
           email: attendee.email,
@@ -184,11 +211,27 @@ async function issueForAttendee(
       certNumber: undefined,
     };
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    await logAudit({
+      organization_id: attendee.organization_id,
+      user_id: userId,
+      action: "workflow.error",
+      source: "workflow",
+      entity_type: "certificate",
+      entity_id: attendeeId,
+      details: {
+        workflow: "issueForAttendee",
+        attendee_id: attendee.id,
+        attendee_email: attendee.email,
+        error: errorMessage,
+      },
+      client: supabaseAdmin,
+    });
     return {
       name: attendee.name,
       email: attendee.email,
       success: false,
-      error: err instanceof Error ? err.message : "Unknown error",
+      error: errorMessage,
     };
   }
 }

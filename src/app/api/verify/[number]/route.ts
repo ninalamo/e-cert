@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logAudit } from "@/features/audit/server/audit.service";
 
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
@@ -19,6 +20,7 @@ export async function GET(
       expires_at,
       revoked_at,
       recipient_name,
+      organization_id,
       events ( name ),
       organizations ( name )
     `)
@@ -42,6 +44,21 @@ export async function GET(
 
   const event = certificate.events as unknown as { name: string } | null;
   const org = certificate.organizations as unknown as { name: string } | null;
+
+  logAudit({
+    organization_id: certificate.organization_id ?? "",
+    action: "certificate.viewed",
+    source: "ui",
+    entity_type: "certificate",
+    entity_id: number,
+    details: {
+      certificate_number: certificate.certificate_number,
+      recipient_name: certificate.recipient_name,
+      event_name: event?.name ?? null,
+      ip_address: _request.headers.get("x-forwarded-for") ?? _request.headers.get("x-real-ip") ?? null,
+    },
+    client: supabaseAdmin,
+  }).catch(() => {});
 
   return NextResponse.json({
     valid: true,
