@@ -81,8 +81,8 @@ export async function updateEventAction(
 }
 
 export async function deleteEventAction(id: string) {
-  await requireRole(["admin"]);
-  return eventService.deleteEvent(id);
+  const session = await requireRole(["admin"]);
+  return eventService.deleteEvent(id, undefined, session.id);
 }
 
 export async function cloneTemplateForEventAction(

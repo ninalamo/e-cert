@@ -8,6 +8,7 @@ import { ORG_ID, ORG_NAME } from "@/lib/org";
 import { env } from "@/lib/env";
 import { renderTemplate } from "@/lib/template-renderer";
 import { extractCanvasDimensions, buildQrReplacement } from "@/lib/certificate-renderer";
+import { logAudit } from "@/features/audit/server/audit.service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function repo(client: SupabaseClient) {
@@ -134,6 +135,22 @@ export async function issueCertificate(
     return { certificate: null, error: error ?? "Failed to issue certificate" };
   }
 
+  await logAudit({
+    organization_id: data.organization_id,
+    user_id: data.user_id,
+    action: "certificate.issued",
+    source: "api",
+    entity_type: "certificate",
+    entity_id: certificate.id,
+    details: {
+      certificate_number: certificate.certificate_number,
+      recipient_name: certificate.recipient_name,
+      recipient_email: certificate.recipient_email,
+      event_id: data.event_id,
+      template_id: data.template_id,
+    },
+  });
+
   if (data.send_email && data.user_id) {
     const { sendCertificateEmail } = await import("./certificate-email.service");
     const emailResult = await sendCertificateEmail(certificate.id, data.user_id);
@@ -207,6 +224,7 @@ export async function getMyCertificate(
 export async function revokeCertificate(
   id: string,
   reason: string,
+  userId?: string,
   client?: SupabaseClient
 ): Promise<{ certificate: Certificate | null; error?: string }> {
   const certRepo = repo(client ?? (await createClient()));
@@ -228,6 +246,21 @@ export async function revokeCertificate(
     return { certificate: null, error: "Failed to revoke certificate" };
   }
 
+  await logAudit({
+    organization_id: ORG_ID,
+    user_id: userId,
+    action: "certificate.revoked",
+    source: "ui",
+    entity_type: "certificate",
+    entity_id: id,
+    details: {
+      certificate_number: certificate.certificate_number,
+      recipient_name: certificate.recipient_name,
+      recipient_email: certificate.recipient_email,
+      reason,
+    },
+  });
+
   if (existing.file_path) {
     try {
       const { getStorageProvider } = await import("@/lib/storage");
@@ -241,7 +274,7 @@ export async function revokeCertificate(
   return { certificate };
 }
 
-export async function deleteCertificate(id: string, client?: SupabaseClient): Promise<{ certificate: Certificate | null; error?: string }> {
+export async function deleteCertificate(id: string, userId?: string, client?: SupabaseClient): Promise<{ certificate: Certificate | null; error?: string }> {
   const certRepo = repo(client ?? (await createClient()));
   const existing = await certRepo.findById(id);
   if (!existing) {
@@ -262,6 +295,20 @@ export async function deleteCertificate(id: string, client?: SupabaseClient): Pr
   if (!ok) {
     return { certificate: null, error: "Failed to delete certificate" };
   }
+
+  await logAudit({
+    organization_id: ORG_ID,
+    user_id: userId,
+    action: "certificate.deleted",
+    source: "ui",
+    entity_type: "certificate",
+    entity_id: id,
+    details: {
+      certificate_number: existing.certificate_number,
+      recipient_name: existing.recipient_name,
+      recipient_email: existing.recipient_email,
+    },
+  });
 
   return { certificate: existing };
 }

@@ -152,6 +152,21 @@ CREATE TABLE IF NOT EXISTS certificate_sequences (
   PRIMARY KEY (organization_id, pattern)
 );
 
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  user_email TEXT,
+  action TEXT NOT NULL,
+  source TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id UUID,
+  details JSONB,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- ============================================================
 -- 2. INDEXES
 -- ============================================================
@@ -185,6 +200,11 @@ CREATE INDEX IF NOT EXISTS idx_certificates_number ON certificates(certificate_n
 CREATE INDEX IF NOT EXISTS idx_certificates_email ON certificates(recipient_email);
 CREATE INDEX IF NOT EXISTS idx_certificate_emails_cert ON certificate_emails(certificate_id);
 CREATE INDEX IF NOT EXISTS idx_cert_sequences_org ON certificate_sequences(organization_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_org ON audit_logs(organization_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
 
 -- Deduplicate before creating the unique index
 DO $$
@@ -215,6 +235,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS certificates_event_email_unique
 -- ============================================================
 -- 3. FUNCTIONS
 -- ============================================================
+
+CREATE OR REPLACE FUNCTION current_user_id()
+RETURNS UUID
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT NULLIF(current_setting('app.user_id', true), '')::UUID;
+$$;
 
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
@@ -357,6 +385,7 @@ ALTER TABLE event_attendees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE certificate_sequences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE certificate_emails ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Helper: safe CREATE POLICY (skip if exists)
 DO $$
@@ -493,12 +522,19 @@ BEGIN
           )
         )
       );
-  END IF;
-END $$;
+   END IF;
 
--- ============================================================
--- 6. GRANTS
--- ============================================================
+   -- Audit logs
+   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Admins can view audit logs' AND tablename = 'audit_logs') THEN
+     CREATE POLICY "Admins can view audit logs" ON audit_logs
+       FOR SELECT USING (
+         EXISTS (
+           SELECT 1 FROM user_memberships
+           WHERE user_id = current_user_id() AND role = 'admin'
+         )
+       );
+   END IF;
+END $$;
 
 -- ============================================================
 -- 7. SEED DATA (idempotent)
