@@ -2,7 +2,7 @@ import AuditLogTable from "./audit-log-table";
 import { getAuditLogsAction } from "../server/audit.actions";
 
 export default async function AuditLogPage() {
-  const initialData = await getAuditLogsAction({ limit: 50, offset: 0 });
+  const initialData = await getAuditLogsAction({ limit: 20, offset: 0 });
 
   return (
     <div className="space-y-6">

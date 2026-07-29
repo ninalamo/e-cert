@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { usePagination } from "@/components/ui/paginator";
+import { Paginator } from "@/components/ui/paginator";
 import type { AuditLog } from "@/types/audit-log";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -96,45 +96,42 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
     fromDate: "",
     toDate: "",
   });
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [serverData, setServerData] = useState(initialData);
 
-  const { page, pageSize, paginatedItems } = usePagination(serverData.data, 20);
-
-  const refreshData = useCallback(async () => {
+  const fetchPage = useCallback(async (p: number, ps: number, f: typeof filters) => {
     const { getAuditLogsAction } = await import("../server/audit.actions");
     const result = await getAuditLogsAction({
-      action: filters.action || undefined,
-      source: filters.source || undefined,
-      fromDate: filters.fromDate || undefined,
-      toDate: filters.toDate || undefined,
-      limit: 200,
-      offset: 0,
+      action: f.action || undefined,
+      source: f.source || undefined,
+      fromDate: f.fromDate || undefined,
+      toDate: f.toDate || undefined,
+      limit: ps,
+      offset: p * ps,
     });
     setServerData(result);
-  }, [filters.action, filters.source, filters.fromDate, filters.toDate]);
+  }, []);
+
+  const applyFilters = useCallback(() => {
+    setPage(0);
+    startTransition(async () => {
+      await fetchPage(0, pageSize, filters);
+    });
+  }, [fetchPage, pageSize, filters]);
+
+  useEffect(() => {
+    fetchPage(page, pageSize, filters);
+  }, [page, pageSize, fetchPage, filters]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      refreshData();
+      fetchPage(page, pageSize, filters);
     }, 20000);
-
     return () => clearInterval(intervalId);
-  }, [refreshData]);
+  }, [page, pageSize, filters, fetchPage]);
 
-  function applyFilters() {
-    startTransition(async () => {
-      const { getAuditLogsAction } = await import("../server/audit.actions");
-      const result = await getAuditLogsAction({
-        action: filters.action || undefined,
-        source: filters.source || undefined,
-        fromDate: filters.fromDate || undefined,
-        toDate: filters.toDate || undefined,
-        limit: 200,
-        offset: 0,
-      });
-      setServerData(result);
-    });
-  }
+  const totalPages = Math.max(1, Math.ceil(serverData.total / pageSize));
 
   return (
     <div className="space-y-4">
@@ -199,14 +196,14 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedItems.length === 0 ? (
+            {serverData.data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   No audit log entries found.
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedItems.map((entry) => (
+              serverData.data.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                     {new Date(entry.created_at).toLocaleString()}
@@ -234,11 +231,14 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
         </Table>
       </div>
 
-      {serverData.total > 0 && (
-        <div className="text-xs text-muted-foreground text-right">
-          Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, serverData.total)} of {serverData.total}
-        </div>
-      )}
+      <Paginator
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={serverData.total}
+        setPage={setPage}
+        setPageSize={(s) => { setPageSize(s); setPage(0); }}
+      />
     </div>
   );
 }
