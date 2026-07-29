@@ -11,7 +11,22 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Paginator } from "@/components/ui/paginator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  Trash2Icon,
+  FileDownIcon,
+  Loader2Icon,
+} from "lucide-react";
 import type { AuditLog } from "@/types/audit-log";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -99,6 +114,11 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(20);
   const [serverData, setServerData] = useState(initialData);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<"selected" | "all">("selected");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const fetchPage = useCallback(async (p: number, ps: number, f: typeof filters) => {
     const { getAuditLogsAction } = await import("../server/audit.actions");
@@ -133,7 +153,103 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
     return () => clearInterval(intervalId);
   }, [page, pageSize, filters, fetchPage]);
 
+  function buildAuditCsv(logs: AuditLog[]): string {
+    const headers = ["ID", "Time", "User", "Action", "Source", "Entity Type", "Entity ID", "Details", "IP Address", "User Agent"];
+    const escapeCsv = (val: unknown): string => {
+      if (val === null || val === undefined) return "";
+      const str = String(val);
+      if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+    const rows = logs.map((l) =>
+      [
+        l.id,
+        l.created_at,
+        l.user_email ?? l.user_id ?? "",
+        l.action,
+        l.source,
+        l.entity_type ?? "",
+        l.entity_id ?? "",
+        l.details ? JSON.stringify(l.details) : "",
+        l.ip_address ?? "",
+        l.user_agent ?? "",
+      ].map(escapeCsv).join(",")
+    );
+    return headers.map(escapeCsv).join(",") + "\n" + rows.join("\n");
+  }
+
+  function triggerDownload(csv: string, filename: string) {
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDownload() {
+    setExportLoading(true);
+    try {
+      if (selectedIds.length > 0) {
+        const { getAuditLogsByIdsAction } = await import("../server/audit.actions");
+        const logs = await getAuditLogsByIdsAction(selectedIds);
+        triggerDownload(buildAuditCsv(logs), `audit-logs-selected-${new Date().toISOString().slice(0, 10)}.csv`);
+      } else {
+        const { getAuditLogsForExportAction } = await import("../server/audit.actions");
+        const logs = await getAuditLogsForExportAction(filters);
+        triggerDownload(buildAuditCsv(logs), `audit-logs-all-${new Date().toISOString().slice(0, 10)}.csv`);
+      }
+      toast.success("CSV downloaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to export");
+    } finally {
+      setExportLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleteLoading(true);
+    try {
+      const { deleteAuditLogsAction, deleteAllAuditLogsAction } = await import("../server/audit.actions");
+      let deleted: AuditLog[] = [];
+      if (deleteTarget === "selected") {
+        const res = await deleteAuditLogsAction(selectedIds);
+        deleted = res.data;
+      } else {
+        const res = await deleteAllAuditLogsAction(filters);
+        deleted = res.data;
+      }
+      triggerDownload(buildAuditCsv(deleted), `audit-logs-deleted-${new Date().toISOString().slice(0, 10)}.csv`);
+      setSelectedIds([]);
+      setShowDeleteConfirm(false);
+      setPage(0);
+      const { getAuditLogsAction } = await import("../server/audit.actions");
+      const result = await getAuditLogsAction({
+        action: filters.action || undefined,
+        source: filters.source || undefined,
+        fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
+        limit: pageSize,
+        offset: 0,
+      });
+      startTransition(() => {
+        setServerData(result);
+      });
+      toast.success(`Deleted ${deleted.length} log(s)`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(serverData.total / pageSize));
+  const pageIds = serverData.data.map((e) => e.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+  const targetCount = deleteTarget === "all" ? serverData.total : selectedIds.length;
 
   return (
     <div className="space-y-4">
@@ -185,10 +301,68 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
         </Button>
       </div>
 
+      {(selectedIds.length > 0 || true) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-secondary)]/70 p-2">
+          <span className="px-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+            {selectedIds.length > 0 ? `${selectedIds.length} selected` : `${serverData.total} rows`}
+          </span>
+          <div className="w-px h-4 bg-[var(--color-border)]" />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            disabled={exportLoading || isPending}
+            className="inline-flex items-center gap-1.5"
+          >
+            {exportLoading ? <Loader2Icon className="size-3 animate-spin" /> : <FileDownIcon className="size-3" />}
+            {selectedIds.length > 0 ? "Download Selected" : "Download All"}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            onClick={() => { setDeleteTarget("selected"); setShowDeleteConfirm(true); }}
+            disabled={selectedIds.length === 0 || deleteLoading}
+            className="inline-flex items-center gap-1.5"
+          >
+            <Trash2Icon className="size-3" />
+            Delete Selected
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            onClick={() => { setDeleteTarget("all"); setShowDeleteConfirm(true); }}
+            disabled={serverData.total === 0 || deleteLoading}
+            className="inline-flex items-center gap-1.5"
+          >
+            <Trash2Icon className="size-3" />
+            Delete All
+          </Button>
+        </div>
+      )}
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={allPageSelected}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        pageIds.forEach((id) => next.add(id));
+                        return [...next];
+                      });
+                    } else {
+                      setSelectedIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+                    }
+                  }}
+                />
+              </TableHead>
               <TableHead>Time</TableHead>
               <TableHead>User</TableHead>
               <TableHead>Action</TableHead>
@@ -200,13 +374,23 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
           <TableBody>
             {serverData.data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No audit log entries found.
                 </TableCell>
               </TableRow>
             ) : (
               serverData.data.map((entry) => (
                 <TableRow key={entry.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedIds.includes(entry.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedIds((prev) =>
+                          checked ? [...prev, entry.id] : prev.filter((id) => id !== entry.id)
+                        );
+                      }}
+                    />
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                     {new Date(entry.created_at).toLocaleString()}
                   </TableCell>
@@ -241,6 +425,26 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
         setPage={setPage}
         setPageSize={(s) => { setPageSize(s); setPage(0); }}
       />
+
+      <Dialog open={showDeleteConfirm} onOpenChange={(open) => { if (!open) setShowDeleteConfirm(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Audit Logs?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete {targetCount} audit log(s). A CSV of the deleted records will be downloaded automatically. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleteLoading}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteLoading}>
+              {deleteLoading ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
+              {deleteLoading ? "Deleting..." : `Delete ${targetCount}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

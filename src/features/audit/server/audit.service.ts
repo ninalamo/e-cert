@@ -65,3 +65,43 @@ export async function getUserAuditLog(userId: string, organizationId: string): P
   const repo = new AuditLogRepository(await getDefaultClient());
   return repo.findByUserId(userId, organizationId);
 }
+
+export async function getAuditLogsForExport(
+  organizationId: string,
+  filters?: {
+    action?: string;
+    userId?: string;
+    entityType?: string;
+    source?: string;
+    fromDate?: string;
+    toDate?: string;
+  }
+): Promise<AuditLog[]> {
+  const repo = new AuditLogRepository(await getDefaultClient());
+  return repo.findByOrganizationIdAll(organizationId, filters);
+}
+
+export async function deleteAuditLogsByIds(ids: string[]): Promise<AuditLog[]> {
+  const repo = new AuditLogRepository(await getDefaultClient());
+  return repo.deleteByIds(ids);
+}
+
+export async function deleteAllAuditLogs(
+  organizationId: string,
+  filters?: {
+    action?: string;
+    userId?: string;
+    entityType?: string;
+    source?: string;
+    fromDate?: string;
+    toDate?: string;
+  }
+): Promise<AuditLog[]> {
+  const repo = new AuditLogRepository(await getDefaultClient());
+  return repo.deleteByOrganizationId(organizationId, filters);
+}
+
+export async function getAuditLogsByIds(ids: string[]): Promise<AuditLog[]> {
+  const repo = new AuditLogRepository(await getDefaultClient());
+  return repo.findByIds(ids);
+}
