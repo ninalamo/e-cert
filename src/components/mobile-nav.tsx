@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ORG_NAME } from "@/lib/org";
-import { useDashboardStats } from "@/features/dashboard/components/use-dashboard-stats";
 import type { UserRole } from "@/types/organization";
 
 type NavChild = { label: string; href: string; roles?: UserRole[] };
@@ -23,7 +22,6 @@ function isActivePath(pathname: string, href: string, exact = false) {
 function NavLinks({
   items,
   pathname,
-  certCount,
   certOpen,
   settingsOpen,
   onToggle,
@@ -32,7 +30,6 @@ function NavLinks({
 }: {
   items: NavItem[];
   pathname: string;
-  certCount: number | null;
   certOpen: boolean;
   settingsOpen: boolean;
   onToggle: (label: string) => void;
@@ -78,17 +75,6 @@ function NavLinks({
             >
               <span>{item.label}</span>
               <div className="flex items-center gap-2">
-                {certCount !== null && certCount > 0 && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      parentActive
-                        ? "bg-black/15 text-black"
-                        : "bg-surface-secondary text-tertiary"
-                    }`}
-                  >
-                    {certCount}
-                  </span>
-                )}
                 <svg
                   className={`size-4 transition-transform ${
                     certOpen ? "rotate-90" : ""
@@ -147,9 +133,6 @@ export default function MobileNav({
   const [open, setOpen] = useState(false);
   const [certOpen, setCertOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  const { stats } = useDashboardStats();
-  const certCount = role !== "participant" ? (stats?.totalCertificates ?? null) : null;
 
   const adminItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard" },
@@ -255,7 +238,6 @@ export default function MobileNav({
               <NavLinks
                 items={items}
                 pathname={pathname}
-                certCount={certCount}
                 certOpen={certOpen}
                 settingsOpen={settingsOpen}
                 onToggle={(label) => {

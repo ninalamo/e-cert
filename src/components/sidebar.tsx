@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { useDashboardStats } from "@/features/dashboard/components/use-dashboard-stats";
 import type { UserRole } from "@/types/organization";
 
 type NavChild = { label: string; href: string; roles?: UserRole[] };
@@ -77,9 +76,6 @@ export default function Sidebar({ role }: { role: UserRole }) {
   const [certOpen, setCertOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-
-  const { stats } = useDashboardStats();
-  const certCount = stats?.totalCertificates ?? null;
 
   const homeHref = role === "participant" ? "/my" : "/dashboard";
   const visibleNav = navItems
@@ -173,17 +169,6 @@ export default function Sidebar({ role }: { role: UserRole }) {
                 </span>
                 {!collapsed && (
                   <div className="flex items-center gap-2">
-                    {certCount !== null && certCount > 0 && (
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs ${
-                          parentActive
-                            ? "bg-black/15 text-black"
-                            : "bg-surface-secondary text-tertiary"
-                        }`}
-                      >
-                        {certCount}
-                      </span>
-                    )}
                     <svg
                       className={`size-4 transition-transform ${
                         certOpen ? "rotate-90" : ""
