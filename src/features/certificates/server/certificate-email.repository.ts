@@ -20,4 +20,15 @@ export class CertificateEmailRepository extends BaseRepository<CertificateEmailL
     const logs = await this.findByCertificateId(certificateId);
     return logs[0] ?? null;
   }
+
+  async findAll(
+    options?: { limit?: number; offset?: number }
+  ): Promise<CertificateEmailLog[]> {
+    return this.findMany(undefined, {
+      orderBy: "sent_at",
+      ascending: false,
+      limit: options?.limit,
+      offset: options?.offset,
+    });
+  }
 }

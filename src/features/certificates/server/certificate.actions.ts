@@ -109,3 +109,11 @@ export async function getSessionRoleAction() {
   const session = await requireSession();
   return session.role;
 }
+
+export async function getAllEmailLogsAction(limit = 50, offset = 0) {
+  await requireRole(["admin"]);
+  const emailRepo = new (await import("./certificate-email.repository")).CertificateEmailRepository(
+    (await import("@/lib/supabase/admin")).supabaseAdmin
+  );
+  return emailRepo.findAll({ limit, offset });
+}
