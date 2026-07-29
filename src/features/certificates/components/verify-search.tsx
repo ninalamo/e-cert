@@ -136,7 +136,7 @@ function VerifySearchInner() {
       </form>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 dark:border-red-900/30 dark:bg-red-900/20 animate-in slide-in-from-top-2 duration-200">
+        <div className="rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/20 px-4 py-4 animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-start gap-3">
             <svg className="mt-0.5 shrink-0 w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.707 7.293a1 1 0 00-1.414 1.414L10.586 10l-3.293 3.293a1 1 0 101.414 1.414L12 11.414l3.293 3.293a1 1 0 001.414-1.414L13.414 10l3.293-3.293a1 1 0 00-1.414-1.414L12 8.586 8.707 5.293a1 1 0 00-1.414 0z" clipRule="evenodd" />
@@ -147,8 +147,8 @@ function VerifySearchInner() {
       )}
 
       {result && result.valid && (
-        <div className="rounded-2xl border border-border bg-white dark:bg-surface-elevated overflow-hidden animate-in fade-in duration-300 slide-in-from-bottom-2">
-          <div className="px-6 py-5 border-b border-border bg-surface-muted/50 dark:bg-surface-elevated/50">
+        <div className="rounded-2xl border border-border bg-white dark:bg-[#1c1c1e] overflow-hidden animate-in fade-in duration-300 slide-in-from-bottom-2">
+          <div className="px-6 py-5 border-b border-border bg-surface-muted/50 dark:bg-[#2c2c2e]/50">
             <div className="flex items-center justify-between gap-3">
               {getStatusBadge(result.status)}
             </div>
@@ -156,20 +156,20 @@ function VerifySearchInner() {
 
           <div className="p-6 space-y-5">
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
+              <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50 dark:bg-[#2c2c2e]/50">
                 <span className="text-sm text-tertiary">Certificate Number</span>
                 <span className="font-mono font-medium text-primary text-sm break-all text-right max-w-[65%]">{result.certificate_number}</span>
               </div>
 
               {result.recipient_name && (
-                <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
+                <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50 dark:bg-[#2c2c2e]/50">
                   <span className="text-sm text-tertiary">Participant</span>
                   <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.recipient_name}</span>
                 </div>
               )}
 
               {result.event_name && (
-                <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
+                <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50 dark:bg-[#2c2c2e]/50">
                   <span className="text-sm text-tertiary">Event</span>
                   <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.event_name}</span>
                 </div>
@@ -178,7 +178,7 @@ function VerifySearchInner() {
               {result.organization && (
                 <>
                   <div className="pt-2 border-t border-border" />
-                  <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
+                  <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50 dark:bg-[#2c2c2e]/50">
                     <span className="text-sm text-tertiary">Issued By</span>
                     <span className="font-medium text-primary text-sm truncate text-right max-w-[65%]">{result.organization.name}</span>
                   </div>
@@ -186,11 +186,11 @@ function VerifySearchInner() {
               )}
 
               <div className="pt-2 border-t border-border" />
-              <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
+              <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50 dark:bg-[#2c2c2e]/50">
                 <span className="text-sm text-tertiary">Issued</span>
                 <span className="font-medium text-primary text-sm">{formatDate(result.issued_date)}</span>
               </div>
-              <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50">
+              <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-surface-muted/50 dark:bg-[#2c2c2e]/50">
                 <span className="text-sm text-tertiary">Valid Until</span>
                 <span className="font-medium text-primary text-sm">{formatDate(result.valid_until) || "No expiry"}</span>
               </div>
