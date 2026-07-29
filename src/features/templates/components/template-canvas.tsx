@@ -2183,7 +2183,7 @@ const content = (
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.code === "Space" && !e.repeat && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+      if (e.code === "Space" && !e.repeat && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA" && document.activeElement?.getAttribute("contentEditable") !== "true") {
         e.preventDefault();
         setSpaceHeld(true);
       }
