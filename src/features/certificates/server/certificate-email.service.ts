@@ -9,6 +9,7 @@ import { ORG_NAME } from "@/lib/org";
 import { env } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logAudit } from "@/features/audit/server/audit.service";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -138,6 +139,16 @@ export async function sendCertificateEmail(
       console.error("[EmailService] Failed to write email log:", logErr);
     }
 
+    await logAudit({
+      organization_id: certificate.organization_id,
+      user_id: userId,
+      action: "email.sent",
+      source: "system",
+      entity_type: "email",
+      entity_id: certificateId,
+      details: { sent_to: certificate.recipient_email, subject },
+    });
+
     return { success: true };
   } catch (error) {
     console.error("[EmailService] Failed to send email:", error);
@@ -161,6 +172,16 @@ export async function sendCertificateEmail(
     } catch (logErr) {
       console.error("[EmailService] Failed to write email log:", logErr);
     }
+
+    await logAudit({
+      organization_id: certificate.organization_id,
+      user_id: userId,
+      action: "email.failed",
+      source: "system",
+      entity_type: "email",
+      entity_id: certificateId,
+      details: { sent_to: certificate.recipient_email, subject, error: errorMessage },
+    });
 
     return { success: false, error: errorMessage };
   }

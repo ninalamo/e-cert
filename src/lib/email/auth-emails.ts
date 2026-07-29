@@ -1,6 +1,8 @@
 import { env } from "@/lib/env";
 import { getEmailProvider } from "./index";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { ORG_ID } from "@/lib/org";
+import { logAudit } from "@/features/audit/server/audit.service";
 import type { AuthProcess } from "@/types/template";
 
 const BASE_URL = env.client.NEXT_PUBLIC_BASE_URL;
@@ -120,12 +122,24 @@ export async function sendPasswordResetEmail(
     `);
   }
 
-  await provider.sendEmail({
-    to: email,
-    subject: `Reset Your Password — ${ORG_NAME}`,
-    html,
-    text: `Reset your password: ${url}\n\nThis link expires in 1 hour.`,
-  });
+  try {
+    await provider.sendEmail({
+      to: email,
+      subject: `Reset Your Password — ${ORG_NAME}`,
+      html,
+      text: `Reset your password: ${url}\n\nThis link expires in 1 hour.`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    await logAudit({
+      organization_id: ORG_ID,
+      action: "email.failed",
+      source: "system",
+      entity_type: "email",
+      details: { type: "password_reset", recipient_email: email, error: message },
+    });
+    throw err;
+  }
 }
 
 export async function sendConfirmationEmail(
@@ -170,12 +184,24 @@ export async function sendConfirmationEmail(
     `);
   }
 
-  await provider.sendEmail({
-    to: email,
-    subject: `Confirm Your Email — ${ORG_NAME}`,
-    html,
-    text: `Confirm your email: ${url}\n\nThis link expires in 24 hours.`,
-  });
+  try {
+    await provider.sendEmail({
+      to: email,
+      subject: `Confirm Your Email — ${ORG_NAME}`,
+      html,
+      text: `Confirm your email: ${url}\n\nThis link expires in 24 hours.`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    await logAudit({
+      organization_id: ORG_ID,
+      action: "email.failed",
+      source: "system",
+      entity_type: "email",
+      details: { type: "confirmation", recipient_email: email, error: message },
+    });
+    throw err;
+  }
 }
 
 export async function sendWelcomeEmail(
@@ -216,12 +242,24 @@ export async function sendWelcomeEmail(
     `);
   }
 
-  await provider.sendEmail({
-    to: email,
-    subject: `Welcome to ${ORG_NAME}!`,
-    html,
-    text: `Welcome to ${ORG_NAME}! Log in at: ${loginUrl}`,
-  });
+  try {
+    await provider.sendEmail({
+      to: email,
+      subject: `Welcome to ${ORG_NAME}!`,
+      html,
+      text: `Welcome to ${ORG_NAME}! Log in at: ${loginUrl}`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    await logAudit({
+      organization_id: ORG_ID,
+      action: "email.failed",
+      source: "system",
+      entity_type: "email",
+      details: { type: "welcome", recipient_email: email, error: message },
+    });
+    throw err;
+  }
 }
 
 export async function sendEmailConfirmedEmail(
@@ -262,10 +300,22 @@ export async function sendEmailConfirmedEmail(
     `);
   }
 
-  await provider.sendEmail({
-    to: email,
-    subject: `Email Confirmed — ${ORG_NAME}`,
-    html,
-    text: `Your email has been confirmed. Log in at: ${loginUrl}`,
-  });
+  try {
+    await provider.sendEmail({
+      to: email,
+      subject: `Email Confirmed — ${ORG_NAME}`,
+      html,
+      text: `Your email has been confirmed. Log in at: ${loginUrl}`,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    await logAudit({
+      organization_id: ORG_ID,
+      action: "email.failed",
+      source: "system",
+      entity_type: "email",
+      details: { type: "email_confirmed", recipient_email: email, error: message },
+    });
+    throw err;
+  }
 }
