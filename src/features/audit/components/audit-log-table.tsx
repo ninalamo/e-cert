@@ -110,7 +110,9 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
       limit: ps,
       offset: p * ps,
     });
-    setServerData(result);
+    startTransition(() => {
+      setServerData(result);
+    });
   }, []);
 
   const applyFilters = useCallback(() => {

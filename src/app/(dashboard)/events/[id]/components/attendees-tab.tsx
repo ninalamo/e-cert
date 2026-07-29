@@ -52,7 +52,6 @@ export default function AttendeesTab({
   }, [issueBusy]);
 
   async function handleIssueSelected() {
-    const count = selectedAttendeeIds.length;
     setIssueBusy(true);
     setIssueSummary(null);
     try {
