@@ -72,6 +72,7 @@ export default function AttendeesManager({
   const [editEmail, setEditEmail] = useState("");
   const [editMode, setEditMode] = useState<"template" | "file">("template");
   const [editFile, setEditFile] = useState<{ name: string; data: string; type: string } | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const [removeTarget, setRemoveTarget] = useState<EventAttendee | null>(null);
 
@@ -190,6 +191,7 @@ export default function AttendeesManager({
     setEditEmail(a.email);
     setEditMode(a.metadata?.generation_mode === "file" ? "file" : "template");
     setEditFile(null);
+    setEditError(null);
     setEditOpen(true);
   }
 
@@ -222,7 +224,7 @@ export default function AttendeesManager({
     });
     setBusy(false);
     if (result.error) {
-      setError(result.error);
+      setEditError(result.error);
     } else {
       setEditName("");
       setEditEmail("");
@@ -387,14 +389,18 @@ export default function AttendeesManager({
                           <button
                             type="button"
                             onClick={() => openEdit(a)}
-                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
+                            disabled={!!a.certificate_id}
+                            title={a.certificate_id ? "Cannot edit after certificate is issued" : undefined}
+                            className={`rounded-lg p-1.5 transition-colors ${a.certificate_id ? "text-[var(--color-text-muted)] opacity-40 cursor-not-allowed" : "text-[var(--color-text-muted)] hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"}`}
                           >
                             <PencilIcon className="size-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => setRemoveTarget(a)}
-                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                            disabled={!!a.certificate_id}
+                            title={a.certificate_id ? "Cannot remove after certificate is issued" : undefined}
+                            className={`rounded-lg p-1.5 transition-colors ${a.certificate_id ? "text-[var(--color-text-muted)] opacity-40 cursor-not-allowed" : "text-[var(--color-text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"}`}
                           >
                             <Trash2Icon className="size-4" />
                           </button>
@@ -600,6 +606,12 @@ export default function AttendeesManager({
           </DialogHeader>
 
           <form onSubmit={handleEdit} className="space-y-4">
+            {editError && (
+              <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+                <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
+                <p className="text-[var(--color-danger-text)]">{editError}</p>
+              </div>
+            )}
             <div>
               <label htmlFor="edit-name" className="block text-sm font-medium">
                 Name *
@@ -681,10 +693,11 @@ export default function AttendeesManager({
                       const file = e.target.files?.[0];
                       if (!file) return;
                       if (file.size > MAX_FILE_SIZE) {
-                        setError("File exceeds 1 MB limit. Please choose a smaller file.");
+                        setEditError("File exceeds 1 MB limit. Please choose a smaller file.");
                         e.target.value = "";
                         return;
                       }
+                      setEditError(null);
                       const reader = new FileReader();
                       reader.onload = (ev) => {
                         const base64 = (ev.target?.result as string).split(",")[1] ?? "";
