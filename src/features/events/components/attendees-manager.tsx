@@ -389,9 +389,7 @@ export default function AttendeesManager({
                           <button
                             type="button"
                             onClick={() => openEdit(a)}
-                            disabled={!!a.certificate_id}
-                            title={a.certificate_id ? "Cannot edit after certificate is issued" : undefined}
-                            className={`rounded-lg p-1.5 transition-colors ${a.certificate_id ? "text-[var(--color-text-muted)] opacity-40 cursor-not-allowed" : "text-[var(--color-text-muted)] hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"}`}
+                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
                           >
                             <PencilIcon className="size-4" />
                           </button>
@@ -640,26 +638,31 @@ export default function AttendeesManager({
             <div>
               <label className="block text-sm font-medium mb-2">
                 Cert Option
+                {editTarget?.certificate_id && (
+                  <span className="ml-2 text-xs font-normal text-[var(--color-text-muted)]">(locked after issuance)</span>
+                )}
               </label>
               <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <label className={`flex items-center gap-2 text-sm ${editTarget?.certificate_id ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                   <input
                     type="radio"
                     name="edit-mode"
                     value="template"
                     checked={editMode === "template"}
                     onChange={() => { setEditMode("template"); setEditFile(null); }}
+                    disabled={!!editTarget?.certificate_id}
                     className="accent-[var(--color-brand-600)]"
                   />
                   System Generated
                 </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <label className={`flex items-center gap-2 text-sm ${editTarget?.certificate_id ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                   <input
                     type="radio"
                     name="edit-mode"
                     value="file"
                     checked={editMode === "file"}
                     onChange={() => setEditMode("file")}
+                    disabled={!!editTarget?.certificate_id}
                     className="accent-[var(--color-brand-600)]"
                   />
                   Use Uploaded
@@ -678,13 +681,14 @@ export default function AttendeesManager({
                     <span className="text-xs text-[var(--color-text-muted)] ml-auto shrink-0">Uploaded</span>
                   </div>
                 )}
-                <label
-                  className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors cursor-pointer ${
-                    editFile
-                      ? "border-[var(--color-success-border)] bg-[var(--color-success-bg)]"
-                      : "border-border hover:border-border-strong hover:bg-surface-hover"
-                  }`}
-                >
+                {!editTarget?.certificate_id && (
+                  <label
+                    className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors cursor-pointer ${
+                      editFile
+                        ? "border-[var(--color-success-border)] bg-[var(--color-success-bg)]"
+                        : "border-border hover:border-border-strong hover:bg-surface-hover"
+                    }`}
+                  >
                   <input
                     type="file"
                     accept=".pdf,.png,.jpg,.jpeg"
@@ -723,6 +727,7 @@ export default function AttendeesManager({
                     </span>
                   )}
                 </label>
+                )}
               </div>
             )}
 
