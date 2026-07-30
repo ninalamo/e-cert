@@ -72,6 +72,7 @@ export default function AttendeesManager({
   const [editEmail, setEditEmail] = useState("");
   const [editMode, setEditMode] = useState<"template" | "file">("template");
   const [editFile, setEditFile] = useState<{ name: string; data: string; type: string } | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const [removeTarget, setRemoveTarget] = useState<EventAttendee | null>(null);
 
@@ -190,6 +191,7 @@ export default function AttendeesManager({
     setEditEmail(a.email);
     setEditMode(a.metadata?.generation_mode === "file" ? "file" : "template");
     setEditFile(null);
+    setEditError(null);
     setEditOpen(true);
   }
 
@@ -222,7 +224,7 @@ export default function AttendeesManager({
     });
     setBusy(false);
     if (result.error) {
-      setError(result.error);
+      setEditError(result.error);
     } else {
       setEditName("");
       setEditEmail("");
@@ -394,7 +396,9 @@ export default function AttendeesManager({
                           <button
                             type="button"
                             onClick={() => setRemoveTarget(a)}
-                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                            disabled={!!a.certificate_id}
+                            title={a.certificate_id ? "Cannot remove after certificate is issued" : undefined}
+                            className={`rounded-lg p-1.5 transition-colors ${a.certificate_id ? "text-[var(--color-text-muted)] opacity-40 cursor-not-allowed" : "text-[var(--color-text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"}`}
                           >
                             <Trash2Icon className="size-4" />
                           </button>
@@ -600,6 +604,12 @@ export default function AttendeesManager({
           </DialogHeader>
 
           <form onSubmit={handleEdit} className="space-y-4">
+            {editError && (
+              <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+                <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
+                <p className="text-[var(--color-danger-text)]">{editError}</p>
+              </div>
+            )}
             <div>
               <label htmlFor="edit-name" className="block text-sm font-medium">
                 Name *
@@ -628,26 +638,31 @@ export default function AttendeesManager({
             <div>
               <label className="block text-sm font-medium mb-2">
                 Cert Option
+                {editTarget?.certificate_id && (
+                  <span className="ml-2 text-xs font-normal text-[var(--color-text-muted)]">(locked after issuance)</span>
+                )}
               </label>
               <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <label className={`flex items-center gap-2 text-sm ${editTarget?.certificate_id ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                   <input
                     type="radio"
                     name="edit-mode"
                     value="template"
                     checked={editMode === "template"}
                     onChange={() => { setEditMode("template"); setEditFile(null); }}
+                    disabled={!!editTarget?.certificate_id}
                     className="accent-[var(--color-brand-600)]"
                   />
                   System Generated
                 </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <label className={`flex items-center gap-2 text-sm ${editTarget?.certificate_id ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                   <input
                     type="radio"
                     name="edit-mode"
                     value="file"
                     checked={editMode === "file"}
                     onChange={() => setEditMode("file")}
+                    disabled={!!editTarget?.certificate_id}
                     className="accent-[var(--color-brand-600)]"
                   />
                   Use Uploaded
@@ -666,13 +681,14 @@ export default function AttendeesManager({
                     <span className="text-xs text-[var(--color-text-muted)] ml-auto shrink-0">Uploaded</span>
                   </div>
                 )}
-                <label
-                  className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors cursor-pointer ${
-                    editFile
-                      ? "border-[var(--color-success-border)] bg-[var(--color-success-bg)]"
-                      : "border-border hover:border-border-strong hover:bg-surface-hover"
-                  }`}
-                >
+                {!editTarget?.certificate_id && (
+                  <label
+                    className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors cursor-pointer ${
+                      editFile
+                        ? "border-[var(--color-success-border)] bg-[var(--color-success-bg)]"
+                        : "border-border hover:border-border-strong hover:bg-surface-hover"
+                    }`}
+                  >
                   <input
                     type="file"
                     accept=".pdf,.png,.jpg,.jpeg"
@@ -681,10 +697,11 @@ export default function AttendeesManager({
                       const file = e.target.files?.[0];
                       if (!file) return;
                       if (file.size > MAX_FILE_SIZE) {
-                        setError("File exceeds 1 MB limit. Please choose a smaller file.");
+                        setEditError("File exceeds 1 MB limit. Please choose a smaller file.");
                         e.target.value = "";
                         return;
                       }
+                      setEditError(null);
                       const reader = new FileReader();
                       reader.onload = (ev) => {
                         const base64 = (ev.target?.result as string).split(",")[1] ?? "";
@@ -710,6 +727,7 @@ export default function AttendeesManager({
                     </span>
                   )}
                 </label>
+                )}
               </div>
             )}
 

@@ -6,6 +6,15 @@ import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import type { Event } from "@/types/event";
 import { PlusIcon, UploadIcon, Loader2Icon, InfoIcon, XIcon, DownloadIcon, CheckCircle2Icon, XCircleIcon } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const AttendeesManager = dynamic(
   () => import("@/features/events/components/attendees-manager"),
@@ -41,6 +50,7 @@ export default function AttendeesTab({
   const [issueBusy, setIssueBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [issueSummary, setIssueSummary] = useState<IssueSummary | null>(null);
+  const [confirmIssueOpen, setConfirmIssueOpen] = useState(false);
 
   useEffect(() => {
     if (!issueBusy) return;
@@ -218,7 +228,7 @@ export default function AttendeesTab({
         {selectedAttendeeIds.length > 0 && (
           <button
             type="button"
-            onClick={handleIssueSelected}
+            onClick={() => setConfirmIssueOpen(true)}
             disabled={issueBusy || !canIssue}
             title={
               canIssue
@@ -244,6 +254,29 @@ export default function AttendeesTab({
         onAddDialogHandled={() => setShowAddDialog(false)}
         refreshTrigger={refresh}
       />
+      <Dialog open={confirmIssueOpen} onOpenChange={setConfirmIssueOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Issue Certificate</DialogTitle>
+            <DialogDescription>
+              Are you sure? This will make attendees that are not yet issued uneditable.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmIssueOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmIssueOpen(false);
+                handleIssueSelected();
+              }}
+            >
+              Issue Certificate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
