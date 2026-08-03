@@ -235,9 +235,7 @@ export default function AttendeesTab({
             title={
               canIssue
                 ? undefined
-                : event.status !== "active"
-                  ? "Certificates can only be issued while the event is Active"
-                  : "Certificate issuance is available on or after the event date"
+                : "Certificates can only be issued while the event is Active"
             }
             className="btn-brand"
           >

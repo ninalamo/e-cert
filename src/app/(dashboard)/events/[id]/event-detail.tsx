@@ -127,9 +127,7 @@ export default function EventDetail({
   const config = statusConfig[event.status] ?? { label: event.status, badgeClass: "status-badge status-badge--draft", description: "" };
   const showArchiveTip = event.status === "active" && isExpired(event.valid_until);
   const canManageAttendees = event.status === "draft" || event.status === "active";
-  const canIssue =
-    event.status === "active" &&
-    (!event.event_date || new Date() >= new Date(event.event_date));
+  const canIssue = event.status === "active";
   const showMissingFieldsWarning =
     event.status === "draft" && (!event.template_id || !event.event_date);
 
