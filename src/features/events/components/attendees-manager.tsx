@@ -7,6 +7,8 @@ import {
   addAttendeeAction,
   updateAttendeeAction,
   removeAttendeeAction,
+  removeAttendeeWithCertAction,
+  getAttendeeDeletePreviewAction,
 } from "@/features/events/server/attendee.actions";
 import type { EventAttendee } from "@/types/event-attendee";
 import {
@@ -36,6 +38,7 @@ export default function AttendeesManager({
   eventId,
   organizationId,
   readOnly = false,
+  isAdmin = false,
   onSelectionChange,
   showAddDialog = false,
   onAddDialogHandled,
@@ -44,6 +47,7 @@ export default function AttendeesManager({
   eventId: string;
   organizationId: string;
   readOnly?: boolean;
+  isAdmin?: boolean;
   onSelectionChange?: (ids: string[]) => void;
   showAddDialog?: boolean;
   onAddDialogHandled?: () => void;
@@ -75,6 +79,12 @@ export default function AttendeesManager({
   const [editError, setEditError] = useState<string | null>(null);
 
   const [removeTarget, setRemoveTarget] = useState<EventAttendee | null>(null);
+  const [deletePreview, setDeletePreview] = useState<{
+    hasCertificate: boolean;
+    otherEventCount: number;
+    hasUserAccount: boolean;
+  } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const load = useCallback(async () => {
     const data = await getAttendeesAction(eventId);
@@ -239,7 +249,10 @@ export default function AttendeesManager({
 
   async function handleRemove(id: string) {
     setRemoveTarget(null);
-    const result = await removeAttendeeAction(id);
+    const target = attendees.find((a) => a.id === id);
+    const result = isAdmin && target?.certificate_id
+      ? await removeAttendeeWithCertAction(id)
+      : await removeAttendeeAction(id);
     if (result.error) {
       setError(result.error);
     } else {
@@ -386,22 +399,32 @@ export default function AttendeesManager({
                               <EyeIcon className="size-4" />
                             </Link>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => openEdit(a)}
-                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
-                          >
-                            <PencilIcon className="size-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setRemoveTarget(a)}
-                            disabled={!!a.certificate_id}
-                            title={a.certificate_id ? "Cannot remove after certificate is issued" : undefined}
-                            className={`rounded-lg p-1.5 transition-colors ${a.certificate_id ? "text-[var(--color-text-muted)] opacity-40 cursor-not-allowed" : "text-[var(--color-text-muted)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"}`}
-                          >
-                            <Trash2Icon className="size-4" />
-                          </button>
+                          {!a.certificate_id && (
+                            <button
+                              type="button"
+                              onClick={() => openEdit(a)}
+                              className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
+                            >
+                              <PencilIcon className="size-4" />
+                            </button>
+                          )}
+                          {(isAdmin || !a.certificate_id) && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                setRemoveTarget(a);
+                                setPreviewLoading(true);
+                                setDeletePreview(null);
+                                const preview = await getAttendeeDeletePreviewAction(a.id);
+                                setDeletePreview(preview);
+                                setPreviewLoading(false);
+                              }}
+                              title={a.certificate_id ? "This will also delete the issued certificate" : undefined}
+                              className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                            >
+                              <Trash2Icon className="size-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     )}
@@ -743,7 +766,7 @@ export default function AttendeesManager({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!removeTarget} onOpenChange={(open) => { if (!open) setRemoveTarget(null); }}>
+      <Dialog open={!!removeTarget} onOpenChange={(open) => { if (!open) { setRemoveTarget(null); setDeletePreview(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Remove Attendee</DialogTitle>
@@ -751,15 +774,34 @@ export default function AttendeesManager({
               Are you sure you want to remove <strong>{removeTarget?.name}</strong>?
             </DialogDescription>
           </DialogHeader>
+          {previewLoading ? (
+            <p className="text-sm text-[var(--color-text-muted)]">Checking what will be deleted...</p>
+          ) : deletePreview ? (
+            <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm space-y-1">
+              <p className="font-medium text-[var(--color-danger-text)]">The following will be permanently deleted:</p>
+              <ul className="list-disc list-inside text-[var(--color-danger-text)] opacity-80 space-y-0.5">
+                <li>Attendee record</li>
+                {deletePreview.hasCertificate && <li>Issued certificate</li>}
+                {deletePreview.hasUserAccount && deletePreview.otherEventCount === 0 && (
+                  <li>User account (no other event records found)</li>
+                )}
+              </ul>
+            </div>
+          ) : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRemoveTarget(null)}>
+            <Button variant="outline" onClick={() => { setRemoveTarget(null); setDeletePreview(null); }}>
               Cancel
             </Button>
             <Button
               variant="destructive"
+              disabled={previewLoading}
               onClick={() => removeTarget && handleRemove(removeTarget.id)}
             >
-              Remove
+              {deletePreview?.hasCertificate && deletePreview?.hasUserAccount && deletePreview?.otherEventCount === 0
+                ? "Delete All & Remove"
+                : deletePreview?.hasCertificate
+                  ? "Delete Certificate & Remove"
+                  : "Remove"}
             </Button>
           </DialogFooter>
         </DialogContent>

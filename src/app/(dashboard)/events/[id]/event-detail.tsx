@@ -320,6 +320,7 @@ export default function EventDetail({
           event={event}
           canManageAttendees={canManageAttendees}
           canIssue={canIssue}
+          isAdmin={canDelete}
         />
       )}
 
