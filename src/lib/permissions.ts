@@ -1,5 +1,5 @@
 import "server-only";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ORG_ID } from "@/lib/org";
@@ -36,12 +36,12 @@ export async function getCurrentSession(): Promise<SessionUser | null> {
   const proxyUserRole = hdrs.get("x-user-role");
 
   if (proxyUserId) {
-    return {
+    return applyDemoImpersonation({
       id: proxyUserId,
       email: proxyUserEmail || null,
       name: proxyUserName || null,
       role: (proxyUserRole as UserRole) ?? DEFAULT_ROLE,
-    };
+    });
   }
 
   // Fallback: read the session cookie directly (for server actions where
@@ -59,12 +59,27 @@ export async function getCurrentSession(): Promise<SessionUser | null> {
     .eq("organization_id", ORG_ID)
     .single();
 
-  return {
+  return applyDemoImpersonation({
     id: jwt.sub,
     email: jwt.email || null,
     name: jwt.name,
     role: (membership?.role as UserRole) ?? DEFAULT_ROLE,
-  };
+  });
+}
+
+/**
+ * Demo mode role impersonation. When DEMO=true, checks for an
+ * impersonate_role cookie and overrides the session role.
+ */
+async function applyDemoImpersonation(session: SessionUser): Promise<SessionUser> {
+  if (process.env.DEMO !== "true") return session;
+
+  const store = await cookies();
+  const impersonated = store.get("impersonate_role")?.value;
+  if (impersonated && ["admin", "staff", "participant"].includes(impersonated)) {
+    return { ...session, role: impersonated as UserRole };
+  }
+  return session;
 }
 
 /**
