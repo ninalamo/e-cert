@@ -21,6 +21,7 @@ export default async function DashboardShell({
 }) {
   const isDemo = process.env.DEMO === "true";
   const borderClass = isDemo ? (roleHeaderColors[session.role] ?? "") : "";
+  const version = process.env.NEXT_PUBLIC_VERSION ?? "";
 
   return (
     <div className="flex h-screen bg-surface-muted">
@@ -30,6 +31,11 @@ export default async function DashboardShell({
           <div className="flex items-center gap-2">
             <MobileNav role={session.role} />
             <span className="text-sm font-medium text-secondary">{ORG_NAME}</span>
+            {version && (
+              <span className="rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-[0.625rem] font-medium text-[var(--color-text-muted)]">
+                v{version}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {session.role !== "participant" && (
