@@ -9,7 +9,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 
 const roles: { value: UserRole; label: string; color: string }[] = [
@@ -45,9 +44,9 @@ export default function RoleSwitcher({ currentRole }: { currentRole: UserRole })
         </svg>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8}>
-        <DropdownMenuLabel className="text-xs text-tertiary">
+        <DropdownMenuItem disabled className="text-xs text-tertiary cursor-default">
           {busy ? "Switching..." : "Impersonate Role"}
-        </DropdownMenuLabel>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {roles.map((role) => (
           <DropdownMenuItem
