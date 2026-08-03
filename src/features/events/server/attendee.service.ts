@@ -2,6 +2,8 @@ import { EventAttendeeRepository } from "./attendee.repository";
 import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
 import { EventRepository } from "./event.repository";
 import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { ORG_ID } from "@/lib/org";
 import type { EventAttendee, AttendeeMetadata } from "@/types/event-attendee";
 import type { Event } from "@/types/event";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -100,6 +102,99 @@ export async function removeAttendee(
     return { error: "Failed to remove attendee" };
   }
   return {};
+}
+
+export async function removeAttendeeWithCert(
+  id: string,
+  client?: SupabaseClient
+): Promise<{ error?: string }> {
+  const c = client ?? (await createClient());
+  const { attendeeRepo, certRepo } = repos(c);
+
+  const attendee = await attendeeRepo.findById(id);
+  if (!attendee) {
+    return { error: "Attendee not found" };
+  }
+
+  if (attendee.certificate_id) {
+    const certId = attendee.certificate_id;
+
+    await attendeeRepo.update(id, { certificate_id: null } as Partial<EventAttendee>);
+
+    const certDeleted = await certRepo.delete(certId);
+    if (!certDeleted) {
+      return { error: "Failed to delete certificate" };
+    }
+  }
+
+  const deleted = await attendeeRepo.delete(id);
+  if (!deleted) {
+    return { error: "Failed to remove attendee" };
+  }
+
+  const { count: otherEventCount } = await c
+    .from("event_attendees")
+    .select("id", { count: "exact", head: true })
+    .eq("email", attendee.email)
+    .neq("event_id", attendee.event_id);
+
+  if ((otherEventCount ?? 0) === 0 && supabaseAdmin) {
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("email", attendee.email)
+      .maybeSingle();
+
+    if (user) {
+      await supabaseAdmin
+        .from("user_memberships")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("organization_id", ORG_ID);
+
+      await supabaseAdmin
+        .from("users")
+        .delete()
+        .eq("id", user.id);
+    }
+  }
+
+  return {};
+}
+
+export async function getAttendeeDeletePreview(
+  id: string,
+  client?: SupabaseClient
+): Promise<{
+  hasCertificate: boolean;
+  otherEventCount: number;
+  hasUserAccount: boolean;
+}> {
+  const c = client ?? (await createClient());
+  const { attendeeRepo } = repos(c);
+
+  const attendee = await attendeeRepo.findById(id);
+  if (!attendee) return { hasCertificate: false, otherEventCount: 0, hasUserAccount: false };
+
+  const hasCertificate = !!attendee.certificate_id;
+
+  const { count: otherEventCount } = await c
+    .from("event_attendees")
+    .select("id", { count: "exact", head: true })
+    .eq("email", attendee.email)
+    .neq("event_id", attendee.event_id);
+
+  const { data: user } = await c
+    .from("users")
+    .select("id")
+    .eq("email", attendee.email)
+    .maybeSingle();
+
+  return {
+    hasCertificate,
+    otherEventCount: otherEventCount ?? 0,
+    hasUserAccount: !!user,
+  };
 }
 
 export async function bulkAddAttendees(

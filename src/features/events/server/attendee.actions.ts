@@ -63,6 +63,16 @@ export async function removeAttendeeAction(id: string) {
   return attendeeService.removeAttendee(id);
 }
 
+export async function removeAttendeeWithCertAction(id: string) {
+  await requireRole(["admin"]);
+  return attendeeService.removeAttendeeWithCert(id);
+}
+
+export async function getAttendeeDeletePreviewAction(id: string) {
+  await requireRole(["admin"]);
+  return attendeeService.getAttendeeDeletePreview(id);
+}
+
 export async function bulkAddAttendeesAction(data: {
   event_id: string;
   organization_id: string;

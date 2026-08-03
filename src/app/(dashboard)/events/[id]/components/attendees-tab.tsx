@@ -40,10 +40,12 @@ export default function AttendeesTab({
   event,
   canManageAttendees,
   canIssue,
+  isAdmin = false,
 }: {
   event: Event;
   canManageAttendees: boolean;
   canIssue: boolean;
+  isAdmin?: boolean;
 }) {
   const [selectedAttendeeIds, setSelectedAttendeeIds] = useState<string[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -249,6 +251,7 @@ export default function AttendeesTab({
         eventId={event.id}
         organizationId={event.organization_id}
         readOnly={!canManageAttendees}
+        isAdmin={isAdmin}
         onSelectionChange={setSelectedAttendeeIds}
         showAddDialog={showAddDialog}
         onAddDialogHandled={() => setShowAddDialog(false)}
