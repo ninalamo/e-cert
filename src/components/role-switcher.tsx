@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { setImpersonateRole } from "@/features/demo/server/demo.actions";
 import type { UserRole } from "@/types/organization";
 import {
@@ -18,12 +17,9 @@ const roles: { value: UserRole; label: string; color: string }[] = [
 ];
 
 export default function RoleSwitcher({ currentRole }: { currentRole: UserRole }) {
-  const [busy, setBusy] = useState(false);
-
   const current = roles.find((r) => r.value === currentRole) ?? roles[0];
 
   async function switchRole(role: UserRole) {
-    setBusy(true);
     await setImpersonateRole(role);
     window.location.reload();
   }
@@ -44,14 +40,9 @@ export default function RoleSwitcher({ currentRole }: { currentRole: UserRole })
         </svg>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8}>
-        <DropdownMenuItem disabled className="text-xs text-tertiary cursor-default">
-          {busy ? "Switching..." : "Impersonate Role"}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         {roles.map((role) => (
           <DropdownMenuItem
             key={role.value}
-            disabled={busy || currentRole === role.value}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
