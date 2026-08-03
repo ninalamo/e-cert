@@ -79,6 +79,7 @@ export default function AttendeesManager({
   const [editError, setEditError] = useState<string | null>(null);
 
   const [removeTarget, setRemoveTarget] = useState<EventAttendee | null>(null);
+  const [removeBusy, setRemoveBusy] = useState(false);
   const [deletePreview, setDeletePreview] = useState<{
     hasCertificate: boolean;
     otherEventCount: number;
@@ -248,11 +249,14 @@ export default function AttendeesManager({
   }
 
   async function handleRemove(id: string) {
-    setRemoveTarget(null);
+    setRemoveBusy(true);
     const target = attendees.find((a) => a.id === id);
     const result = isAdmin && target?.certificate_id
       ? await removeAttendeeWithCertAction(id)
       : await removeAttendeeAction(id);
+    setRemoveBusy(false);
+    setRemoveTarget(null);
+    setDeletePreview(null);
     if (result.error) {
       setError(result.error);
     } else {
@@ -766,7 +770,7 @@ export default function AttendeesManager({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!removeTarget} onOpenChange={(open) => { if (!open) { setRemoveTarget(null); setDeletePreview(null); } }}>
+      <Dialog open={!!removeTarget} onOpenChange={(open) => { if (!open && !removeBusy) { setRemoveTarget(null); setDeletePreview(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Remove Attendee</DialogTitle>
@@ -789,19 +793,21 @@ export default function AttendeesManager({
             </div>
           ) : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setRemoveTarget(null); setDeletePreview(null); }}>
-              Cancel
+            <Button variant="outline" disabled={removeBusy} onClick={() => { setRemoveTarget(null); setDeletePreview(null); }}>
+              {removeBusy ? "Please wait..." : "Cancel"}
             </Button>
             <Button
               variant="destructive"
-              disabled={previewLoading}
+              disabled={previewLoading || removeBusy}
               onClick={() => removeTarget && handleRemove(removeTarget.id)}
             >
-              {deletePreview?.hasCertificate && deletePreview?.hasUserAccount && deletePreview?.otherEventCount === 0
-                ? "Delete All & Remove"
-                : deletePreview?.hasCertificate
-                  ? "Delete Certificate & Remove"
-                  : "Remove"}
+              {removeBusy
+                ? "Removing..."
+                : deletePreview?.hasCertificate && deletePreview?.hasUserAccount && deletePreview?.otherEventCount === 0
+                  ? "Delete All & Remove"
+                  : deletePreview?.hasCertificate
+                    ? "Delete Certificate & Remove"
+                    : "Remove"}
             </Button>
           </DialogFooter>
         </DialogContent>
