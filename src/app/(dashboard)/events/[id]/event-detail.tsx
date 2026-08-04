@@ -29,6 +29,8 @@ interface EventDetailData {
   event: Event;
   template: CertificateTemplate | null;
   emailTemplate: CertificateTemplate | null;
+  stats?: { total: number; active: number; revoked: number };
+  certificates?: Array<{ id: string; revoked_at: string | null }>;
 }
 
 function isExpired(dateStr: string | null): boolean {
@@ -280,6 +282,7 @@ export default function EventDetail({
             <p className="section-title mb-3">Status</p>
             <StatusChangeDialog
               event={event}
+              issuedCertificateCount={data.stats?.active ?? 0}
               open={statusDialogOpen}
               onOpenChange={setStatusDialogOpen}
               onStatusChanged={handleDataUpdated}

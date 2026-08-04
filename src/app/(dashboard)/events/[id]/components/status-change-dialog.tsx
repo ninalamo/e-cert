@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cloneTemplateForEventAction, updateEventAction } from "@/features/events/server/event.actions";
 import type { Event } from "@/types/event";
+import { InfoIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +42,7 @@ const statusTransitions: Record<Status, { target: Status; label: string; message
       target: "draft",
       label: "Revert to Draft",
       message:
-        "This event will be moved back to Draft. Participants will no longer see it and certificate issuance will be disabled until re-activated.",
+        "This event will be moved back to Draft. Participants will no longer see it and certificate issuance will be disabled until re-activated. Any certificates already issued remain valid as-is and are not updated by this change.",
     },
     {
       target: "archive",
@@ -82,11 +83,13 @@ export {
 
 export default function StatusChangeDialog({
   event,
+  issuedCertificateCount = 0,
   open,
   onOpenChange,
   onStatusChanged,
 }: {
   event: Event;
+  issuedCertificateCount?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStatusChanged: (event: Event) => void;
@@ -99,6 +102,13 @@ export default function StatusChangeDialog({
   const [templateMode, setTemplateMode] = useState<TemplateMode>("lock");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [acknowledgeDraft, setAcknowledgeDraft] = useState(false);
+
+  const showDraftWarning =
+    target?.target === "draft" &&
+    event.status === "active" &&
+    issuedCertificateCount > 0;
+
 
   const transitions = statusTransitions[event.status] ?? [];
   const missingFieldsMessage = buildMissingFieldsMessage(event);
@@ -108,6 +118,7 @@ export default function StatusChangeDialog({
       setTarget(null);
       setTemplateMode("lock");
       setError(null);
+      setAcknowledgeDraft(false);
     }
     onOpenChange(open);
   }
@@ -117,11 +128,13 @@ export default function StatusChangeDialog({
     setTarget(transitions[0]);
     setTemplateMode("lock");
     setError(null);
+    setAcknowledgeDraft(false);
     onOpenChange(true);
   }
 
   async function handleConfirm() {
     if (!target) return;
+    if (showDraftWarning && !acknowledgeDraft) return;
 
     if (target.target === "active") {
       const missing: string[] = [];
@@ -268,6 +281,34 @@ export default function StatusChangeDialog({
             )}
           </div>
 
+          {showDraftWarning && (
+            <div className="space-y-3 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-4 text-sm text-[var(--color-warning-text)]">
+              <div className="flex items-start gap-3">
+                <InfoIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-warning-text)]" />
+                <p>
+                  This event already has <strong>{issuedCertificateCount}</strong>{" "}
+                  issued certificate{issuedCertificateCount !== 1 ? "s" : ""}. Moving it back to Draft{" "}
+                  <strong>will not update or revoke</strong> those certificates &mdash; they remain
+                  valid exactly as issued. If you change the template or rendered details while in
+                  Draft and later re-activate the event, those certificates will need to be re-issued
+                  (re-issuing keeps the same certificate number and only updates the rendered content).
+                </p>
+              </div>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acknowledgeDraft}
+                  onChange={(e) => setAcknowledgeDraft(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span className="text-xs">
+                  I understand that already-issued certificates are unaffected and would need to be
+                  re-issued if I change the template or render details.
+                </span>
+              </label>
+            </div>
+          )}
+
           {error && (
             <p className="text-xs text-[var(--color-danger-text)]">{error}</p>
           )}
@@ -279,7 +320,7 @@ export default function StatusChangeDialog({
             <Button
               variant={target?.target === "archive" ? "destructive" : "default"}
               onClick={handleConfirm}
-              disabled={busy}
+              disabled={busy || (showDraftWarning && !acknowledgeDraft)}
             >
               {busy ? "Working..." : target?.label ?? "Confirm"}
             </Button>
