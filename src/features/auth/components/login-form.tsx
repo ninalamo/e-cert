@@ -74,7 +74,7 @@ export default function LoginForm({
         <button
           type="submit"
           disabled={pending}
-          className="btn-brand w-full disabled:opacity-50"
+          className="btn w-full disabled:opacity-50"
         >
           {pending ? "Signing in..." : "Sign in"}
         </button>

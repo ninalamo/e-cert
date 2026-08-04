@@ -108,7 +108,7 @@ export default function EventsList({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
-        <Link href="/events/new" className="btn-brand">
+        <Link href="/events/new" className="btn">
           <PlusIcon className="size-4" />
           New Event
         </Link>

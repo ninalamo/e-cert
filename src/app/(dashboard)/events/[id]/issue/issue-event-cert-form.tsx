@@ -157,7 +157,7 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
           <button
             type="submit"
             disabled={loading || event.status !== "active"}
-            className="btn-brand disabled:opacity-50"
+            className="btn disabled:opacity-50"
           >
             {loading ? "Issuing..." : "Issue Certificate"}
           </button>

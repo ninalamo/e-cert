@@ -26,7 +26,7 @@ export default function DashboardSearch() {
       />
       <button
         type="submit"
-        className="btn-brand"
+        className="btn"
       >
         Search
       </button>

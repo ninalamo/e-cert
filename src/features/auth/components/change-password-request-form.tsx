@@ -33,7 +33,7 @@ export default function ChangePasswordRequestForm() {
             <button
               type="submit"
               disabled={pending}
-              className="btn-brand disabled:opacity-50"
+              className="btn disabled:opacity-50"
             >
               {pending ? "Sending..." : "Send Password Change Link"}
             </button>

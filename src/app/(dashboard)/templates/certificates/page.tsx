@@ -23,7 +23,7 @@ export default function CertificateTemplatesPage() {
             Manage your certificate templates
           </p>
         </div>
-        <Link href="/templates/certificates/new" className="btn-brand-soft">
+        <Link href="/templates/certificates/new" className="btn">
           <PlusIcon className="size-4" />
           New Certificate
         </Link>

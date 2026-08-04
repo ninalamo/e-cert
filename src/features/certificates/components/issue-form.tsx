@@ -205,7 +205,7 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
         <button
           type="submit"
           disabled={loading}
-          className="btn-brand disabled:opacity-50"
+          className="btn disabled:opacity-50"
         >
           {loading ? "Issuing..." : "Issue Certificate"}
         </button>

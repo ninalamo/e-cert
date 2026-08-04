@@ -23,7 +23,7 @@ export default function EmailTemplatesPage() {
             Manage your email templates for certificate notifications
           </p>
         </div>
-        <Link href="/templates/emails/new" className="btn-brand">
+        <Link href="/templates/emails/new" className="btn">
           <PlusIcon className="size-4" />
           New Email
         </Link>

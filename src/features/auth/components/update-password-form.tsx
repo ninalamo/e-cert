@@ -74,7 +74,7 @@ export default function UpdatePasswordForm({ token }: { token?: string }) {
         <button
           type="submit"
           disabled={loading}
-          className="btn-brand w-full disabled:opacity-50"
+          className="btn w-full disabled:opacity-50"
         >
           {loading ? "Updating..." : "Update password"}
         </button>

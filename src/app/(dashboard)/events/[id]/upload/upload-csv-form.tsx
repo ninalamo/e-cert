@@ -541,7 +541,7 @@ export default function UploadCsvForm({
             <button
               onClick={handleSubmit}
               disabled={loading || rows.length === 0 || missingFileCount > 0}
-              className="btn-brand disabled:opacity-50"
+              className="btn disabled:opacity-50"
             >
               {loading ? "Adding..." : `Add ${rows.length} Participant(s)`}
             </button>
@@ -624,7 +624,7 @@ export default function UploadCsvForm({
                 setPage(0);
                 if (csvRef.current) csvRef.current.value = "";
               }}
-              className="btn-brand"
+              className="btn"
             >
               Upload More
             </button>
