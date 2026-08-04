@@ -382,3 +382,36 @@ export async function issueCertificatesForCompleted(
 
   return { issued, emailed, skipped: 0, results };
 }
+
+export async function revokeExpiredForEvent(
+  eventId: string,
+  userId: string,
+  client?: SupabaseClient
+): Promise<{ revoked: number; error?: string }> {
+  const c = client ?? (await createClient());
+  const { attendeeRepo, certRepo } = repos(c);
+
+  const attendees = await attendeeRepo.findByEventId(eventId);
+  const now = new Date();
+  let revoked = 0;
+
+  for (const attendee of attendees) {
+    if (!attendee.certificate_id) continue;
+    if (attendee.certificates?.revoked_at) continue;
+    if (!attendee.certificates?.expires_at) continue;
+    if (new Date(attendee.certificates.expires_at) >= now) continue;
+
+    const result = await certService.revokeCertificate(
+      attendee.certificate_id,
+      "Auto-revoked: certificate expired",
+      userId,
+      c
+    );
+
+    if (result.certificate) {
+      revoked++;
+    }
+  }
+
+  return { revoked };
+}

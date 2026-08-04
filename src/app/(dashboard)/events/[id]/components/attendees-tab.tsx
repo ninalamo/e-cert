@@ -5,7 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import type { Event } from "@/types/event";
-import { PlusIcon, UploadIcon, Loader2Icon, InfoIcon, XIcon, DownloadIcon, CheckCircle2Icon, XCircleIcon } from "lucide-react";
+import { PlusIcon, UploadIcon, Loader2Icon, InfoIcon, XIcon, DownloadIcon, CheckCircle2Icon, XCircleIcon, ShieldIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,8 @@ export default function AttendeesTab({
   const [refresh, setRefresh] = useState(0);
   const [issueSummary, setIssueSummary] = useState<IssueSummary | null>(null);
   const [confirmIssueOpen, setConfirmIssueOpen] = useState(false);
+  const [revokeBusy, setRevokeBusy] = useState(false);
+  const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
 
   useEffect(() => {
     if (!issueBusy) return;
@@ -93,6 +95,35 @@ export default function AttendeesTab({
       toast.error(err instanceof Error ? err.message : "Failed to start certificate issuance");
     } finally {
       setIssueBusy(false);
+    }
+  }
+
+  async function handleRevokeExpired() {
+    setRevokeBusy(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}/revoke-expired`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Request failed (${res.status})`);
+      }
+
+      const result = await res.json();
+      setConfirmRevokeOpen(false);
+      setRefresh((n) => n + 1);
+
+      if (result.revoked > 0) {
+        toast.success(`Revoked ${result.revoked} expired certificate(s)`);
+      } else {
+        toast.info("No expired certificates found");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to revoke expired certificates");
+    } finally {
+      setRevokeBusy(false);
     }
   }
 
@@ -244,6 +275,15 @@ export default function AttendeesTab({
               : `Issue Certificate (${selectedAttendeeIds.length})`}
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => setConfirmRevokeOpen(true)}
+          disabled={revokeBusy}
+          className="btn"
+        >
+          <ShieldIcon className="size-4" />
+          Revoke Expired
+        </button>
       </div>
       <AttendeesManager
         eventId={event.id}
@@ -255,29 +295,54 @@ export default function AttendeesTab({
         onAddDialogHandled={() => setShowAddDialog(false)}
         refreshTrigger={refresh}
       />
-      <Dialog open={confirmIssueOpen} onOpenChange={setConfirmIssueOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Issue Certificate</DialogTitle>
-            <DialogDescription>
-              Are you sure? This will make attendees that are not yet issued uneditable.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmIssueOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setConfirmIssueOpen(false);
-                handleIssueSelected();
-              }}
-            >
-              Issue Certificate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        <Dialog open={confirmIssueOpen} onOpenChange={setConfirmIssueOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Issue Certificate</DialogTitle>
+              <DialogDescription>
+                Are you sure? This will make attendees that are not yet issued uneditable.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmIssueOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  setConfirmIssueOpen(false);
+                  handleIssueSelected();
+                }}
+              >
+                Issue Certificate
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={confirmRevokeOpen} onOpenChange={setConfirmRevokeOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Revoke Expired Certificates</DialogTitle>
+              <DialogDescription>
+                Are you sure? This will revoke all expired certificates for this event.
+                Attendees will need to be re-issued if they still need a certificate.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmRevokeOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setConfirmRevokeOpen(false);
+                  handleRevokeExpired();
+                }}
+              >
+                Revoke Expired
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
   );
 }

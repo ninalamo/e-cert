@@ -104,3 +104,8 @@ export async function issueCertificatesForCompletedAction(
     attendeeIds: parsed.attendeeIds,
   });
 }
+
+export async function revokeExpiredForEventAction(eventId: string) {
+  const session = await requireRole(["admin"]);
+  return attendeeService.revokeExpiredForEvent(eventId, session.id);
+}
