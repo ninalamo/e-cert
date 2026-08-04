@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { updateEventAction } from "@/features/events/server/event.actions";
 import type { Event } from "@/types/event";
@@ -31,6 +31,13 @@ export default function TemplateCard({
   const [message, setMessage] = useState<string | null>(null);
   const [emailMessage, setEmailMessage] = useState<string | null>(null);
 
+  const displayTemplates = useMemo(() => {
+    if (currentTemplate && !templates.some((t) => t.id === currentTemplate.id)) {
+      return [currentTemplate, ...templates];
+    }
+    return templates;
+  }, [templates, currentTemplate]);
+
   async function handleSave() {
     setSaving(true);
     setMessage(null);
@@ -41,7 +48,7 @@ export default function TemplateCard({
       setMessage(result.error ?? "Failed to update template");
     } else if (result?.event) {
       const updatedTemplate =
-        templates.find((t) => t.id === (selected || undefined)) ?? null;
+        displayTemplates.find((t) => t.id === (selected || undefined)) ?? null;
       onUpdated(result.event, updatedTemplate);
       setMessage("Template updated.");
     }
@@ -92,7 +99,7 @@ export default function TemplateCard({
           className="input mb-3 disabled:opacity-50"
         >
           <option value="">No template</option>
-          {templates.map((t) => (
+          {displayTemplates.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
             </option>
