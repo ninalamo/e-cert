@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { createAuthTemplateAction, updateTemplateAction, getCurrentRoleAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import { AUTH_PROCESS_LABELS } from "@/features/templates/components/email-placeholder-field";
@@ -14,6 +14,7 @@ const AuthEmailEditor = dynamic(() => import("@/features/templates/components/au
 
 export default function NewAuthEmailPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialProcess = searchParams.get("process") as AuthProcess | null;
 
   const [role, setRole] = useState<UserRole>("staff");
@@ -64,6 +65,7 @@ export default function NewAuthEmailPage() {
         initialData={{ name: "", description: "", html_content: "", auth_process: initialProcess }}
         lockProcess={true}
         onPreview={onPreview}
+        onCancel={() => router.back()}
         onSubmit={async (data) => {
           if (createdId) {
             const result = await updateTemplateAction(createdId, data);

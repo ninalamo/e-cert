@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import {
   getTemplateAction,
   updateTemplateAction,
@@ -15,6 +16,7 @@ import { SkeletonForm } from "@/components/ui/skeleton";
 import { useEmailPreview } from "@/features/templates/hooks/use-email-preview";
 
 export default function EditAuthEmailForm({ id }: { id: string }) {
+  const router = useRouter();
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<UserRole>("staff");
@@ -79,6 +81,7 @@ export default function EditAuthEmailForm({ id }: { id: string }) {
         }}
         lockProcess={true}
         onPreview={onPreview}
+        onCancel={() => router.back()}
         onSubmit={async (data) => {
           return await updateTemplateAction(id, data);
         }}
