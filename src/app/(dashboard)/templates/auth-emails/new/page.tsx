@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { createAuthTemplateAction, getCurrentRoleAction } from "@/features/templates/server/template.actions";
+import { createAuthTemplateAction, updateTemplateAction, getCurrentRoleAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import { AUTH_PROCESS_LABELS } from "@/features/templates/components/email-placeholder-field";
 import type { AuthProcess } from "@/types/template";
@@ -17,6 +17,7 @@ export default function NewAuthEmailPage() {
   const initialProcess = searchParams.get("process") as AuthProcess | null;
 
   const [role, setRole] = useState<UserRole>("staff");
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const { onPreview, PreviewDialog } = useEmailPreview();
 
   useEffect(() => {
@@ -64,7 +65,11 @@ export default function NewAuthEmailPage() {
         lockProcess={true}
         onPreview={onPreview}
         onSubmit={async (data) => {
-          return await createAuthTemplateAction({
+          if (createdId) {
+            const result = await updateTemplateAction(createdId, data);
+            return result;
+          }
+          const result = await createAuthTemplateAction({
             organization_id: ORG_ID,
             name: data.name,
             description: data.description,
@@ -72,6 +77,10 @@ export default function NewAuthEmailPage() {
             css_content: "",
             auth_process: data.auth_process!,
           });
+          if (result.template) {
+            setCreatedId(result.template.id);
+          }
+          return result;
         }}
       />
       <PreviewDialog />

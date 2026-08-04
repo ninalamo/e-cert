@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { createTemplateAction } from "@/features/templates/server/template.actions";
+import { createTemplateAction, updateTemplateAction } from "@/features/templates/server/template.actions";
 import { ORG_ID } from "@/lib/org";
 import {
   Breadcrumb,
@@ -16,6 +17,8 @@ import {
 const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });
 
 export default function NewTemplatePage() {
+  const [createdId, setCreatedId] = useState<string | null>(null);
+
   return (
     <div className="space-y-6">
       <Breadcrumb>
@@ -48,10 +51,18 @@ export default function NewTemplatePage() {
         templateType="certificate"
         submitLabel="Save Changes"
         onSubmit={async (data) => {
-          return await createTemplateAction({
+          if (createdId) {
+            const result = await updateTemplateAction(createdId, data);
+            return result;
+          }
+          const result = await createTemplateAction({
             organization_id: ORG_ID,
             ...data,
           });
+          if (result.template) {
+            setCreatedId(result.template.id);
+          }
+          return result;
         }}
       />
     </div>
