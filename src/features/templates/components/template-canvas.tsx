@@ -1728,7 +1728,7 @@ const content = (
                       setActiveAlignGuides([]);
                       handleDragStop(el.id, d);
                     }}
-                    enableResizing={el.locked || isPlaceholderElement(el) ? false : (el.type === 'text' || el.type === 'qr' ? {
+                    enableResizing={el.locked ? false : (el.type === 'text' || el.type === 'qr' ? {
                       top: false,
                       right: true,
                       bottom: !!el.manualHeight,
@@ -2018,7 +2018,7 @@ const content = (
                 {firstSel?.type === "text" && (
                   <button
                     type="button"
-                    disabled={selCount === 0 || allSelectedLocked || isPlaceholderElement(firstSel)}
+                    disabled={selCount === 0 || allSelectedLocked}
                     onClick={() => updateSelected({ manualHeight: !elements.filter((e) => isSelected(e.id)).some((e) => e.manualHeight) })}
                     className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] disabled:opacity-40 ${elements.filter((e) => isSelected(e.id)).some((e) => e.manualHeight) ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"}`}
                     title="Toggle between auto height (fits text) and manual height (drag to resize)"
