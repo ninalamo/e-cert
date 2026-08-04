@@ -73,6 +73,11 @@ export async function getAttendeeDeletePreviewAction(id: string) {
   return attendeeService.getAttendeeDeletePreview(id);
 }
 
+export async function getAttendeeFileDataAction(id: string) {
+  await requireRole(["admin", "staff"]);
+  return attendeeService.getAttendeeFileData(id);
+}
+
 export async function bulkAddAttendeesAction(data: {
   event_id: string;
   organization_id: string;

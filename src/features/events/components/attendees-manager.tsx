@@ -9,6 +9,7 @@ import {
   removeAttendeeAction,
   removeAttendeeWithCertAction,
   getAttendeeDeletePreviewAction,
+  getAttendeeFileDataAction,
 } from "@/features/events/server/attendee.actions";
 import type { EventAttendee } from "@/types/event-attendee";
 import {
@@ -219,9 +220,10 @@ export default function AttendeesManager({
       metadata.file_name = editFile.name;
       metadata.file_type = editFile.type;
     } else if (editMode === "file" && !editFile) {
-      metadata.file_data = editTarget.metadata?.file_data ?? null;
-      metadata.file_name = editTarget.metadata?.file_name ?? null;
-      metadata.file_type = editTarget.metadata?.file_type ?? null;
+      const fileData = await getAttendeeFileDataAction(editTarget.id);
+      metadata.file_data = fileData?.file_data ?? null;
+      metadata.file_name = fileData?.file_name ?? null;
+      metadata.file_type = fileData?.file_type ?? null;
     } else if (editMode === "template") {
       metadata.file_data = null;
       metadata.file_name = null;
