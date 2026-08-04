@@ -109,3 +109,15 @@ export async function revokeExpiredForEventAction(eventId: string) {
   const session = await requireRole(["admin"]);
   return attendeeService.revokeExpiredForEvent(eventId, session.id);
 }
+
+export async function reissueCertificatesForSelectedAction(
+  eventId: string,
+  attendeeIds: string[]
+) {
+  const session = await requireRole(["admin"]);
+  return attendeeService.reissueCertificatesForSelected(
+    eventId,
+    attendeeIds,
+    session.id
+  );
+}

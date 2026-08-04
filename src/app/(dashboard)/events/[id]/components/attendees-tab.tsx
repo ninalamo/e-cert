@@ -5,7 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import type { Event } from "@/types/event";
-import { PlusIcon, UploadIcon, Loader2Icon, InfoIcon, XIcon, DownloadIcon, CheckCircle2Icon, XCircleIcon, ShieldIcon } from "lucide-react";
+import { PlusIcon, UploadIcon, Loader2Icon, InfoIcon, XIcon, DownloadIcon, CheckCircle2Icon, XCircleIcon, ShieldIcon, RefreshCwIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,8 +53,10 @@ export default function AttendeesTab({
   const [refresh, setRefresh] = useState(0);
   const [issueSummary, setIssueSummary] = useState<IssueSummary | null>(null);
   const [confirmIssueOpen, setConfirmIssueOpen] = useState(false);
-  const [revokeBusy, setRevokeBusy] = useState(false);
+  const [confirmReissueOpen, setConfirmReissueOpen] = useState(false);
   const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
+  const [reissueBusy, setReissueBusy] = useState(false);
+  const [revokeBusy, setRevokeBusy] = useState(false);
 
   useEffect(() => {
     if (!issueBusy) return;
@@ -125,6 +127,38 @@ export default function AttendeesTab({
     } finally {
       setRevokeBusy(false);
     }
+  }
+
+  async function handleReissueSelected() {
+    setReissueBusy(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}/reissue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendeeIds: selectedAttendeeIds }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Request failed (${res.status})`);
+      }
+
+      const result = await res.json();
+      setConfirmReissueOpen(false);
+      setRefresh((n) => n + 1);
+      setIssueSummary(null);
+
+      toast.success(`Re-issued ${result.reissued} certificate(s)`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to re-issue certificates");
+    } finally {
+      setReissueBusy(false);
+    }
+  }
+
+  function getIssueDialogDescription(): string {
+    if (selectedAttendeeIds.length === 0) return "";
+    return "Are you sure? This will issue certificates to attendees that are not yet issued. Attendees that already have a certificate will be re-issued with updated details while keeping the same certificate number.";
   }
 
   function downloadCsv() {
@@ -253,7 +287,7 @@ export default function AttendeesTab({
           aria-disabled={!canManageAttendees}
           onClick={(e) => { if (!canManageAttendees) e.preventDefault(); }}
           title={canManageAttendees ? undefined : "Attendees can only be imported while the event is in Draft or Active"}
-          className={`btn ${!canManageAttendees ? "opacity-50 pointer-events-none cursor-not-allowed" : ""}`}
+          className={`btn-brand ${!canManageAttendees ? "opacity-50 pointer-events-none cursor-not-allowed" : ""}`}
         >
           <UploadIcon className="size-4" />
           Bulk Import
@@ -279,7 +313,7 @@ export default function AttendeesTab({
           type="button"
           onClick={() => setConfirmRevokeOpen(true)}
           disabled={revokeBusy}
-          className="btn"
+          className="btn-brand"
         >
           <ShieldIcon className="size-4" />
           Revoke Expired
@@ -300,7 +334,7 @@ export default function AttendeesTab({
             <DialogHeader>
               <DialogTitle>Issue Certificate</DialogTitle>
               <DialogDescription>
-                Are you sure? This will make attendees that are not yet issued uneditable.
+                {getIssueDialogDescription()}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -314,6 +348,32 @@ export default function AttendeesTab({
                 }}
               >
                 Issue Certificate
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={confirmReissueOpen} onOpenChange={setConfirmReissueOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Re/Issue Certificate</DialogTitle>
+              <DialogDescription>
+                This will re-issue certificates for the selected attendees.
+                Existing certificates will be updated with new details while keeping the same certificate number.
+                Any changes to the certificate template or metadata will be applied.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmReissueOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setConfirmReissueOpen(false);
+                  handleReissueSelected();
+                }}
+              >
+                Re/Issue Certificate
               </Button>
             </DialogFooter>
           </DialogContent>
