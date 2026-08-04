@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
+import { countExpired } from "@/lib/certificate-utils";
 import {
   getCertificatesWithEventAction,
   deleteCertificateAction,
@@ -152,6 +153,8 @@ export default function CertificatesList({
     });
   }, [certificates, search, eventFilter, statusFilter]);
 
+  const expiredCount = useMemo(() => countExpired(certificates), [certificates]);
+
   const events = useMemo(() => {
     const eventMap = new Map<string, string>();
     certificates.forEach((c) => {
@@ -216,7 +219,7 @@ export default function CertificatesList({
         </div>
       )}
 
-      {isAdmin && (
+      {isAdmin && expiredCount > 0 && (
         <div className="flex justify-end">
           <button
             type="button"
@@ -224,7 +227,7 @@ export default function CertificatesList({
             className="btn bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40"
           >
             <ShieldIcon className="size-4" />
-            Revoke Expired
+            Revoke Expired ({expiredCount})
           </button>
         </div>
       )}

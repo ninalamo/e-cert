@@ -414,7 +414,30 @@ export async function revokeExpiredForEvent(
     }
   }
 
-  return { revoked };
+   return { revoked };
+ }
+
+export async function getExpiredCountForEvent(
+  eventId: string,
+  client?: SupabaseClient
+): Promise<number> {
+  const c = client ?? (await createClient());
+  const { attendeeRepo } = repos(c);
+
+  const attendees = await attendeeRepo.findByEventId(eventId);
+  const now = new Date();
+
+  let count = 0;
+  for (const attendee of attendees) {
+    if (!attendee.certificate_id) continue;
+    const cert = attendee.certificates;
+    if (!cert) continue;
+    if (cert.revoked_at) continue;
+    if (!cert.expires_at) continue;
+    if (new Date(cert.expires_at) >= now) continue;
+    count++;
+  }
+  return count;
 }
 
 export async function reissueCertificatesForSelected(

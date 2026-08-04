@@ -57,6 +57,7 @@ export default function AttendeesTab({
   const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
   const [reissueBusy, setReissueBusy] = useState(false);
   const [revokeBusy, setRevokeBusy] = useState(false);
+  const [expiredCount, setExpiredCount] = useState(0);
 
   useEffect(() => {
     if (!issueBusy) return;
@@ -66,6 +67,32 @@ export default function AttendeesTab({
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [issueBusy]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(`/api/events/${event.id}/revoke-expired`)
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error ?? `Request failed (${res.status})`);
+        }
+        return res.json();
+      })
+      .then((json) => {
+        if (!cancelled) {
+          const n = Number(json?.expired);
+          setExpiredCount(Number.isFinite(n) ? n : 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setExpiredCount(0);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refresh, event.id]);
 
   async function handleIssueSelected() {
     setIssueBusy(true);
@@ -309,15 +336,17 @@ export default function AttendeesTab({
               : "Issue Certificate"}
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => setConfirmRevokeOpen(true)}
-          disabled={revokeBusy}
-          className="btn bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40"
-        >
-          <ShieldIcon className="size-4" />
-          Revoke Expired
-        </button>
+        {isAdmin && expiredCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setConfirmRevokeOpen(true)}
+            disabled={revokeBusy}
+            className="btn bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40"
+          >
+            <ShieldIcon className="size-4" />
+            Revoke Expired ({expiredCount})
+          </button>
+        )}
       </div>
       <AttendeesManager
         eventId={event.id}
