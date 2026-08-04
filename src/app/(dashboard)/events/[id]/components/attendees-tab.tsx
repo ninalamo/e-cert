@@ -277,7 +277,7 @@ export default function AttendeesTab({
           onClick={() => canManageAttendees && setShowAddDialog(true)}
           disabled={!canManageAttendees}
           title={canManageAttendees ? undefined : "Attendees can only be added while the event is in Draft or Active"}
-          className="btn-brand"
+          className="btn"
         >
           <PlusIcon className="size-4" />
           Add Attendee
@@ -302,11 +302,11 @@ export default function AttendeesTab({
                 ? undefined
                 : "Certificates can only be issued while the event is Active"
             }
-            className="btn-brand"
+            className="btn"
           >
             {issueBusy
               ? "Issuing..."
-              : `Issue Certificate (${selectedAttendeeIds.length})`}
+              : "Issue Certificate"}
           </button>
         )}
         <button
