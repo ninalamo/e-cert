@@ -1,7 +1,7 @@
 "use client";
 
-import { setImpersonateRole } from "@/features/demo/server/demo.actions";
-import type { UserRole } from "@/types/organization";
+import { setImpersonateUser } from "@/features/demo/server/demo.actions";
+import type { ManagedUser } from "@/features/users/server/user.service";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -10,25 +10,27 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-const roles: { value: UserRole; label: string; color: string }[] = [
-  { value: "admin", label: "Admin", color: "bg-red-500" },
-  { value: "staff", label: "Staff", color: "bg-blue-500" },
-  { value: "participant", label: "Participant", color: "bg-green-500" },
-];
+export default function RoleSwitcher({
+  currentUser,
+  participants,
+}: {
+  currentUser: { id: string; name: string | null; email: string | null; role: string } | null;
+  participants: ManagedUser[];
+}) {
+  const current = participants.find((p) => p.id === currentUser?.id) ?? null;
 
-export default function RoleSwitcher({ currentRole }: { currentRole: UserRole }) {
-  const current = roles.find((r) => r.value === currentRole) ?? roles[0];
-
-  async function switchRole(role: UserRole) {
-    await setImpersonateRole(role);
+  async function switchUser(userId: string | null) {
+    await setImpersonateUser(userId);
     window.location.reload();
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-secondary hover:bg-surface-hover transition-colors outline-none">
-        <span className={`size-2 rounded-full ${current.color}`} />
-        <span className="hidden sm:inline font-medium">{current.label}</span>
+        <span className="size-2 rounded-full bg-green-500" />
+        <span className="hidden sm:inline font-medium">
+          {current ? (current.name ?? current.email) : "No impersonation"}
+        </span>
         <svg
           className="size-4 shrink-0"
           fill="none"
@@ -40,22 +42,38 @@ export default function RoleSwitcher({ currentRole }: { currentRole: UserRole })
         </svg>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8}>
-        {roles.map((role) => (
+        {participants.map((user) => (
           <DropdownMenuItem
-            key={role.value}
+            key={user.id}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              switchRole(role.value);
+              switchUser(user.id);
             }}
           >
-            <span className={`size-2 rounded-full ${role.color}`} />
-            {role.label}
-            {currentRole === role.value && (
+            <span className="flex flex-col">
+              <span className="text-sm">{user.name ?? user.email}</span>
+              <span className="text-xs text-tertiary">{user.email}</span>
+            </span>
+            {currentUser?.id === user.id && (
               <span className="ml-auto text-xs text-tertiary">current</span>
             )}
           </DropdownMenuItem>
         ))}
+        {currentUser && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                switchUser(null);
+              }}
+            >
+              <span className="text-sm text-tertiary">Clear impersonation</span>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
