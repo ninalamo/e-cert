@@ -1716,6 +1716,7 @@ const content = (
                     key={el.id}
                     size={{ width: el.w, height: el.h }}
                     position={{ x: el.x, y: el.y }}
+                    scale={zoom}
                     dragHandleClassName="cert-drag"
                     disableDragging={!!el.locked}
                     onDragStart={() => handleDragStart(el.id)}
