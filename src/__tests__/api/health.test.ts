@@ -67,7 +67,7 @@ describe("POST /api/health invalidation", () => {
 
     const req = createPostRequest("http://localhost:3000/api/health", {
       email: "admin@lyceumalabang.edu.ph",
-      password: "password123",
+      password: "Password123!",
     });
     const res = await POST(req);
 
@@ -80,7 +80,7 @@ describe("POST /api/health", () => {
   it("shows email is wrong when email is wrong", async () => {
     const req = createPostRequest("http://localhost:3000/api/health", {
       email: "wrong@example.com",
-      password: "password123",
+      password: "Password123!",
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
@@ -127,7 +127,7 @@ describe("POST /api/health", () => {
 
     const req = createPostRequest("http://localhost:3000/api/health", {
       email: "admin@lyceumalabang.edu.ph",
-      password: "password123",
+      password: "Password123!",
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
@@ -155,7 +155,7 @@ describe("POST /api/health", () => {
 
     const req = createPostRequest("http://localhost:3000/api/health", {
       email: "admin@lyceumalabang.edu.ph",
-      password: "password123",
+      password: "Password123!",
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
@@ -175,7 +175,7 @@ describe("POST /api/health", () => {
 
     const req = createPostRequest("http://localhost:3000/api/health", {
       email: "admin@lyceumalabang.edu.ph",
-      password: "password123",
+      password: "Password123!",
     });
     const res = await POST(req);
     expect(res.status).toBe(200);

@@ -29,7 +29,7 @@ vi.mock("@/lib/supabase", () => ({
 
 vi.mock("@/lib/seed", () => ({
   ORG_ID: "d4444444-4444-4444-4444-444444444444",
-  SEED_PASSWORD: "password123",
+  SEED_PASSWORD: "Password123!",
   SEED_USERS: [
     { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", email: "admin@lyceumalabang.edu.ph", name: "Admin User", role: "admin" },
     { id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2", email: "staff@lyceumalabang.edu.ph", name: "Staff User", role: "staff" },

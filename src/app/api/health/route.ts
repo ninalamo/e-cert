@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
   }
 
   const envEmail = (process.env.DEFAULT_ADMIN_EMAIL || SEED_USERS.find((user) => user.role === "admin")?.email || "admin@lyceumalabang.edu.ph").trim();
-  const envPassword = (process.env.DEFAULT_ADMIN_PASSWORD || SEED_PASSWORD || "password123").trim();
+  const envPassword = (process.env.DEFAULT_ADMIN_PASSWORD || SEED_PASSWORD || "Password123!").trim();
   const submittedEmail = (email ?? "").trim();
   const submittedPassword = (password ?? "").trim();
 

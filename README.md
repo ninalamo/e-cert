@@ -89,9 +89,9 @@ All authenticated users (any role) can access:
 
 | Email | Password | Role |
 |-------|----------|------|
-| admin@lyceumalabang.edu.ph | password123 | admin |
-| staff@lyceumalabang.edu.ph | password123 | staff |
-| participant@lyceumalabang.edu.ph | password123 | participant |
+| admin@lyceumalabang.edu.ph | Password123! | admin |
+| staff@lyceumalabang.edu.ph | Password123! | staff |
+| participant@lyceumalabang.edu.ph | Password123! | participant |
 
 Reseed via `PUT http://localhost:3000/api/health` (see [Health API](#health-api) below).
 
