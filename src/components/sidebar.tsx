@@ -49,7 +49,8 @@ const navItems: NavItem[] = [
     icon: <TemplatesIcon />,
     children: [
       { label: "Certificates", href: "/templates/certificates" },
-      { label: "Emails", href: "/templates/emails" },
+      // HIDDEN: Email template management — system uses default email template
+      // { label: "Emails", href: "/templates/emails" },
     ],
     roles: ["admin", "staff"],
   },
