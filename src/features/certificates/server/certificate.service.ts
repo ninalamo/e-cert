@@ -362,3 +362,78 @@ export async function getCertificatePdfBuffer(certificate: Certificate): Promise
 
   return { data: null, error: "Certificate PDF not found" };
 }
+
+export async function autoRevokeExpiredCertificates(client?: SupabaseClient): Promise<{ revoked: number; error?: string }> {
+  const supabase = client ?? (await createClient());
+  const certRepo = repo(supabase);
+
+  const expired = await certRepo.findMany(
+    { revoked_at: null },
+    { columns: "id, certificate_number, recipient_name, recipient_email, file_path, organization_id", orderBy: "created_at", ascending: true }
+  );
+
+  const now = new Date().toISOString();
+  let revoked = 0;
+
+  for (const cert of expired) {
+    if (cert.expires_at && new Date(cert.expires_at) < new Date()) {
+      const updated = await certRepo.update(cert.id, {
+        revoked_at: now,
+        revoke_reason: "Auto-revoked: certificate expired",
+      } as Partial<Certificate>);
+
+      if (updated) {
+        const { EventAttendeeRepository } = await import("@/features/events/server/attendee.repository");
+        const attendeeRepo = new EventAttendeeRepository(supabase);
+        const linkedAttendees = await attendeeRepo.findMany({ certificate_id: cert.id });
+        for (const attendee of linkedAttendees) {
+          await attendeeRepo.update(attendee.id, { certificate_id: null });
+        }
+
+        await logAudit({
+          organization_id: cert.organization_id ?? ORG_ID,
+          action: "certificate.revoked",
+          source: "system",
+          entity_type: "certificate",
+          entity_id: cert.id,
+          details: {
+            certificate_number: cert.certificate_number,
+            recipient_name: cert.recipient_name,
+            recipient_email: cert.recipient_email,
+            reason: "Auto-revoked: certificate expired",
+          },
+        });
+
+        if (cert.file_path) {
+          try {
+            const { getStorageProvider } = await import("@/lib/storage");
+            const storage = getStorageProvider();
+            await storage.deleteFile(cert.file_path);
+          } catch (err) {
+            console.error(`[autoRevokeExpired] Failed to delete stored file for ${cert.id}:`, err);
+          }
+        }
+
+        revoked++;
+      }
+    }
+  }
+
+  return { revoked };
+}
+
+export async function getExpiringCertificates(days: number, client?: SupabaseClient): Promise<Certificate[]> {
+  const supabase = client ?? (await createClient());
+  const certRepo = repo(supabase);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() + days);
+
+  const expired = await certRepo.findMany(
+    { revoked_at: null },
+    { columns: "id, certificate_number, recipient_name, recipient_email, expires_at, organization_id, file_path" }
+  );
+
+  return expired.filter(
+    (c) => c.expires_at && new Date(c.expires_at) < cutoff && new Date(c.expires_at) >= new Date()
+  );
+}

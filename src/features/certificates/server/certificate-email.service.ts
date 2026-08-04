@@ -200,3 +200,57 @@ export async function getEmailLogs(
   const emailRepo = new CertificateEmailRepository(client ?? await getDefaultClient());
   return emailRepo.findByCertificateId(certificateId);
 }
+
+export async function sendExpiryNotification(
+  certificates: Certificate[],
+  userId: string,
+  client?: SupabaseClient
+): Promise<{ success: boolean; error?: string }> {
+  if (certificates.length === 0) return { success: true };
+
+  const supabase = client ?? await getDefaultClient();
+  const orgId = certificates[0].organization_id;
+  if (!orgId) return { success: false, error: "Missing organization_id" };
+
+  const { data: users } = await supabase
+    .from("users")
+    .select("id, email, name")
+    .eq("organization_id", orgId)
+    .in("role", ["admin", "staff"]);
+
+  if (!users || users.length === 0) return { success: false, error: "No admin users found" };
+
+  const certList = certificates
+    .map((c) => `- ${c.certificate_number}: ${c.recipient_name} (${c.recipient_email}) — expires ${c.expires_at ? new Date(c.expires_at).toLocaleDateString() : "unknown"}`)
+    .join("\n");
+
+  const subject = `Expiring Certificates Notification — ${certificates.length} certificate(s) expiring within 30 days`;
+  const html = `<div style="font-family:Georgia,serif;max-width:600px;margin:40px auto;padding:24px;border:1px solid #d4d4d8;background:#fff;"><h2 style="color:#18181b;">Certificate Expiry Notice</h2><p>The following certificates will expire within 30 days:</p><pre style="background:#fafafa;padding:16px;border-radius:4px;font-size:14px;white-space:pre-wrap;">${certList}</pre><p style="color:#71717a;font-size:13px;">Please take appropriate action for each certificate.</p></div>`;
+
+  const emailProvider = getEmailProvider();
+  const adminEmails = users.map((u) => u.email!);
+
+  try {
+    await emailProvider.sendEmail({
+      to: adminEmails.join(","),
+      subject,
+      html,
+    });
+
+    const emailRepo = new CertificateEmailRepository(supabase);
+    await emailRepo.create({
+      certificate_id: certificates[0].id,
+      sent_to: adminEmails.join(","),
+      subject,
+      sent_by: userId,
+      status: "sent",
+      error_message: null,
+      sent_at: new Date().toISOString(),
+    } as Partial<CertificateEmailLog>);
+
+    return { success: true };
+  } catch (error) {
+    console.error("[EmailService] Failed to send expiry notification:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}

@@ -37,6 +37,11 @@ export async function GET(
     return NextResponse.json({ error: "Certificate has been revoked" }, { status: 410 });
   }
 
+  if (certificate.expires_at && new Date(certificate.expires_at) < new Date()) {
+    console.warn(`[download] Certificate expired: ${id}`);
+    return NextResponse.json({ error: "Certificate has expired" }, { status: 410 });
+  }
+
   const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
 
   const cachedPdf = meta.rendered_pdf;

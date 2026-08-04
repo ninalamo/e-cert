@@ -112,6 +112,7 @@ async function issueForAttendee(
           expires_at: event.valid_until ?? undefined,
           metadata: { attendee_id: attendee.id },
           skip_pdf: true,
+          attendee_certificate_number: attendee.certificate_number ?? undefined,
           ...(hasUpload
             ? { existing_pdf_base64: attendee.metadata!.file_data as string }
             : {}),

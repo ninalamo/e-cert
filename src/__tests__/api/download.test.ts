@@ -118,6 +118,20 @@ describe("GET /api/certificates/[id]/download", () => {
     expect(res.status).toBe(410);
   });
 
+  it("returns 410 when certificate is expired", async () => {
+    vi.mocked(getCurrentSession).mockResolvedValue({
+      id: "admin-1", email: "admin@test.com", name: "Admin", role: "admin",
+    });
+    getMockSupabase()._setHandler("certificates", mockQueryResult({
+      ...baseCert,
+      expires_at: "2024-12-31T00:00:00Z",
+    }));
+
+    const req = createNextRequest("http://localhost:3000/api/certificates/cert-1/download");
+    const res = await GET(req, { params: Promise.resolve({ id: "cert-1" }) });
+    expect(res.status).toBe(410);
+  });
+
   it("returns 404 when no PDF source is available", async () => {
     vi.mocked(getCurrentSession).mockResolvedValue({
       id: "admin-1", email: "admin@test.com", name: "Admin", role: "admin",

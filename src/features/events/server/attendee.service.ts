@@ -318,6 +318,7 @@ export async function issueCertificatesForCompleted(
           expires_at: event.valid_until ?? undefined,
           metadata: { attendee_id: attendee.id },
           skip_pdf: true,
+          attendee_certificate_number: attendee.certificate_number ?? undefined,
           ...(existing_pdf_base64 ? { existing_pdf_base64 } : {}),
           event: {
             name: event.name,

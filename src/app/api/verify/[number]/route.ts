@@ -60,8 +60,10 @@ export async function GET(
     client: supabaseAdmin,
   }).catch(() => {});
 
+  const valid = status === "active";
+
   return NextResponse.json({
-    valid: true,
+    valid,
     certificate_number: certificate.certificate_number,
     issued_date: certificate.issued_at,
     valid_until: certificate.expires_at,
