@@ -28,6 +28,7 @@ export async function issueCertificate(
     user_id?: string;
     skip_pdf?: boolean;
     existing_pdf_base64?: string;
+    attendee_certificate_number?: string;
     event?: {
       name?: string | null;
       event_date?: string | null;
@@ -41,7 +42,8 @@ export async function issueCertificate(
 ): Promise<{ certificate: Certificate | null; error?: string; emailSent?: boolean }> {
   const client = clientOverride ?? (await createClient());
   const certRepo = repo(client);
-  const number = await generateCertificateNumber({
+
+  const number = data.attendee_certificate_number ?? await generateCertificateNumber({
     organizationId: data.organization_id,
     pattern: data.event?.certificate_number_pattern ?? null,
     client,
@@ -276,10 +278,19 @@ export async function revokeCertificate(
 }
 
 export async function deleteCertificate(id: string, userId?: string, client?: SupabaseClient): Promise<{ certificate: Certificate | null; error?: string }> {
-  const certRepo = repo(client ?? (await createClient()));
+  const supabase = client ?? (await createClient());
+  const certRepo = repo(supabase);
   const existing = await certRepo.findById(id);
   if (!existing) {
     return { certificate: null, error: "Certificate not found" };
+  }
+
+  // Nullify linked attendee's certificate_id before deleting
+  const { EventAttendeeRepository } = await import("@/features/events/server/attendee.repository");
+  const attendeeRepo = new EventAttendeeRepository(supabase);
+  const linkedAttendees = await attendeeRepo.findMany({ certificate_id: id });
+  for (const attendee of linkedAttendees) {
+    await attendeeRepo.update(attendee.id, { certificate_id: null });
   }
 
   if (existing.file_path) {
