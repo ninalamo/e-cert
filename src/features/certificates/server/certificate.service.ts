@@ -119,23 +119,24 @@ export async function issueCertificate(
     }
   }
 
-  const { data: certificate, error } = await certRepo.create({
-    organization_id: data.organization_id,
-    event_id: data.event_id ?? null,
-    template_id: data.template_id ?? null,
-    recipient_name: data.recipient_name,
-    recipient_email: data.recipient_email,
-    certificate_number: number,
-    expires_at: data.expires_at ?? null,
-    file_path: null,
-    metadata,
-  } as Partial<Certificate>);
+  const { data: rpcResult, error } = await client.rpc("issue_certificate_atomic", {
+    p_org_id: data.organization_id,
+    p_event_id: data.event_id ?? null,
+    p_template_id: data.template_id ?? null,
+    p_recipient_name: data.recipient_name,
+    p_recipient_email: data.recipient_email,
+    p_certificate_number: number,
+    p_expires_at: data.expires_at ?? null,
+    p_metadata: metadata,
+  }).single();
 
-  if (!certificate) {
-    return { certificate: null, error: error ?? "Failed to issue certificate" };
+  if (error || !rpcResult) {
+    return { certificate: null, error: error?.message ?? "Failed to issue certificate" };
   }
 
-  await logAudit({
+  const certificate = rpcResult as Certificate;
+
+  logAudit({
     organization_id: data.organization_id,
     user_id: data.user_id,
     action: "certificate.issued",
@@ -149,7 +150,7 @@ export async function issueCertificate(
       event_id: data.event_id,
       template_id: data.template_id,
     },
-  });
+  }).catch(console.error);
 
   if (data.send_email && data.user_id) {
     const { sendCertificateEmail } = await import("./certificate-email.service");

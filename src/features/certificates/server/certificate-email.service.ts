@@ -9,6 +9,8 @@ import { ORG_NAME } from "@/lib/org";
 import { env } from "@/lib/env";
 import { logAudit } from "@/features/audit/server/audit.service";
 import type { CertificateEmailLog } from "@/types/certificate-email";
+import type { Certificate } from "@/types/certificate";
+import type { Event } from "@/types/event";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 async function getDefaultClient(): Promise<SupabaseClient> {
@@ -25,7 +27,12 @@ export async function sendCertificateEmail(
   certificateId: string,
   userId: string,
   client?: SupabaseClient,
-  options?: { skip_pdf?: boolean }
+  options?: {
+    skip_pdf?: boolean;
+    certificate?: Certificate;
+    event?: Event;
+    orgName?: string;
+  }
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = client ?? await getDefaultClient();
   const certRepo = new CertificateRepository(supabase);
@@ -33,14 +40,14 @@ export async function sendCertificateEmail(
   const eventRepo = new EventRepository(supabase);
   const templateRepo = new CertificateTemplateRepository(supabase);
   const existingLog = await emailRepo.findLatestByCertificateId(certificateId);
-  const certificate = await certRepo.findById(certificateId);
+  const certificate = options?.certificate ?? await certRepo.findById(certificateId);
   if (!certificate) {
     console.error(`[EmailService] Certificate not found: ${certificateId}`);
     return { success: false, error: "Certificate not found" };
   }
 
-  let orgName = ORG_NAME;
-  if (certificate.organization_id) {
+  let orgName = options?.orgName ?? ORG_NAME;
+  if (!options?.orgName && certificate.organization_id) {
     const { data: org } = await supabase
       .from("organizations")
       .select("name")
@@ -54,10 +61,8 @@ export async function sendCertificateEmail(
   const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
 
   let eventName = "Certificate";
-  if (certificate.event_id) {
-    const event = await eventRepo.findById(certificate.event_id);
-    if (event?.name) eventName = event.name;
-  }
+  const event = options?.event ?? (certificate.event_id ? await eventRepo.findById(certificate.event_id) : null);
+  if (event?.name) eventName = event.name;
   const subject = `Your ${eventName} Certificate is Ready`;
 
   let attachments: { filename: string; content: Buffer; contentType: string }[] | undefined;
@@ -79,29 +84,17 @@ export async function sendCertificateEmail(
 
   // Check if event has a custom email template
   let html: string;
-  if (certificate.event_id) {
-    const event = await eventRepo.findById(certificate.event_id);
-    if (event?.email_template_id) {
-      const emailTemplate = await templateRepo.findById(event.email_template_id);
-      if (emailTemplate && emailTemplate.type === 'email') {
-        html = renderEmailTemplate(emailTemplate.html_content, {
-          recipient_name: certificate.recipient_name,
-          certificate_number: certificate.certificate_number,
-          issued_date: new Date(certificate.issued_at).toLocaleDateString(),
-          download_url: viewUrl,
-          verify_url: verifyUrl,
-          org_name: orgName,
-        });
-      } else {
-        html = certificateEmailHtml({
-          recipientName: certificate.recipient_name,
-          certificateNumber: certificate.certificate_number,
-          issuedDate: new Date(certificate.issued_at).toLocaleDateString(),
-          downloadUrl: viewUrl,
-          verifyUrl,
-          orgName,
-        });
-      }
+  if (certificate.event_id && event?.email_template_id) {
+    const emailTemplate = await templateRepo.findById(event.email_template_id);
+    if (emailTemplate && emailTemplate.type === 'email') {
+      html = renderEmailTemplate(emailTemplate.html_content, {
+        recipient_name: certificate.recipient_name,
+        certificate_number: certificate.certificate_number,
+        issued_date: new Date(certificate.issued_at).toLocaleDateString(),
+        download_url: viewUrl,
+        verify_url: verifyUrl,
+        org_name: orgName,
+      });
     } else {
       html = certificateEmailHtml({
         recipientName: certificate.recipient_name,
@@ -152,7 +145,7 @@ export async function sendCertificateEmail(
       console.error("[EmailService] Failed to write email log:", logErr);
     }
 
-    await logAudit({
+    logAudit({
       organization_id: certificate.organization_id,
       user_id: userId,
       action: "email.sent",
@@ -160,7 +153,7 @@ export async function sendCertificateEmail(
       entity_type: "email",
       entity_id: certificateId,
       details: { sent_to: certificate.recipient_email, subject },
-    });
+    }).catch(console.error);
 
     return { success: true };
   } catch (error) {
@@ -186,7 +179,7 @@ export async function sendCertificateEmail(
       console.error("[EmailService] Failed to write email log:", logErr);
     }
 
-    await logAudit({
+    logAudit({
       organization_id: certificate.organization_id,
       user_id: userId,
       action: "email.failed",
@@ -194,7 +187,7 @@ export async function sendCertificateEmail(
       entity_type: "email",
       entity_id: certificateId,
       details: { sent_to: certificate.recipient_email, subject, error: errorMessage },
-    });
+    }).catch(console.error);
 
     return { success: false, error: errorMessage };
   }
