@@ -86,7 +86,7 @@ export default function ComponentsSidebar({
         </div>
       </button>
       {expanded && (
-        <div className="overflow-y-auto flex-1 min-h-0 max-h-[400px] divide-y divide-[var(--color-border)]">
+        <div className="overflow-y-auto flex-1 min-h-0 divide-y divide-[var(--color-border)]">
           {items.length === 0 ? (
             <p className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
               {emptyMessage}
