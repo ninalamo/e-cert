@@ -92,7 +92,7 @@ export default function ComponentsSidebar({
               {emptyMessage}
             </p>
           ) : (
-            items.map((item, index) => (
+            [...items].reverse().map((item, index) => (
               <div
                 key={item.id}
                 className={`flex items-center gap-1.5 px-2 py-2 text-xs cursor-pointer transition-all select-none ${
@@ -128,7 +128,8 @@ export default function ComponentsSidebar({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (index > 0) onReorder?.(index, index - 1);
+                      const origIdx = items.length - 1 - index;
+                      if (origIdx < items.length - 1) onReorder?.(origIdx, origIdx + 1);
                     }}
                     disabled={index === 0 || disabled}
                     className="rounded p-0.5 hover:bg-[var(--color-surface-secondary)] disabled:opacity-30"
@@ -140,7 +141,8 @@ export default function ComponentsSidebar({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (index < items.length - 1) onReorder?.(index, index + 1);
+                      const origIdx = items.length - 1 - index;
+                      if (origIdx > 0) onReorder?.(origIdx, origIdx - 1);
                     }}
                     disabled={index === items.length - 1 || disabled}
                     className="rounded p-0.5 hover:bg-[var(--color-surface-secondary)] disabled:opacity-30"
