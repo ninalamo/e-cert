@@ -77,7 +77,7 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
         <button
           onClick={handleSend}
           disabled={sending}
-          className="btn-brand shrink-0"
+          className="btn shrink-0"
         >
           {sending ? "Sending..." : "Email Certificate to Participant"}
         </button>

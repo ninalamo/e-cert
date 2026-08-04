@@ -280,7 +280,7 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
                 </span>
                 <Link
                   href={previewTemplate.type === 'email' ? `/templates/emails/${previewTemplate.id}` : `/templates/certificates/${previewTemplate.id}`}
-                  className="btn-brand text-xs px-4 py-2"
+                  className="btn text-xs px-4 py-2"
                 >
                   Edit Template
                 </Link>

@@ -74,7 +74,7 @@ describe("GET /api/verify/[number]", () => {
 
     const body = await res.json();
     expect(body.status).toBe("revoked");
-    expect(body.valid).toBe(true);
+    expect(body.valid).toBe(false);
   });
 
   it("returns status expired when expires_at is in the past", async () => {
@@ -93,6 +93,7 @@ describe("GET /api/verify/[number]", () => {
 
     const body = await res.json();
     expect(body.status).toBe("expired");
+    expect(body.valid).toBe(false);
     expect(body.valid_until).toBe("2024-12-31T00:00:00Z");
   });
 

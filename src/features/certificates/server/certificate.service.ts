@@ -28,6 +28,7 @@ export async function issueCertificate(
     user_id?: string;
     skip_pdf?: boolean;
     existing_pdf_base64?: string;
+    attendee_certificate_number?: string;
     event?: {
       name?: string | null;
       event_date?: string | null;
@@ -41,7 +42,8 @@ export async function issueCertificate(
 ): Promise<{ certificate: Certificate | null; error?: string; emailSent?: boolean }> {
   const client = clientOverride ?? (await createClient());
   const certRepo = repo(client);
-  const number = await generateCertificateNumber({
+
+  const number = data.attendee_certificate_number ?? await generateCertificateNumber({
     organizationId: data.organization_id,
     pattern: data.event?.certificate_number_pattern ?? null,
     client,
@@ -119,23 +121,24 @@ export async function issueCertificate(
     }
   }
 
-  const { data: certificate, error } = await certRepo.create({
-    organization_id: data.organization_id,
-    event_id: data.event_id ?? null,
-    template_id: data.template_id ?? null,
-    recipient_name: data.recipient_name,
-    recipient_email: data.recipient_email,
-    certificate_number: number,
-    expires_at: data.expires_at ?? null,
-    file_path: null,
-    metadata,
-  } as Partial<Certificate>);
+  const { data: rpcResult, error } = await client.rpc("issue_certificate_atomic", {
+    p_org_id: data.organization_id,
+    p_event_id: data.event_id ?? null,
+    p_template_id: data.template_id ?? null,
+    p_recipient_name: data.recipient_name,
+    p_recipient_email: data.recipient_email,
+    p_certificate_number: number,
+    p_expires_at: data.expires_at ?? null,
+    p_metadata: metadata,
+  }).single();
 
-  if (!certificate) {
-    return { certificate: null, error: error ?? "Failed to issue certificate" };
+  if (error || !rpcResult) {
+    return { certificate: null, error: error?.message ?? "Failed to issue certificate" };
   }
 
-  await logAudit({
+  const certificate = rpcResult as Certificate;
+
+  logAudit({
     organization_id: data.organization_id,
     user_id: data.user_id,
     action: "certificate.issued",
@@ -149,7 +152,7 @@ export async function issueCertificate(
       event_id: data.event_id,
       template_id: data.template_id,
     },
-  });
+  }).catch(console.error);
 
   if (data.send_email && data.user_id) {
     const { sendCertificateEmail } = await import("./certificate-email.service");
@@ -275,10 +278,19 @@ export async function revokeCertificate(
 }
 
 export async function deleteCertificate(id: string, userId?: string, client?: SupabaseClient): Promise<{ certificate: Certificate | null; error?: string }> {
-  const certRepo = repo(client ?? (await createClient()));
+  const supabase = client ?? (await createClient());
+  const certRepo = repo(supabase);
   const existing = await certRepo.findById(id);
   if (!existing) {
     return { certificate: null, error: "Certificate not found" };
+  }
+
+  // Nullify linked attendee's certificate_id before deleting
+  const { EventAttendeeRepository } = await import("@/features/events/server/attendee.repository");
+  const attendeeRepo = new EventAttendeeRepository(supabase);
+  const linkedAttendees = await attendeeRepo.findMany({ certificate_id: id });
+  for (const attendee of linkedAttendees) {
+    await attendeeRepo.update(attendee.id, { certificate_id: null });
   }
 
   if (existing.file_path) {
@@ -349,4 +361,79 @@ export async function getCertificatePdfBuffer(certificate: Certificate): Promise
   }
 
   return { data: null, error: "Certificate PDF not found" };
+}
+
+export async function autoRevokeExpiredCertificates(client?: SupabaseClient): Promise<{ revoked: number; error?: string }> {
+  const supabase = client ?? (await createClient());
+  const certRepo = repo(supabase);
+
+  const expired = await certRepo.findMany(
+    { revoked_at: null },
+    { columns: "id, certificate_number, recipient_name, recipient_email, file_path, organization_id", orderBy: "created_at", ascending: true }
+  );
+
+  const now = new Date().toISOString();
+  let revoked = 0;
+
+  for (const cert of expired) {
+    if (cert.expires_at && new Date(cert.expires_at) < new Date()) {
+      const updated = await certRepo.update(cert.id, {
+        revoked_at: now,
+        revoke_reason: "Auto-revoked: certificate expired",
+      } as Partial<Certificate>);
+
+      if (updated) {
+        const { EventAttendeeRepository } = await import("@/features/events/server/attendee.repository");
+        const attendeeRepo = new EventAttendeeRepository(supabase);
+        const linkedAttendees = await attendeeRepo.findMany({ certificate_id: cert.id });
+        for (const attendee of linkedAttendees) {
+          await attendeeRepo.update(attendee.id, { certificate_id: null });
+        }
+
+        await logAudit({
+          organization_id: cert.organization_id ?? ORG_ID,
+          action: "certificate.revoked",
+          source: "system",
+          entity_type: "certificate",
+          entity_id: cert.id,
+          details: {
+            certificate_number: cert.certificate_number,
+            recipient_name: cert.recipient_name,
+            recipient_email: cert.recipient_email,
+            reason: "Auto-revoked: certificate expired",
+          },
+        });
+
+        if (cert.file_path) {
+          try {
+            const { getStorageProvider } = await import("@/lib/storage");
+            const storage = getStorageProvider();
+            await storage.deleteFile(cert.file_path);
+          } catch (err) {
+            console.error(`[autoRevokeExpired] Failed to delete stored file for ${cert.id}:`, err);
+          }
+        }
+
+        revoked++;
+      }
+    }
+  }
+
+  return { revoked };
+}
+
+export async function getExpiringCertificates(days: number, client?: SupabaseClient): Promise<Certificate[]> {
+  const supabase = client ?? (await createClient());
+  const certRepo = repo(supabase);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() + days);
+
+  const expired = await certRepo.findMany(
+    { revoked_at: null },
+    { columns: "id, certificate_number, recipient_name, recipient_email, expires_at, organization_id, file_path" }
+  );
+
+  return expired.filter(
+    (c) => c.expires_at && new Date(c.expires_at) < cutoff && new Date(c.expires_at) >= new Date()
+  );
 }

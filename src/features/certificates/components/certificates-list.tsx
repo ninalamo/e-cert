@@ -24,6 +24,7 @@ import {
   ChevronRightIcon,
   Trash2Icon,
   EyeIcon,
+  ShieldIcon,
 } from "lucide-react";
 
 interface CertificateWithEvent extends Certificate {
@@ -33,11 +34,13 @@ interface CertificateWithEvent extends Certificate {
 interface CertificatesListProps {
   initialCertificates: CertificateWithEvent[];
   initialQuery?: string;
+  isAdmin?: boolean;
 }
 
 export default function CertificatesList({
   initialCertificates,
   initialQuery = "",
+  isAdmin = false,
 }: CertificatesListProps) {
   const [certificates, setCertificates] = useState<CertificateWithEvent[]>(initialCertificates);
   const [search, setSearch] = useState(initialQuery);
@@ -48,6 +51,9 @@ export default function CertificatesList({
   const [deleteTarget, setDeleteTarget] = useState<CertificateWithEvent | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
 
   async function loadCertificates() {
     try {
@@ -87,6 +93,43 @@ export default function CertificatesList({
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
     setDeleteError(null);
+  };
+
+  async function handleRevokeExpired() {
+    setRevoking(true);
+    setRevokeError(null);
+    try {
+      const res = await fetch("/api/certificates/expire", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Request failed (${res.status})`);
+      }
+      const result = await res.json();
+      setRevokeDialogOpen(false);
+      if (result.revoked > 0) {
+        const updated = await loadCertificates();
+        if (updated.length > 0) {
+          setCertificates(updated);
+        }
+      }
+    } catch (err) {
+      setRevokeError(err instanceof Error ? err.message : "Failed to revoke expired certificates");
+    } finally {
+      setRevoking(false);
+    }
+  }
+
+  const openRevokeDialog = () => {
+    setRevokeError(null);
+    setRevokeDialogOpen(true);
+  };
+
+  const closeRevokeDialog = () => {
+    setRevokeDialogOpen(false);
+    setRevokeError(null);
   };
 
   const filtered = useMemo(() => {
@@ -170,6 +213,19 @@ export default function CertificatesList({
       {loadError && (
         <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4 text-sm text-[var(--color-danger-text)]">
           {loadError}
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={openRevokeDialog}
+            className="btn bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40"
+          >
+            <ShieldIcon className="size-4" />
+            Revoke Expired
+          </button>
         </div>
       )}
 
@@ -335,6 +391,44 @@ export default function CertificatesList({
               disabled={deleting}
             >
               {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke Expired Confirmation Dialog */}
+      <Dialog open={revokeDialogOpen} onOpenChange={closeRevokeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke Expired Certificates</DialogTitle>
+            <DialogDescription>
+              Are you sure? This will revoke all expired certificates across all events.
+              Attendees will need to be re-issued if they still need a certificate.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+              <ShieldIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
+              <p className="text-[var(--color-danger-text)]">
+                This cannot be undone. All expired certificates will be marked as revoked.
+              </p>
+            </div>
+          </div>
+          {revokeError && (
+            <p className="text-xs text-[var(--color-danger-text)]">
+              {revokeError}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeRevokeDialog}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRevokeExpired}
+              disabled={revoking}
+            >
+              {revoking ? "Revoking..." : "Revoke Expired"}
             </Button>
           </DialogFooter>
         </DialogContent>

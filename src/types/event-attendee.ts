@@ -17,6 +17,7 @@ export interface EventAttendee {
   attended_at: string | null;
   completed_at: string | null;
   certificate_id: string | null;
+  certificate_number: string | null;
   metadata: AttendeeMetadata | null;
   created_at: string;
   updated_at: string;

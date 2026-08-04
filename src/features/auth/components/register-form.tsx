@@ -121,7 +121,7 @@ export default function RegisterForm() {
         <button
           type="submit"
           disabled={loading}
-          className="btn-brand w-full disabled:opacity-50"
+          className="btn w-full disabled:opacity-50"
         >
           {loading ? "Creating account..." : "Create account"}
         </button>

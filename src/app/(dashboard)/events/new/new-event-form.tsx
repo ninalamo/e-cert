@@ -303,7 +303,7 @@ export default function NewEventForm({
             <button
               type="button"
               onClick={() => setPreviewOpen(true)}
-              className="btn-brand-soft rounded-xl"
+              className="btn rounded-xl"
             >
               Preview Certificate
             </button>
@@ -363,7 +363,7 @@ export default function NewEventForm({
           <button
             type="submit"
             disabled={loading}
-            className="btn-brand h-11 w-full rounded-xl px-6 text-[15px] font-semibold disabled:opacity-50 sm:w-auto"
+            className="btn h-11 w-full rounded-xl px-6 text-[15px] font-semibold disabled:opacity-50 sm:w-auto"
           >
             {loading ? "Creating..." : "Create Event"}
           </button>

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ORG_ID } from "@/lib/org";
 import type { EventAttendee, AttendeeMetadata } from "@/types/event-attendee";
+import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import * as certService from "@/features/certificates/server/certificate.service";
@@ -318,6 +319,7 @@ export async function issueCertificatesForCompleted(
           expires_at: event.valid_until ?? undefined,
           metadata: { attendee_id: attendee.id },
           skip_pdf: true,
+          attendee_certificate_number: attendee.certificate_number ?? undefined,
           ...(existing_pdf_base64 ? { existing_pdf_base64 } : {}),
           event: {
             name: event.name,
@@ -380,4 +382,104 @@ export async function issueCertificatesForCompleted(
   }
 
   return { issued, emailed, skipped: 0, results };
+}
+
+export async function revokeExpiredForEvent(
+  eventId: string,
+  userId: string,
+  client?: SupabaseClient
+): Promise<{ revoked: number; error?: string }> {
+  const c = client ?? (await createClient());
+  const { attendeeRepo, certRepo } = repos(c);
+
+  const attendees = await attendeeRepo.findByEventId(eventId);
+  const now = new Date();
+  let revoked = 0;
+
+  for (const attendee of attendees) {
+    if (!attendee.certificate_id) continue;
+    if (attendee.certificates?.revoked_at) continue;
+    if (!attendee.certificates?.expires_at) continue;
+    if (new Date(attendee.certificates.expires_at) >= now) continue;
+
+    const result = await certService.revokeCertificate(
+      attendee.certificate_id,
+      "Auto-revoked: certificate expired",
+      userId,
+      c
+    );
+
+    if (result.certificate) {
+      revoked++;
+    }
+  }
+
+  return { revoked };
+}
+
+export async function reissueCertificatesForSelected(
+  eventId: string,
+  attendeeIds: string[],
+  userId: string,
+  client?: SupabaseClient
+): Promise<{ reissued: number; error?: string }> {
+  const c = client ?? (await createClient());
+  const { attendeeRepo, certRepo } = repos(c);
+
+  const attendees = await attendeeRepo.findMany({ event_id: eventId });
+  const selectedAttendees = attendees.filter((a) =>
+    attendeeIds.includes(a.id)
+  );
+
+  const event = await new EventRepository(c).findById(eventId);
+  if (!event) {
+    return { reissued: 0, error: "Event not found" };
+  }
+
+  let reissued = 0;
+
+  for (const attendee of selectedAttendees) {
+    try {
+      if (attendee.certificate_id && !attendee.certificates?.revoked_at) {
+        // Update existing certificate
+        const updated = await certRepo.update(attendee.certificate_id, {
+          expires_at: event.valid_until ?? null,
+          metadata: { attendee_id: attendee.id },
+        } as Partial<Certificate>);
+        if (updated) reissued++;
+      } else {
+        // Issue new certificate with existing number or generate new
+        const result = await certService.issueCertificate({
+          organization_id: attendee.organization_id,
+          event_id: eventId,
+          template_id: event.template_id ?? undefined,
+          recipient_name: attendee.name,
+          recipient_email: attendee.email,
+          expires_at: event.valid_until ?? undefined,
+          metadata: { attendee_id: attendee.id },
+          skip_pdf: true,
+          attendee_certificate_number: attendee.certificate_number ?? undefined,
+          event: {
+            name: event.name,
+            event_date: event.event_date,
+            location: event.location,
+            organizer: event.organizer,
+            certificate_title: event.certificate_title,
+            certificate_number_pattern: event.certificate_number_pattern,
+          },
+        }, c);
+
+        if (result.certificate && !result.error) {
+          await attendeeRepo.update(attendee.id, {
+            certificate_id: result.certificate.id,
+          } as Partial<EventAttendee>);
+          reissued++;
+        }
+      }
+    } catch (err) {
+      console.error(`[reissue] Failed for attendee ${attendee.id}:`, err);
+    }
+  }
+
+  return { reissued };
 }

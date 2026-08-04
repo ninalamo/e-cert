@@ -86,7 +86,7 @@ export default function CertificateDetail({
         <div className="flex shrink-0 items-center gap-2">
           <button
             onClick={() => window.open(`/view/${certificate.id}`, "_blank")}
-            className="btn-brand"
+            className="btn"
           >
             <PrinterIcon className="size-4" />
             <span className="hidden sm:inline">Preview</span>

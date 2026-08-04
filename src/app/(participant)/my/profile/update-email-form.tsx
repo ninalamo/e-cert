@@ -42,7 +42,7 @@ export default function UpdateEmailForm({ currentEmail }: { currentEmail: string
             <button
               type="submit"
               disabled={pending}
-              className="btn-brand disabled:opacity-50"
+              className="btn disabled:opacity-50"
             >
               {pending ? "Updating..." : "Update"}
             </button>

@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS certificates (
   template_id UUID REFERENCES certificate_templates(id),
   recipient_name TEXT NOT NULL,
   recipient_email TEXT NOT NULL,
-  certificate_number TEXT UNIQUE NOT NULL,
+  certificate_number TEXT NOT NULL,
   issued_at TIMESTAMPTZ DEFAULT now(),
   expires_at TIMESTAMPTZ,
   revoked_at TIMESTAMPTZ,
@@ -114,6 +114,13 @@ CREATE TABLE IF NOT EXISTS certificates (
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Only enforce uniqueness for active (non-revoked) certificates
+-- This allows revoked certificates to keep their number for audit trail
+-- while enabling re-issuance with the same number after revocation
+CREATE UNIQUE INDEX IF NOT EXISTS certificates_number_active_unique
+  ON certificates (certificate_number)
+  WHERE revoked_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS event_attendees (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -126,6 +133,7 @@ CREATE TABLE IF NOT EXISTS event_attendees (
   attended_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   certificate_id UUID REFERENCES certificates(id),
+  certificate_number TEXT,
   metadata JSONB,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
@@ -166,6 +174,18 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- ============================================================
+-- 1b. ALTER TABLES (idempotent column additions)
+-- ============================================================
+
+ALTER TABLE event_attendees ADD COLUMN IF NOT EXISTS certificate_number TEXT;
+
+-- Backfill certificate_number from existing certificates
+UPDATE event_attendees ea
+SET certificate_number = c.certificate_number
+FROM certificates c
+WHERE ea.certificate_id = c.id AND ea.certificate_number IS NULL;
 
 -- ============================================================
 -- 2. INDEXES
@@ -298,7 +318,9 @@ BEGIN
 
   IF p_event_id IS NOT NULL THEN
     UPDATE event_attendees
-    SET certificate_id = v_cert.id, updated_at = now()
+    SET certificate_id = v_cert.id,
+        certificate_number = p_certificate_number,
+        updated_at = now()
     WHERE event_id = p_event_id
       AND email = p_recipient_email
       AND certificate_id IS NULL;

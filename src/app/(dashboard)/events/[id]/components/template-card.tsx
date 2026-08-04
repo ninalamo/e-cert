@@ -107,7 +107,7 @@ export default function TemplateCard({
               selected === (event.template_id ?? "") ||
               event.status !== "draft"
             }
-            className="btn-brand-soft disabled:opacity-50"
+            className="btn disabled:opacity-50"
           >
             {saving ? "Saving..." : "Assign Template"}
           </button>
@@ -116,7 +116,7 @@ export default function TemplateCard({
               href={`/templates/certificates/${selected || event.template_id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-brand-soft"
+              className="btn"
             >
               Edit in Page
             </Link>
@@ -169,7 +169,7 @@ export default function TemplateCard({
               selectedEmail === (event.email_template_id ?? "") ||
               event.status !== "draft"
             }
-            className="btn-brand-soft disabled:opacity-50"
+            className="btn disabled:opacity-50"
           >
             {savingEmail ? "Saving..." : "Assign Email Template"}
           </button>
@@ -178,7 +178,7 @@ export default function TemplateCard({
               href={`/templates/emails/${selectedEmail || event.email_template_id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-brand-soft"
+              className="btn"
             >
               Edit in Page
             </Link>
