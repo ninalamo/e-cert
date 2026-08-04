@@ -156,17 +156,22 @@ export default function CertificatesList({
   const expiredCount = useMemo(() => countExpired(certificates), [certificates]);
 
   const events = useMemo(() => {
-    const eventMap = new Map<string, string>();
-    certificates.forEach((c) => {
+    const eventSet = new Set<string>();
+    for (const c of certificates) {
       if (c.events) {
-        eventMap.set(c.events.name, c.events.name);
+        eventSet.add(c.events.name);
       }
-    });
-    return Array.from(eventMap.values()).sort();
+    }
+    return Array.from(eventSet).sort();
   }, [certificates]);
 
   const { page, totalPages, pageSize, paginatedItems, setPage, setPageSize } =
     usePagination(filtered, 10);
+
+  const grouped = useMemo(
+    () => groupByEvent(paginatedItems),
+    [paginatedItems]
+  );
 
   return (
     <div className="space-y-4">
@@ -240,7 +245,7 @@ export default function CertificatesList({
 
       {filtered.length > 0 && (
         <div className="space-y-6">
-          {groupByEvent(paginatedItems).map(({ eventName, certificates: groupCerts }) => (
+          {grouped.map(({ eventName, certificates: groupCerts }) => (
             <div key={eventName ?? "(no event)"} className="space-y-2">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text)]">
                 {eventName ?? "No Event"}
