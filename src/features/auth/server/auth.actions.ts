@@ -328,11 +328,15 @@ export async function confirmEmail(token: string) {
     .eq("id", result.userId);
 
   if (user) {
-    await sendEmailConfirmedEmail(user.email, user.name);
-    await sendWelcomeEmail(user.email, user.name);
+    sendEmailConfirmedEmail(user.email, user.name).catch((err) => {
+      console.error("[confirmEmail] Failed to send confirmation email:", err);
+    });
+    sendWelcomeEmail(user.email, user.name).catch((err) => {
+      console.error("[confirmEmail] Failed to send welcome email:", err);
+    });
   }
 
-  await logAudit({
+  logAudit({
     organization_id: ORG_ID,
     user_id: result.userId,
     user_email: user?.email ?? undefined,
@@ -340,6 +344,8 @@ export async function confirmEmail(token: string) {
     source: "ui",
     entity_type: "user",
     entity_id: result.userId,
+  }).catch((err) => {
+    console.error("[confirmEmail] Failed to log audit:", err);
   });
 
   return { success: true };

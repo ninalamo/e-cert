@@ -57,6 +57,13 @@ export async function listUsers(): Promise<ManagedUser[]> {
   }));
 }
 
+export async function listActiveUsers(): Promise<ManagedUser[]> {
+  const allUsers = await listUsers();
+  return allUsers.filter(
+    (u) => !(u.banned_until && new Date(u.banned_until) > new Date()),
+  );
+}
+
 export async function setUserRole(
   userId: string,
   role: UserRole

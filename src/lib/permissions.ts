@@ -68,18 +68,41 @@ export async function getCurrentSession(): Promise<SessionUser | null> {
 }
 
 /**
- * Demo mode role impersonation. When DEMO=true, checks for an
- * impersonate_role cookie and overrides the session role.
+ * Demo mode user impersonation. When DEMO=true, checks for an
+ * impersonate_user cookie and replaces the session with the
+ * impersonated user's identity and role.
  */
 async function applyDemoImpersonation(session: SessionUser): Promise<SessionUser> {
   if (process.env.DEMO !== "true") return session;
 
   const store = await cookies();
-  const impersonated = store.get("impersonate_role")?.value;
-  if (impersonated && ["admin", "staff", "participant"].includes(impersonated)) {
-    return { ...session, role: impersonated as UserRole };
-  }
-  return session;
+  const userId = store.get("impersonate_user")?.value;
+  if (!userId) return session;
+
+  const db = supabaseAdmin;
+  if (!db) return session;
+
+  const { data: user } = await db
+    .from("users")
+    .select("id, email, name")
+    .eq("id", userId)
+    .single();
+
+  if (!user) return session;
+
+  const { data: membership } = await db
+    .from("user_memberships")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("organization_id", ORG_ID)
+    .single();
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: (membership?.role as UserRole) ?? DEFAULT_ROLE,
+  };
 }
 
 /**

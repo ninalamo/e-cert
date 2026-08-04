@@ -4,6 +4,7 @@ import MobileNav from "@/components/mobile-nav";
 import UserMenu from "@/components/user-menu";
 import WhatsNew from "@/components/whats-new";
 import RoleSwitcher from "@/components/role-switcher";
+import { listActiveUsers } from "@/features/users/server/user.service";
 import type { SessionUser } from "@/lib/permissions";
 
 const roleHeaderColors: Record<string, string> = {
@@ -22,6 +23,7 @@ export default async function DashboardShell({
   const isDemo = process.env.DEMO === "true";
   const borderClass = isDemo ? (roleHeaderColors[session.role] ?? "") : "";
   const version = process.env.NEXT_PUBLIC_VERSION ?? "";
+  const participants = isDemo ? await listActiveUsers() : [];
 
   return (
     <div className="flex h-screen bg-surface-muted">
@@ -41,7 +43,17 @@ export default async function DashboardShell({
             {session.role !== "participant" && (
               <WhatsNew userKey={session.email ?? session.id} />
             )}
-            {isDemo && <RoleSwitcher currentRole={session.role} />}
+            {isDemo && (
+              <RoleSwitcher
+                currentUser={{
+                  id: session.id,
+                  name: session.name,
+                  email: session.email,
+                  role: session.role,
+                }}
+                participants={participants}
+              />
+            )}
             <UserMenu name={session.name ?? session.email} />
           </div>
         </header>
