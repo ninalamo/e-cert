@@ -1794,16 +1794,16 @@ const content = (
                       {isSelected(el.id) && !el.locked && (() => {
                         const nearTop = el.y < 30;
                         const nearLeft = el.x < 80;
-                        let handleClass = "cert-drag absolute z-10 flex cursor-move items-center gap-1 rounded bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white";
+                        let handleClass = "cert-drag absolute z-50 flex cursor-move items-center gap-1 rounded bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white pointer-events-auto";
 
                         if (nearTop && nearLeft) {
                           handleClass += " top-0 right-0 translate-x-full";
                         } else if (nearTop) {
-                          handleClass += " -bottom-6 left-0";
+                          handleClass += " bottom-0 left-0 translate-y-full";
                         } else if (nearLeft) {
-                          handleClass += " -top-6 right-0 translate-x-full";
+                          handleClass += " top-0 right-0 translate-x-full";
                         } else {
-                          handleClass += " -top-6 left-0";
+                          handleClass += " top-0 right-0";
                         }
 
                         return (
