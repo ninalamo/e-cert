@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CertificatesList from "@/features/certificates/components/certificates-list";
 import { getCertificatesWithEventAction } from "@/features/certificates/server/certificate.actions";
 import { requireRole } from "@/lib/permissions";
-import { getCurrentSession } from "@/lib/permissions";
 import { ORG_ID } from "@/lib/org";
 
 export default async function CertificatesPage({
@@ -11,8 +10,7 @@ export default async function CertificatesPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  await requireRole(["admin", "staff"]);
-  const session = await getCurrentSession();
+  const session = await requireRole(["admin", "staff"]);
   const { data: certificates } = await getCertificatesWithEventAction(ORG_ID);
 
   return (
