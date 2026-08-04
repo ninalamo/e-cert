@@ -127,8 +127,10 @@ export default function TemplateCard({
         </div>
       </div>
 
-      {/* Email Template */}
-      <div className="app-card p-4">
+      {/* HIDDEN: Email template selector — always uses the system default email template.
+          The underlying state (selectedEmail) remains initialized from event.email_template_id
+          but the UI is hidden so users cannot change it. To re-enable, uncomment the block below. */}
+      {/* <div className="app-card p-4">
         <div className="mb-3 flex items-center gap-2">
           <MailIcon className="size-4 text-[var(--color-text-muted)]" />
           <p className="section-title mb-0">Email Template</p>
@@ -185,7 +187,7 @@ export default function TemplateCard({
             <span className="text-xs text-tertiary">{emailMessage}</span>
           )}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
