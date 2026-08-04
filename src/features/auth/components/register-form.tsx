@@ -99,7 +99,8 @@ export default function RegisterForm() {
             name="password"
             type="password"
             required
-            minLength={6}
+            minLength={8}
+            maxLength={32}
             className="input mt-1"
           />
         </div>
@@ -113,7 +114,8 @@ export default function RegisterForm() {
             name="confirmPassword"
             type="password"
             required
-            minLength={6}
+            minLength={8}
+            maxLength={32}
             className="input mt-1"
           />
         </div>

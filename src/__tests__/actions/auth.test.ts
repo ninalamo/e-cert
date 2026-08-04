@@ -103,7 +103,7 @@ describe("register", () => {
   it("returns error when email already exists", async () => {
     getMockSupabase()._setHandler("users", mockQueryResult({ id: "existing-id" }));
 
-    const result = await register({ name: "New", email: "existing@test.com", password: "password123", confirmPassword: "password123" });
+    const result = await register({ name: "New", email: "existing@test.com", password: "Password123!", confirmPassword: "Password123!" });
     expect(result).toEqual({ error: "Email already registered" });
   });
 
@@ -114,9 +114,9 @@ describe("register", () => {
     ]);
     getMockSupabase()._setHandler("user_memberships", mockQueryResult({}));
 
-    const result = await register({ name: "New User", email: "new@test.com", password: "password123", confirmPassword: "password123" });
+    const result = await register({ name: "New User", email: "new@test.com", password: "Password123!", confirmPassword: "Password123!" });
     expect(result).toEqual({ success: true });
-    expect(hashPassword).toHaveBeenCalledWith("password123");
+    expect(hashPassword).toHaveBeenCalledWith("Password123!");
     expect(createConfirmToken).toHaveBeenCalled();
     expect(sendConfirmationEmail).toHaveBeenCalledWith("new@test.com", "confirm-token");
   });
@@ -124,7 +124,7 @@ describe("register", () => {
   it("returns error when user insert fails", async () => {
     getMockSupabase()._setHandler("users", mockQueryError("Not found"));
 
-    const result = await register({ name: "Fail", email: "fail@test.com", password: "password123", confirmPassword: "password123" });
+    const result = await register({ name: "Fail", email: "fail@test.com", password: "Password123!", confirmPassword: "Password123!" });
     expect(result).toHaveProperty("error");
   });
 });
