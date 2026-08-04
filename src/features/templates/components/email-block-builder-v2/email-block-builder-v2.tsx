@@ -336,7 +336,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
     );
 
     return (
-      <div className={`flex gap-4 ${fullscreen ? "fixed inset-0 z-50 bg-[var(--color-surface)] p-4" : "h-[calc(100vh-200px)] min-h-[600px]"}`}>
+      <div className={`flex gap-4 ${fullscreen ? "fixed inset-0 z-50 bg-[var(--color-surface)] p-4" : "min-h-[600px]"}`}>
         {/* Sidebar collapse toggle */}
         <button
           type="button"
@@ -449,7 +449,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
           </div>
 
           {/* Canvas */}
-          <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[#e5e7eb] p-6 flex justify-center min-h-0">
+          <div className="flex-1 rounded-xl border border-[var(--color-border)] bg-[#e5e7eb] p-6 flex justify-center min-h-0 overflow-y-auto">
             <div className="w-full max-w-[600px] bg-white rounded-lg shadow-lg border border-[var(--color-border)]">
               {/* Email Header Bar */}
               <div className="border-b border-[var(--color-border)] bg-[#fafafa] rounded-t-lg px-4 py-2 flex items-center gap-2">
@@ -462,7 +462,7 @@ const EmailBlockBuilderV2 = forwardRef<EmailBlockBuilderV2Handle, EmailBlockBuil
               </div>
 
               {/* Block Canvas */}
-              <div className="p-4 min-h-[450px]">
+              <div className="p-4 min-h-[300px]">
                 <BlockCanvas
                   blocks={blocks}
                   selectedId={selectedId}

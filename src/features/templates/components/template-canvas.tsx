@@ -110,6 +110,7 @@ export interface CanvasElement {
   paragraphSpacing?: number;
   locked?: boolean;
   hidden?: boolean;
+  manualHeight?: boolean;
 }
 
 interface TemplateCanvasProps {
@@ -791,7 +792,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
     if (!editingElement) return;
     if (editingElement.type === "text") {
       const htmlContent = textToSimpleHtml(editContent);
-      const newHeight = calculateTextHeight(htmlContent, editingElement.fontSize, editingElement.w, editingElement.lineHeight ?? 1.5, editingElement.paragraphSpacing ?? 0);
+      const newHeight = editingElement.manualHeight ? editingElement.h : calculateTextHeight(htmlContent, editingElement.fontSize, editingElement.w, editingElement.lineHeight ?? 1.5, editingElement.paragraphSpacing ?? 0);
       const newElements = elements.map(e => e.id === editingElement.id ? { ...e, content: htmlContent, h: newHeight } : e);
       saveToHistory(newElements);
       setElements(newElements);
@@ -1081,7 +1082,7 @@ const TemplateCanvas = forwardRef<TemplateCanvasHandle, TemplateCanvasProps>(fun
       if (!isSelected(el.id) || el.type !== 'text' || isPlaceholderElement(el)) return el;
       const newW = calculateTextWidth(el.content, el.fontSize, el.fontFamily, el.bold);
       const newH = calculateTextHeight(el.content, el.fontSize, newW, el.lineHeight ?? 1.5, el.paragraphSpacing ?? 0);
-      return { ...el, w: newW, h: newH };
+      return { ...el, w: newW, h: newH, manualHeight: false };
     });
     saveToHistory(newElements);
     setElements(newElements);
@@ -1297,7 +1298,7 @@ const content = (
             <ChevronDownIcon className={`size-4 transition-transform ${drawerOpen ? "" : "-rotate-90"}`} />
           </button>
           {drawerOpen && (
-            <div className="w-64 flex-shrink-0 flex flex-col gap-4 h-[calc(100vh-220px)] overflow-hidden">
+            <div className="w-64 flex-shrink-0 flex flex-col gap-4 max-h-full overflow-y-auto">
 <TemplateSidebar
                 name={name}
                 description={description}
@@ -1612,7 +1613,7 @@ const content = (
           className="cert-canvas overflow-auto rounded-md border bg-[var(--color-surface-secondary)] p-3 relative"
           onKeyDown={handleKeyDown}
           tabIndex={0}
-          style={{ maxHeight: fullscreen ? "calc(100vh - 80px)" : "calc(100vh - 320px)", cursor: panning ? "grabbing" : spaceHeld ? "grab" : undefined, userSelect: panning ? "none" : undefined }}
+          style={{ maxHeight: fullscreen ? "calc(100vh - 80px)" : "none", cursor: panning ? "grabbing" : spaceHeld ? "grab" : undefined, userSelect: panning ? "none" : undefined }}
         >
           <div className="sticky top-0 right-0 z-50 flex justify-end pointer-events-none">
             <div className="flex flex-col items-center rounded-lg bg-[var(--color-surface)] shadow-lg border border-[var(--color-border)] pointer-events-auto">
@@ -1729,11 +1730,11 @@ const content = (
                     enableResizing={el.locked || isPlaceholderElement(el) ? false : (el.type === 'text' || el.type === 'qr' ? {
                       top: false,
                       right: true,
-                      bottom: false,
+                      bottom: !!el.manualHeight,
                       left: true,
                       topRight: false,
-                      bottomRight: false,
-                      bottomLeft: false,
+                      bottomRight: !!el.manualHeight,
+                      bottomLeft: !!el.manualHeight,
                       topLeft: false,
                     } : true)}
                     onResizeStop={(_, __, ref, ___, pos) => {
@@ -1751,11 +1752,12 @@ const content = (
                           y: snappedY,
                         } : e);
                       } else if (el.type === 'text') {
-                        const calculatedH = calculateTextHeight(el.content, el.fontSize, snappedW, el.lineHeight ?? 1.5, el.paragraphSpacing ?? 0);
+                        const snappedH = snapEnabled ? Math.round(parseInt(ref.style.height, 10) / gridSize) * gridSize : parseInt(ref.style.height, 10);
+                        const h = el.manualHeight ? snappedH : calculateTextHeight(el.content, el.fontSize, snappedW, el.lineHeight ?? 1.5, el.paragraphSpacing ?? 0);
                         newElements = elements.map(e => e.id === el.id ? {
                           ...e,
                           w: snappedW,
-                          h: calculatedH,
+                          h,
                           x: snappedX,
                           y: snappedY,
                         } : e);
@@ -1838,7 +1840,7 @@ const content = (
                           suppressContentEditableWarning
                           onBlur={(e) => {
                             const newContent = e.currentTarget.innerHTML;
-                            const newHeight = calculateTextHeight(newContent, el.fontSize, el.w, el.lineHeight ?? 1.5, el.paragraphSpacing ?? 0);
+                            const newHeight = el.manualHeight ? el.h : calculateTextHeight(newContent, el.fontSize, el.w, el.lineHeight ?? 1.5, el.paragraphSpacing ?? 0);
                             update(el.id, {
                               content: newContent,
                               h: newHeight
@@ -2012,6 +2014,18 @@ const content = (
               </div>
 
               <div className="flex flex-wrap gap-2">
+                {firstSel?.type === "text" && (
+                  <button
+                    type="button"
+                    disabled={selCount === 0 || allSelectedLocked || isPlaceholderElement(firstSel)}
+                    onClick={() => updateSelected({ manualHeight: !elements.filter((e) => isSelected(e.id)).some((e) => e.manualHeight) })}
+                    className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all active:scale-[0.97] disabled:opacity-40 ${elements.filter((e) => isSelected(e.id)).some((e) => e.manualHeight) ? "bg-[var(--color-brand-100)] text-[var(--color-brand-700)]" : "bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"}`}
+                    title="Toggle between auto height (fits text) and manual height (drag to resize)"
+                  >
+                    <ArrowDownIcon className="size-3.5" />
+                    {elements.filter((e) => isSelected(e.id)).some((e) => e.manualHeight) ? "Manual Height" : "Auto Height"}
+                  </button>
+                )}
                 {firstSel?.type === "text" && (
                   <button
                     type="button"

@@ -126,7 +126,7 @@ export default function BlockCanvas({
       onDragLeave={handleDragEnd}
     >
       {blocks.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-[var(--color-text-muted)] border-2 border-dashed border-[var(--color-border)] rounded-xl">
+        <div className="flex flex-col items-center justify-center py-12 text-[var(--color-text-muted)] border-2 border-dashed border-[var(--color-border)] rounded-xl">
           <PlusIcon className="size-12 mb-3 opacity-30" />
           <p className="text-sm font-medium">No blocks yet</p>
           <p className="text-xs mt-1">Drag blocks from the palette or click to add</p>
