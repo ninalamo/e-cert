@@ -21,7 +21,7 @@ export async function getAttendees(
   eventId: string,
   client?: SupabaseClient
 ): Promise<EventAttendee[]> {
-  return repos(client ?? (await createClient())).attendeeRepo.findByEventId(eventId);
+  return repos(client ?? (await createClient())).attendeeRepo.findByEventIdLight(eventId);
 }
 
 export async function getAttendee(
@@ -29,6 +29,19 @@ export async function getAttendee(
   client?: SupabaseClient
 ): Promise<EventAttendee | null> {
   return repos(client ?? (await createClient())).attendeeRepo.findById(id);
+}
+
+export async function getAttendeeFileData(
+  id: string,
+  client?: SupabaseClient
+): Promise<{ file_data: string | null; file_name: string | null; file_type: string | null } | null> {
+  const attendee = await repos(client ?? (await createClient())).attendeeRepo.findById(id, "metadata");
+  if (!attendee) return null;
+  return {
+    file_data: (attendee.metadata?.file_data as string) ?? null,
+    file_name: (attendee.metadata?.file_name as string) ?? null,
+    file_type: (attendee.metadata?.file_type as string) ?? null,
+  };
 }
 
 export async function addAttendee(
@@ -44,9 +57,9 @@ export async function addAttendee(
   const c = client ?? (await createClient());
   const { attendeeRepo } = repos(c);
 
-  const existing = await attendeeRepo.findByEventAndEmail(data.event_id, data.email);
-  if (existing) {
-    return { attendee: existing, error: "Attendee with this email already exists" };
+  const exists = await attendeeRepo.findByEventAndEmailExists(data.event_id, data.email);
+  if (exists) {
+    return { attendee: null, error: "Attendee with this email already exists" };
   }
 
   const { data: attendee } = await attendeeRepo.create({
@@ -111,7 +124,7 @@ export async function removeAttendeeWithCert(
   const c = client ?? (await createClient());
   const { attendeeRepo, certRepo } = repos(c);
 
-  const attendee = await attendeeRepo.findById(id);
+  const attendee = await attendeeRepo.findById(id, "id, certificate_id, email, event_id, organization_id");
   if (!attendee) {
     return { error: "Attendee not found" };
   }
@@ -173,7 +186,7 @@ export async function getAttendeeDeletePreview(
   const c = client ?? (await createClient());
   const { attendeeRepo } = repos(c);
 
-  const attendee = await attendeeRepo.findById(id);
+  const attendee = await attendeeRepo.findById(id, "id, certificate_id, email, event_id");
   if (!attendee) return { hasCertificate: false, otherEventCount: 0, hasUserAccount: false };
 
   const hasCertificate = !!attendee.certificate_id;
@@ -219,8 +232,8 @@ export async function bulkAddAttendees(
       skipped++;
       continue;
     }
-    const existing = await attendeeRepo.findByEventAndEmail(eventId, a.email);
-    if (existing) {
+    const exists = await attendeeRepo.findByEventAndEmailExists(eventId, a.email);
+    if (exists) {
       skipped++;
       continue;
     }
@@ -268,7 +281,7 @@ export async function issueCertificatesForCompleted(
     return { issued: 0, emailed: 0, skipped: 0, results: [] };
   }
 
-  const allAttendees = await attendeeRepo.findByEventId(eventId);
+  const allAttendees = await attendeeRepo.findByEventIdLight(eventId);
   const all = options?.attendeeIds?.length
     ? allAttendees.filter((a) => options.attendeeIds!.includes(a.id))
     : allAttendees;
@@ -288,7 +301,13 @@ export async function issueCertificatesForCompleted(
       let certId = attendee.certificate_id;
 
       if (!certId) {
-        const hasUpload = attendee.metadata?.generation_mode === "file" && attendee.metadata?.file_data;
+        let existing_pdf_base64: string | undefined;
+        if (attendee.metadata?.generation_mode === "file") {
+          const fullAttendee = await attendeeRepo.findById(attendee.id, "metadata");
+          if (fullAttendee?.metadata?.file_data) {
+            existing_pdf_base64 = fullAttendee.metadata.file_data as string;
+          }
+        }
 
         const result = await certService.issueCertificate({
           organization_id: attendee.organization_id,
@@ -299,7 +318,7 @@ export async function issueCertificatesForCompleted(
           expires_at: event.valid_until ?? undefined,
           metadata: { attendee_id: attendee.id },
           skip_pdf: true,
-          ...(hasUpload ? { existing_pdf_base64: attendee.metadata!.file_data as string } : {}),
+          ...(existing_pdf_base64 ? { existing_pdf_base64 } : {}),
           event: {
             name: event.name,
             event_date: event.event_date,

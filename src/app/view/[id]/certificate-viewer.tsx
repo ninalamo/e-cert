@@ -58,7 +58,7 @@ export default function CertificateViewer({
 
   const certCss = template?.css_content ?? "";
 
-  const [windowSize, setWindowSize] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const [windowSize, setWindowSize] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
     const handler = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
