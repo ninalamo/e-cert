@@ -310,7 +310,12 @@ export default function NewEventForm({
           )}
         </div>
 
-        <div className="app-card space-y-4 rounded-2xl p-5 shadow-[var(--shadow-ios)]">
+        {/* HIDDEN: Email template selector — always uses the system default email template.
+            The underlying state (selectedEmailTemplate) remains "" so email_template_id
+            is always submitted as undefined, which means the event stores null and
+            sendCertificateEmail falls back to the hardcoded default at send time.
+            To re-enable, uncomment the block below and restore the state/imports. */}
+        {/* <div className="app-card space-y-4 rounded-2xl p-5 shadow-[var(--shadow-ios)]">
           <div className="flex items-baseline justify-between">
             <p className="section-title mb-0">Email Settings</p>
           </div>
@@ -318,12 +323,12 @@ export default function NewEventForm({
             <label htmlFor="email_template_id" className="mb-1.5 block text-[13px] font-semibold text-tertiary">
               Email Template (optional)
             </label>
-<select
-               id="email_template_id"
-               value={selectedEmailTemplate}
-               onChange={(e) => setSelectedEmailTemplate(e.target.value)}
-               className="input h-11 rounded-xl text-[15px]"
-             >
+            <select
+              id="email_template_id"
+              value={selectedEmailTemplate}
+              onChange={(e) => setSelectedEmailTemplate(e.target.value)}
+              className="input h-11 rounded-xl text-[15px]"
+            >
               <option value="">System default template</option>
               {emailTemplates.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -335,18 +340,18 @@ export default function NewEventForm({
               Custom email sent when certificate is issued. Leave empty for default.
             </p>
           </div>
-{selectedEmailTemplate && (
-             <label className="flex items-center gap-2.5 text-[14px] text-secondary cursor-pointer">
-               <input
-                 type="checkbox"
-                 checked={cloneEmailTemplate}
-                 onChange={(e) => setCloneEmailTemplate(e.target.checked)}
-                 className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
-               />
-               Clone email template for this event (independent copy you can customize)
-             </label>
-           )}
-        </div>
+          {selectedEmailTemplate && (
+            <label className="flex items-center gap-2.5 text-[14px] text-secondary cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cloneEmailTemplate}
+                onChange={(e) => setCloneEmailTemplate(e.target.checked)}
+                className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
+              />
+              Clone email template for this event (independent copy you can customize)
+            </label>
+          )}
+        </div> */}
 
         <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
           <Link
