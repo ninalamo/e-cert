@@ -200,7 +200,7 @@ export default function Sidebar({ role }: { role: UserRole }) {
                         href={child.href}
                         className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
                           active
-                            ? "bg-surface-hover text-text font-medium"
+                            ? "bg-brand-600 text-black font-medium"
                             : "text-secondary hover:bg-surface-hover"
                         }`}
                       >
