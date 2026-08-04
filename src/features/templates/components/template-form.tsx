@@ -72,12 +72,14 @@ export default function TemplateForm({
 
     if (!name?.trim()) {
       setError("Template name is required");
+      toast.error("Template name is required");
       return;
     }
 
     const html = isEmail ? htmlContent : (canvasRef.current?.getHtml() ?? htmlContent);
     if (!html?.trim()) {
       setError("Template content is required");
+      toast.error("Template content is required");
       return;
     }
 
