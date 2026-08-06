@@ -89,6 +89,7 @@ Then:
   - Endpoints: `/sso/login`, `/callback`, `/tokens`, `/refresh`, `/logout`, `/access`, `/test-users`
   - Added `cookie-parser` dependency for HTTP-only cookie handling
 - **Updated e2e test fixtures** (`e2e/fixtures/auth.ts`): Now uses mock auth API (`/tokens` endpoint) instead of inline JWT creation; aligned with role-based test users
+- **Added CLI test script** (`mock/test-auth.js`): Self-contained test runner that starts the mock server, validates all auth endpoints, decodes JWT payload, and reports results. Run with: `node mock/test-auth.js`
 
 ---
 
