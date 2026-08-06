@@ -218,7 +218,7 @@ Browser                    Auth Platform              Cert API
 │  • In-memory token (not persistent)                             │
 │  • JWT parsing (UI only, not security)                          │
 │  • Route guard (redirect only, not enforcement)                 │
-│  • MSW intercepts all API calls in tests                        │
+│  • JSON Server mocks all API calls in dev/test                  │
 │                                                                  │
 │  SECURITY BOUNDARY: Cert API (not browser)                      │
 └──────────────────────────┬──────────────────────────────────────┘

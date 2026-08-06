@@ -25,16 +25,17 @@ Read these files IN ORDER and report your understanding of where we left off:
 6. specs/auth/role-resolution.md          - role from JWT permissions (v2.0)
 7. specs/auth/proxy.md                    - client-side route guard (v2.0, no server proxy)
 8. specs/api-client/README.md             - Cert API typed HTTP client (v2.0)
-9. specs/testing/README.md                - Playwright + MSW e2e strategy (v2.0)
+9. specs/testing/README.md                - Playwright + JSON Server e2e strategy (v2.0)
 10. specs/data-flow.md                    - service dependencies, security boundaries
 11. specs/pages/README.md                 - pages to keep/remove
 12. specs/components/README.md            - modules to keep/remove/adapt
-13. specs/environment/README.md           - env contract (3 vars)
+13. specs/environment/README.md           - env contract (4 vars)
 14. specs/deployment/README.md            - Vercel topology
-15. SESSION-PROMPT.md                     - this file: "Last Session Notes" = where we stopped
+15. specs/local-dev/README.md             - local dev workflow, JSON Server mock
+16. SESSION-PROMPT.md                     - this file: "Last Session Notes" = where we stopped
 
 Then:
-- Summarize the spec status (all Draft) and what's implemented vs pending
+- Summarize the spec status (all Final) and what's implemented vs pending
 - List what's Done, In Progress, Backlog
 - Identify the NEXT action item from "Last Session Notes"
 - Do NOT write any code until the governing specs are Final
@@ -62,12 +63,13 @@ Then:
 - **Governing `legacy-e-cert-integration.md` v2.0 promoted to Final** — aligned with specs/ v2.0 CSR approach
 
 ### In Progress
-- (none — all specs are Final)
+- (none)
 
 ### Next Action
 - [ ] **Begin Phase D** — Auth swap implementation (delete legacy auth, add SSO fragment, in-memory token, route guard, delete server actions)
 - [ ] **Update `.env.example`** for the new 4-var env contract
 - [ ] **Delete `src/proxy.ts`** — no longer needed
+- [ ] **Create `mock/` directory** — implement JSON Server setup and seed data
 
 ### Backlog / Known Gaps
 - `api-client/` spec has implementation sketches but could use more detail on each resource module
@@ -83,6 +85,7 @@ Then:
 | 2026-08-06 | Created 14 spec files (v2.0, CSR approach): auth layer (6), api-client, testing, data-flow, pages, components, environment, deployment. Committed + pushed to `migration-plan/api-migration-docs`. Created `migration/implementation` branch. | Review specs → promote to Final → begin Phase D |
 | 2026-08-06 (2) | Cross-boundary: `legacy-e-cert-integration.md` → Draft v2.0 (D8 superseded, CSR — matches specs/), synced per D7; fixed specs stale bits (seed groups `cert-admin/staff/user`, attendee import JSON, CSV client-side) | Review + promote retrofit spec v2.0 + specs → Final → begin Phase D |
 | 2026-08-06 (3) | All 14 specs reviewed and promoted to Final (v2.0); bumped data-flow.md to v2.0; added `NEXT_PUBLIC_CERT_API_BASE_URL` to environment spec (4-var contract); governing `legacy-e-cert-integration.md` v2.0 promoted to Final; updated SESSION-PROMPT.md | Begin Phase D — Auth swap implementation |
+| 2026-08-06 (4) | Created `specs/local-dev/README.md` (v1.0) — local dev workflow with JSON Server mock for dev + Playwright e2e; updated testing, data-flow, specs/README.md refs to JSON Server; updated SESSION-PROMPT.md; promoted local-dev spec to Final | Begin Phase D — Auth swap implementation |
 
 ---
 
@@ -104,6 +107,7 @@ Then:
 | `specs/deployment/README.md` | 2.0 | Final | Phase D |
 | `specs/testing/README.md` | 2.0 | Final | Phase D |
 | `specs/data-flow.md` | 2.0 | Final | — |
+| `specs/local-dev/README.md` | 1.0 | Final | Phase D |
 
 ---
 
