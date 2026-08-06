@@ -242,22 +242,45 @@ export default defineConfig({
 
 # 11. Auth Mock
 
-For local dev and e2e, the SSO flow is mocked:
+For local dev and e2e, the SSO flow is mocked by a **mock Auth Platform** server (port 3002) that simulates `auth.lyceumalabang.edu.ph`:
 
-- `POST /api/v1/auth/callback` ignores the encrypted payload and returns a hardcoded JWT
-- `POST /api/v1/auth/refresh` always returns a fresh JWT
-- `POST /api/v1/auth/logout` returns `{ status: "ok" }`
-- `GET /api/v1/auth/access` returns test admin user info
+**SSO Flow (simulated):**
+1. App redirects unauthenticated user to `http://localhost:3002/sso/login?redirect=http://localhost:3000`
+2. Mock Auth Platform shows a login page with quick-login links for test users
+3. User clicks a link (or submits form with credentials)
+4. Mock Auth Platform redirects back to the app with `#payload=<base64url>&state=<state>`
+5. App's SSO fragment handler processes the payload → POSTs to `/api/v1/auth/callback` → stores token
 
-JWT is a mock token (base64url encode, no real signature) — the client never verifies it.
+**Direct auth (for testing convenience):**
+- `POST /api/v1/auth/tokens` with `{ email, password }` — returns access_token + sets refresh cookie
+- This bypasses the SSO redirect chain for fixture setup
+
+**Auth endpoints on mock server (port 3001):**
+
+| Endpoint | Mock Behavior |
+|----------|---------------|
+| `GET /api/v1/auth/sso/login` | Returns SSO redirect URL to mock Auth Platform |
+| `POST /api/v1/auth/callback` | Accepts `{ payload }`, returns access_token + sets httpOnly refresh cookie |
+| `POST /api/v1/auth/tokens` | Direct token issuance by email+password (bypass SSO) |
+| `POST /api/v1/auth/refresh` | Validates refresh cookie, issues new access token |
+| `POST /api/v1/auth/logout` | Clears session + refresh cookie |
+| `GET /api/v1/auth/access` | Returns current session user info |
+| `GET /api/v1/auth/test-users` | Lists available test users |
 
 **Test users:**
 
-| Email | Permissions | Role |
-|-------|-------------|------|
-| `admin@test.com` | `admin:/api/v1/*` | admin |
-| `staff@test.com` | `write:/api/v1/events`, `read:/api/v1/*` | staff |
-| `participant@test.com` | `read:/api/v1/me/certificates` | participant |
+| Email | Permissions | Role | Password |
+|-------|-------------|------|----------|
+| `admin@test.com` | `admin:/api/v1/*` | admin | admin |
+| `staff@test.com` | `write:/api/v1/events`, `read:/api/v1/*` | staff | staff |
+| `participant@test.com` | `read:/api/v1/me/certificates` | participant | participant |
+
+JWT is a mock token (base64url encode, no real signature) — the client never verifies it.
+
+**SSO Quick login URL pattern:**
+```
+http://localhost:3002/sso/login?redirect=http://localhost:3000&email=admin@test.com&password=admin
+```
 
 ---
 

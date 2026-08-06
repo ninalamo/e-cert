@@ -172,6 +172,9 @@ app.listen(PORT, () => {
   console.log("  Public:       /api/v1/verify/*, /api/v1/view/*");
 });
 
+// Mock Auth Platform (SSO) runs on port 3002
+// Starts after the main server's callback logs
+
 // In-memory session store (refresh token → user info)
 const sessions: Record<string, { user: any; refresh_token: string; created_at: string }> = {};
 const refreshTokens: Record<string, { user: any; expires_at: number }> = {};
@@ -421,6 +424,76 @@ function applyAuthHandlers(server: any, envelope: any) {
     });
   });
 }
+
+// Mock Auth Platform SSO server (port 3002) - simulates auth.lyceumalabang.edu.ph
+const AUTH_PORT = process.env.MOCK_AUTH_PORT || 3002;
+const authApp = express();
+const appState: Record<string, { email: string; redirect: string }> = {};
+
+authApp.use(cors({
+  origin: ["http://localhost:3000"],
+  credentials: true,
+}));
+authApp.use(express.json());
+authApp.use(express.urlencoded({ extended: true }));
+
+// SSO login page simulation
+authApp.get("/sso/login", (req: any, res: any) => {
+  const redirect = req.query.redirect || "http://localhost:3000";
+  const state = Math.random().toString(36).substring(7);
+  appState[state] = { email: req.query.email as string, redirect: redirect as string };
+
+  if (req.query.email && req.query.password) {
+    // Auto-login mode (for testing with credentials)
+    const user = testUsers[req.query.email as string];
+    if (user && user.password === req.query.password) {
+      const payload = Buffer.from(JSON.stringify({ email: user.email, state })).toString("base64url");
+      return res.redirect(302, `${redirect}#payload=${payload}&state=${state}`);
+    }
+    return res.status(401).send("Invalid credentials");
+  }
+
+  // If email provided but no password, show login page
+  // If no email, show login page selection
+  res.send(`<!DOCTYPE html>
+<html>
+<head><title>Mock SSO Login</title></head>
+<body>
+  <h1>Mock Auth Platform SSO</h1>
+  <form method="post" action="/sso/login">
+    <input type="hidden" name="state" value="${state}" />
+    <input type="hidden" name="redirect" value="${redirect}" />
+    <label>Email: <input type="email" name="email" value="${req.query.email || ""}"></label><br/>
+    <label>Password: <input type="password" name="password" /></label><br/>
+    <button type="submit">Login</button>
+  </form>
+  <p>Quick login as:</p>
+  <ul>
+    <li><a href="/sso/login?redirect=${encodeURIComponent(redirect)}&email=admin@test.com&password=admin">Admin</a></li>
+    <li><a href="/sso/login?redirect=${encodeURIComponent(redirect)}&email=staff@test.com&password=staff">Staff</a></li>
+    <li><a href="/sso/login?redirect=${encodeURIComponent(redirect)}&email=participant@test.com&password=participant">Participant</a></li>
+  </ul>
+</body>
+</html>`);
+});
+
+// Handle SSO form submission
+authApp.post("/sso/login", (req: any, res: any) => {
+  const { email, password, state, redirect } = req.body;
+  const user = testUsers[email];
+  if (!user || user.password !== password) {
+    return res.status(401).send("Invalid credentials");
+  }
+  const payload = Buffer.from(JSON.stringify({ email, state })).toString("base64url");
+  res.redirect(302, `${redirect}#payload=${payload}&state=${state}`);
+});
+
+const authServer = authApp.listen(AUTH_PORT, () => {
+  console.log(`\nMock Auth Platform (SSO) running on http://localhost:${AUTH_PORT}`);
+  console.log("Endpoints:");
+  console.log("  SSO:          GET /sso/login?redirect=<url>&email=<email>&password=<password>");
+  console.log("  Quick login:  /sso/login?redirect=<url>&email=admin@test.com&password=admin");
+});
 
 // Handlers for events endpoints
 function applyEventsHandlers(server: any, envelope: any, db: any, saveDb: any) {

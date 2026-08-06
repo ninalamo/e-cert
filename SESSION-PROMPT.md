@@ -88,8 +88,13 @@ Then:
   - Test users: `admin@test.com` (admin), `staff@test.com` (staff), `participant@test.com` (participant)
   - Endpoints: `/sso/login`, `/callback`, `/tokens`, `/refresh`, `/logout`, `/access`, `/test-users`
   - Added `cookie-parser` dependency for HTTP-only cookie handling
-- **Updated e2e test fixtures** (`e2e/fixtures/auth.ts`): Now uses mock auth API (`/tokens` endpoint) instead of inline JWT creation; aligned with role-based test users
-- **Added CLI test script** (`mock/test-auth.js`): Self-contained test runner that starts the mock server, validates all auth endpoints, decodes JWT payload, and reports results. Run with: `node mock/test-auth.js`
+- **Mock Auth Platform SSO simulation added** (`mock/server.ts`): Simulated Auth Platform server on port 3002
+  - `GET /sso/login?redirect=<url>&email=<email>&password=<password>` — auto-login mode, redirects back to app with `#payload=` fragment
+  - `POST /sso/login` — form-based login
+  - Full SSO redirect flow: auth.lyceumalabang.edu.ph/sso/login → app#payload= → callback
+- **Updated e2e test fixtures** (`e2e/fixtures/auth.ts`): Now uses mock auth API (`/tokens` endpoint) instead of inline JWT creation; aligned with role-based test users; added SSO auth helper
+- **Updated local-dev spec** (`specs/local-dev/README.md`): Documented SSO mock simulation, Auth Platform server, endpoint table
+- **Added CLI test script** (`mock/test-auth.js`): Self-contained test runner that validates all auth endpoints, SSO flow, JWT structure. Run with: `node mock/test-auth.js`
 
 ---
 
@@ -103,6 +108,7 @@ Then:
 | 2026-08-06 (5) | Synced governing spec to v2.1 (D9: Cert API auth deferred to new C-Auth phase; Phase D gate now requires C-Auth done); auth-provisioning sections refactored to side-notes; updated SESSION-PROMPT.md next actions | Wait for C-Auth → begin Phase D |
 | 2026-08-06 (6) | Built mock API server (mock/server.ts) with Express + realistic seed data (db.json); Playwright e2e scaffold (e2e/); updated next.config.ts with mock/live rewrite toggle; created .env.example; cleaned package.json (removed legacy deps, added express/concurrently/playwright); created AI-RULES.md | Wait for C-Auth → begin Phase D |
 | 2026-08-06 (7) | Enhanced mock auth API: full auth endpoints with role-based JWT issuance, session store, refresh cookie handling, direct token endpoint for tests. Added `cookie-parser` dependency. Updated e2e fixtures to use mock auth API. | Wait for C-Auth → begin Phase D |
+| 2026-08-06 (8) | Added mock Auth Platform SSO simulation (port 3002) with full SSO redirect flow. Updated local-dev spec, e2e fixtures, CLI test script. All auth tests pass. | Wait for C-Auth → begin Phase D |
 
 ---
 
