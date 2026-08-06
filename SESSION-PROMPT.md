@@ -1,6 +1,6 @@
 # SESSION PROMPT — LOA e-cert Frontend Refactor
 
-> Assembly-scoped session prompt for `specs/` and the e-cert frontend refactor. This complements (does not replace) the governing `legacy-e-cert-integration.md`.
+> Assembly-scoped session prompt for `specs/` and the e-cert frontend refactor. This complements (does not replace) the governing `legacy-e-cert-integration.md` (synced from `loa-apache-server-apps/assemblies/loa-cert-platform/`).
 
 ## How to Use
 
@@ -17,9 +17,7 @@ Paste this block into the first message of a new session:
 ```
 Read these files IN ORDER and report your understanding of where we left off:
 
-0a. AI-RULES.md                          - project rules (spec-first, CSR architecture, anti-patterns)
-0b. ../loa-apache-server-apps/AI-GUIDE.md  - platform architecture guide (layers, dependencies, ownership)
-0c. ../loa-apache-server-apps/AGENT.md     - AI agent instructions (spec check, no auto-pilot)
+0. AI-RULES.md                          - project rules (spec-first, CSR architecture, anti-patterns)
 1. specs/README.md                        - assembly overview, spec map, governing decisions (CSR approach)
 2. specs/auth/README.md                   - auth & SSO integration overview
 3. specs/auth/session-handling.md         - in-memory token store (v2.0, CSR)
@@ -35,7 +33,8 @@ Read these files IN ORDER and report your understanding of where we left off:
 13. specs/environment/README.md           - env contract (4 vars)
 14. specs/deployment/README.md            - Vercel topology
 15. specs/local-dev/README.md             - local dev workflow, JSON Server mock
-16. SESSION-PROMPT.md                     - this file: "Last Session Notes" = where we stopped
+16. legacy-e-cert-integration.md          - governing spec (v2.1, Final, synced from platform repo)
+17. SESSION-PROMPT.md                     - this file: "Last Session Notes" = where we stopped
 
 Then:
 - Summarize the spec status (all Final) and what's implemented vs pending
