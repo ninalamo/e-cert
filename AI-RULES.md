@@ -120,7 +120,7 @@ If the user says "do X" and you think Y is also needed → **ask about Y, don't 
 
 ## No Server-Side Auth
 
-- No httpInner session cookie
+- No httpOnly session cookie
 - No server-side JWT verification
 - No proxy middleware (`src/proxy.ts` must be deleted)
 
@@ -160,7 +160,7 @@ If the user says "do X" and you think Y is also needed → **ask about Y, don't 
 | Signing JWT tokens in e-cert | e-cert is a consumer; Auth Platform owns issuance |
 | Accessing Supabase directly | All data access through Cert API |
 | Using server actions for data mutations | All mutations are client-side API calls |
-| Adding httpInner session cookie | CSR uses in-memory token only |
+| Adding httpOnly session cookie | CSR uses in-memory token only |
 | Using `/login` for SSO | `/login` is admin-only; use `/sso/login` |
 | Role resolution from DB | Role derived from JWT `permissions` claim |
 | Hardcoded `organization_id` in API calls | Org resolved from JWT `tenant.slug` |
@@ -168,7 +168,21 @@ If the user says "do X" and you think Y is also needed → **ask about Y, don't 
 
 ---
 
-# 6. Guiding Principle
+# 7. Environment Limitations
+
+## CLI Constraints
+
+- The CLI environment is **Windows PowerShell 5.1** — Unix tools like `curl`, `grep`, `rg`, `head`, and `&` for backgrounding are not available
+- Background processes do not persist across tool calls — servers started with `npx tsx` will block or timeout
+- Server testing requires external tools (e.g., Postman, browser dev tools) or writing a dedicated test script
+- When testing servers, use `cmd /c "start /B ..."` or write a temporary test script that starts the server, makes requests, and exits
+
+## Package Management
+
+- `npm install` is the supported package manager (no pnpm/yarn configured)
+- Always verify new dependencies are added to the correct section (`dependencies` vs `devDependencies`)
+
+---
 
 > **Spec-first. No code until Final.** The spec is the source of truth; code must match the spec, never the reverse.
 
