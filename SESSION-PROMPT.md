@@ -48,34 +48,38 @@ Then:
 ### Date: 2026-08-06
 
 ### Completed
-- **Governing retrofit spec aligned to CSR — `legacy-e-cert-integration.md` → Draft v2.0** (authoritative in `loa-apache-server-apps/assemblies/loa-cert-platform/`, synced here per D7):
+- **Governing retrofit spec aligned to CSR — `legacy-e-cert-integration.md` → v2.1** (authoritative in `loa-apache-server-apps/assemblies/loa-cert-platform/`, synced here per D7):
   - D8 superseded 2026-08-06 (CSR wins — matches `specs/` v2.0); §3 SPA architecture, §6 in-memory session + parse-only client JWT + route guard, §8 server actions deleted (typed API client), §10 env drops `JWT_SECRET`/cookie vars (adds `NEXT_PUBLIC_CERT_TENANT_SLUG`), §13 Q-2=CSR, R-4=XSS/in-memory risk.
+  - D9 added 2026-08-06 (Cert API auth deferred to new C-Auth phase; Phase D gate now requires C-Auth done)
 - **`specs/` stale bits fixed** to match the Cert API:
-  - Seed groups `loa-cert-admin/staff/participant` → **`cert-admin` / `cert-staff` / `cert-user`** (`auth/role-resolution.md` §4, `auth/jwt-verification.md` claim example)
-  - Attendee bulk import is a **JSON payload** (not multipart CSV): `api-client/README.md` (client features, module tree, decision table), `components/README.md`, `pages/README.md`, `testing/README.md` (2 spots), `data-flow.md`; CSV parsing stays client-side
-  - Env naming already consistent (`NEXT_PUBLIC_CERT_TENANT_SLUG` matches retrofit spec §10.1)
-- **Committed and pushed** to `migration-plan/api-migration-docs`
-- **New branch created:** `migration/implementation`
-- **All 14 specs promoted to Final** — v2.0 (CSR approach):
-  - `specs/README.md`, `specs/auth/README.md`, `specs/auth/session-handling.md`, `specs/auth/jwt-verification.md`, `specs/auth/sso-fragment.md`, `specs/auth/role-resolution.md`, `specs/auth/proxy.md`
-  - `specs/api-client/README.md`, `specs/testing/README.md`, `specs/data-flow.md`, `specs/pages/README.md`, `specs/components/README.md`, `specs/environment/README.md`, `specs/deployment/README.md`
-- **Environment spec updated** — added `NEXT_PUBLIC_CERT_API_BASE_URL` for server-to-server use
-- **Governing `legacy-e-cert-integration.md` v2.0 promoted to Final** — aligned with specs/ v2.0 CSR approach
+  - Seed groups → **`cert-admin` / `cert-staff` / `cert-user`** (`auth/role-resolution.md` §4, `auth/jwt-verification.md` claim example)
+  - Attendee bulk import is a **JSON payload** (not multipart CSV): `api-client/README.md`, `components/README.md`, `pages/README.md`, `testing/README.md`, `data-flow.md`; CSV parsing stays client-side
+  - Env naming consistent (`NEXT_PUBLIC_CERT_TENANT_SLUG` matches retrofit spec §10.1)
+- **Committed and pushed** to `migration/implementation` branch
+- **All 15 specs promoted to Final**:
+  - `specs/README.md`, `specs/auth/` (6), `specs/api-client/README.md`, `specs/testing/README.md`, `specs/data-flow.md`, `specs/pages/README.md`, `specs/components/README.md`, `specs/environment/README.md`, `specs/deployment/README.md`, `specs/local-dev/README.md`
+- **Environment spec** updated with 4-var contract (`NEXT_PUBLIC_CERT_API_BASE_URL` + `NEXT_PUBLIC_CERT_API_TARGET`)
+- **Governing `legacy-e-cert-integration.md` v2.1 Final** synced from `loa-apache-server-apps`
+- **Mock API server** built (`mock/server.ts`) — Express-based, all Cert API v1.2 endpoints, realistic seed data
+- **Playwright e2e** scaffold (`e2e/`) — config + auth fixtures + test structure
+- **`next.config.ts`** updated with mock/live rewrite toggle
+- **`.env.example`** created with 4-var contract
+- **`AI-RULES.md`** created — spec-first rule, CSR architecture rules, phase tracker, anti-patterns
+- **package.json** cleaned — removed legacy deps (Supabase, bcrypt, puppeteer, qrcode, jose, nodemailer); added express, concurrently, playwright
 
 ### In Progress
 - (none)
 
 ### Next Action
-- [ ] **Wait for C-Auth phase** — Phase D gate now requires C-Auth (Cert API auth middleware) complete (D9: 2026-08-06)
-- [ ] **Begin Phase D** — Auth swap implementation (delete legacy auth, add SSO fragment, in-memory token, route guard, delete server actions)
-- [ ] **Update `.env.example`** for the new 4-var env contract
-- [ ] **Delete `src/proxy.ts`** — no longer needed
-- [ ] **Create `mock/` directory** — implement JSON Server setup and seed data
+- [ ] **Wait for C-Auth phase** — Phase D gate requires C-Auth (Cert API auth middleware) complete
+- [ ] **Begin Phase D** — Auth swap (delete legacy auth, add SSO fragment, in-memory token, route guard)
+- [ ] **Start Phase E prep** — Implement typed API client (`src/lib/api/`) while waiting for C-Auth
 
 ### Backlog / Known Gaps
-- `api-client/` spec has implementation sketches but could use more detail on each resource module
-- `pages/` and `components/` specs list what stays/removes but don't detail the adaptation work
-- Testing spec references MSW mocks but no actual mock handlers exist yet
+- Phase D blocked: needs C-Auth phase completed (Cert API `jwt.auth`/`jwt.endpoint` middleware + SSO endpoints)
+- `api-client/` and `components/` specs have implementation sketches but could use more detail on resource modules
+- Mock server exists but no component code yet to consume it (Phase E)
+- Legacy app won't compile — Supabase/bcrypt deps removed but code still imports them
 
 ---
 
@@ -87,6 +91,7 @@ Then:
 | 2026-08-06 (2) | Cross-boundary: `legacy-e-cert-integration.md` → Draft v2.0 (D8 superseded, CSR — matches specs/), synced per D7; fixed specs stale bits (seed groups `cert-admin/staff/user`, attendee import JSON, CSV client-side) | Review + promote retrofit spec v2.0 + specs → Final → begin Phase D |
 | 2026-08-06 (3) | All 14 specs reviewed and promoted to Final (v2.0); bumped data-flow.md to v2.0; added `NEXT_PUBLIC_CERT_API_BASE_URL` to environment spec (4-var contract); governing `legacy-e-cert-integration.md` v2.0 promoted to Final; updated SESSION-PROMPT.md | Begin Phase D — Auth swap implementation |
 | 2026-08-06 (5) | Synced governing spec to v2.1 (D9: Cert API auth deferred to new C-Auth phase; Phase D gate now requires C-Auth done); auth-provisioning sections refactored to side-notes; updated SESSION-PROMPT.md next actions | Wait for C-Auth → begin Phase D |
+| 2026-08-06 (6) | Built mock API server (mock/server.ts) with Express + realistic seed data (db.json); Playwright e2e scaffold (e2e/); updated next.config.ts with mock/live rewrite toggle; created .env.example; cleaned package.json (removed legacy deps, added express/concurrently/playwright); created AI-RULES.md | Wait for C-Auth → begin Phase D |
 
 ---
 
@@ -116,8 +121,8 @@ Then:
 
 | Phase | Work | Spec Gate | Status |
 |-------|------|-----------|--------|
-| **D** | Auth swap: env, SSO fragment, in-memory token, role resolution, delete auth pages/actions/server actions | Specs Final + e2e auth tests pass | Not started |
-| **E** | Data swap: typed Cert API client, delete server actions, delete legacy modules | Specs Final + e2e domain tests pass | Not started |
+| **D** | Auth swap: env, SSO fragment, in-memory token, role resolution, delete auth pages/actions/server actions | Specs Final + C-Auth done | Blocked (waiting for C-Auth) |
+| **E** | Data swap: typed Cert API client, delete server actions, delete legacy modules | Specs Final | Not started |
 | **F** | UI cleanup + verification: removed pages/components, silent refresh, parity checks | e2e full suite passes | Not started |
 
 ---
