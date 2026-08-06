@@ -1,6 +1,8 @@
 const http = require("http");
 const { spawn } = require("child_process");
 const PORT = 3001;
+const IS_WIN = process.platform === "win32";
+const NPX = IS_WIN ? "npx.cmd" : "npx";
 
 function httpRequest(options, body) {
   return new Promise((resolve, reject) => {
@@ -34,12 +36,29 @@ function httpRequest(options, body) {
 
 async function test() {
   console.log("Starting mock server...\n");
-  const server = spawn("npx", ["tsx", "mock/server.ts"], {
+  const server = spawn(NPX, ["tsx", "mock/server.ts"], {
     cwd: process.cwd(),
+    shell: true,
     stdio: "ignore",
   });
 
-  await new Promise((r) => setTimeout(r, 3000));
+  // Wait for server to start
+  let retries = 0;
+  const maxRetries = 10;
+  while (retries < maxRetries) {
+    try {
+      await httpRequest({ method: "GET", path: "/api/v1/auth/test-users" });
+      break; // Server is up
+    } catch {
+      retries++;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+
+  if (retries >= maxRetries) {
+    console.error("Server failed to start. Is port 3001 free?");
+    process.exit(1);
+  }
 
   try {
     // Test 1: List test users
