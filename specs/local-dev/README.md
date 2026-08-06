@@ -22,10 +22,11 @@ It answers:
 
 ## Owns
 
-- Local mock API server (JSON Server) mirroring Cert API endpoints
+- Local mock API server (Express) mirroring Cert API endpoints
 - Seed data (realistic LOA events, certificates, templates, users)
-- Local dev workflow (`next dev` + JSON Server)
-- Playwright e2e against JSON Server (replaces MSW)
+- Local dev workflow (`next dev` + mock server)
+- Playwright e2e against the mock server
+- Mock-to-live handoff mechanism
 
 ## Does Not Own
 
@@ -42,10 +43,10 @@ It answers:
 │  Local Development                                   │
 │                                                      │
 │  ┌──────────────┐         ┌───────────────────────┐  │
-│  │ next dev      │         │ json-server            │  │
-│  │ :3000         │────────▶│ :3001                  │  │
-│  │               │ rewrite │ mock API (db.json)     │  │
-│  │ /api/v1/*     │────────▶│ /api/v1/*              │  │
+│  │ next dev      │◄────────│ mock/server.ts         │  │
+│  │ :3000         │  rewrite │ :3001                  │  │
+│  │               │          │ Express + db.json     │  │
+│  │ /api/v1/*     │────────▶│                        │  │
 │  └──────────────┘         └───────────────────────┘  │
 │                                                      │
 │  ┌──────────────────────────────────────────────┐    │
@@ -57,100 +58,38 @@ It answers:
 
 ---
 
-# 4. JSON Server Setup
+# 4. Mock Server Setup
 
-## 4.1 Installation
+## 4.1 Implementation
+
+The mock server (`mock/server.ts`) is a standalone Express server that:
+
+1. Loads seed data from `mock/db.json`
+2. Serves CRUD endpoints for all resource collections
+3. Implements custom handlers for non-CRUD endpoints (auth callback, PDF download, bulk operations, etc.)
+4. Wraps all JSON responses in the Cert API envelope format (`{ data: ... }`)
+5. Returns binary responses (PDFs) as proper streams
+
+**Built with:** Express 5.x, TypeScript
+
+## 4.2 Installation
 
 ```bash
-npm install -D json-server
+npm install -D express
 ```
 
-## 4.2 Mock Server (`mock/server.ts`)
+Express is already in devDependencies (added for the mock server).
 
-```typescript
-// mock/server.ts
-import { createServer, Router } from "json-server";
-import authRoutes from "./routes/auth";
-import eventsRoutes from "./routes/events";
-import certificatesRoutes from "./routes/certificates";
-import templatesRoutes from "./routes/templates";
-import dashboardRoutes from "./routes/dashboard";
-import auditRoutes from "./routes/audit";
+## 4.3 File Structure
 
-const server = createServer({ dbname: "db" });
-const router = Router("db.json");
-
-// Custom routes (non-CRUD)
-authRoutes(router);
-eventsRoutes(router);
-certificatesRoutes(router);
-templatesRoutes(router);
-dashboardRoutes(router);
-auditRoutes(router);
-
-server.use(router);
-server.listen(3001, () => {
-  console.log("Mock Cert API running on http://localhost:3001");
-});
+```
+mock/
+├── server.ts              # Express entry point with all route handlers
+├── db.json                # Seed data (realistic LOA data)
+└── .gitignore             # Ignores runtime db.json mutations
 ```
 
-## 4.3 Custom Routes (`mock/routes/*.ts`)
-
-JSON Server's default CRUD doesn't handle nested resources or custom actions. Custom routes extend it:
-
-```typescript
-// mock/routes/auth.ts
-import type { Router } from "json-server";
-
-export default function authRoutes(router: Router) {
-  // SSO callback — returns access token
-  router.post("/api/v1/auth/callback", (req, res) => {
-    res.json({
-      access_token: "mock-jwt-access-token",
-      expires_in: 3600,
-    });
-  });
-
-  // Refresh — returns new access token
-  router.post("/api/v1/auth/refresh", (req, res) => {
-    res.json({
-      access_token: "mock-jwt-access-token-refreshed",
-      expires_in: 3600,
-    });
-  });
-
-  // Logout — clears cookie
-  router.post("/api/v1/auth/logout", (req, res) => {
-    res.json({ status: "ok" });
-  });
-}
-```
-
-```typescript
-// mock/routes/events.ts
-import type { Router } from "json-server";
-
-export default function eventsRoutes(router: Router) {
-  // Event stats
-  router.get("/api/v1/events/:id/stats", (req, res) => {
-    const { id } = req.params;
-    res.json({
-      data: {
-        event_id: id,
-        total_attendees: 45,
-        issued: 30,
-        pending: 15,
-        revoked: 0,
-      },
-    });
-  });
-
-  // Clone template
-  router.post("/api/v1/events/:id/clone-template", (req, res) => {
-    res.json({ data: { id: "new-template-id", cloned_from: req.params.id } });
-  });
-}
-```
+All route handlers and helpers are in the single `server.ts` file for simplicity. The file is ~600 lines but keeps the mock self-contained and easy to run.
 
 ---
 
@@ -164,99 +103,21 @@ Realistic LOA data matching the Cert API schema:
     {
       "id": "1",
       "name": "2026 Commencement Exercises",
-      "description": "Annual commencement ceremony",
+      "description": "Annual commencement ceremony for the Lyceum of Alabang",
       "status": "active",
-      "event_date": "2026-04-15",
+      "event_date": "2026-04-15T08:00:00Z",
       "venue": "Lyceum of Alabang Auditorium",
       "created_by": "admin-uuid-001",
       "created_at": "2026-01-15T08:00:00Z",
       "updated_at": "2026-03-20T14:30:00Z"
     },
-    {
-      "id": "2",
-      "name": "Leadership Training Workshop",
-      "description": "Student leadership development",
-      "status": "active",
-      "event_date": "2026-06-10",
-      "venue": "Conference Room A",
-      "created_by": "staff-uuid-001",
-      "created_at": "2026-02-01T10:00:00Z",
-      "updated_at": "2026-05-28T09:15:00Z"
-    }
+    ...
   ],
-  "event_attendees": [
-    {
-      "id": "a1",
-      "event_id": "1",
-      "name": "Maria Santos",
-      "email": "maria.santos@student.loa.edu.ph",
-      "certificate_number": "LOA-2026-COM-001",
-      "status": "issued",
-      "created_at": "2026-02-01T08:00:00Z"
-    },
-    {
-      "id": "a2",
-      "event_id": "1",
-      "name": "Juan Dela Cruz",
-      "email": "juan.delacruz@student.loa.edu.ph",
-      "certificate_number": null,
-      "status": "pending",
-      "created_at": "2026-02-01T08:00:00Z"
-    }
-  ],
-  "certificates": [
-    {
-      "id": "c1",
-      "certificate_number": "LOA-2026-COM-001",
-      "event_id": "1",
-      "attendee_id": "a1",
-      "attendee_name": "Maria Santos",
-      "attendee_email": "maria.santos@student.loa.edu.ph",
-      "template_id": "t1",
-      "status": "issued",
-      "issued_at": "2026-04-15T16:00:00Z",
-      "issued_by": "admin-uuid-001",
-      "created_at": "2026-04-15T16:00:00Z"
-    }
-  ],
-  "templates": [
-    {
-      "id": "t1",
-      "name": "Certificate of Completion",
-      "type": "certificate",
-      "content": "<h1>Certificate of Completion</h1><p>This certifies that <strong>{{attendee_name}}</strong>...</p>",
-      "is_locked": false,
-      "created_at": "2026-01-10T08:00:00Z",
-      "updated_at": "2026-01-10T08:00:00Z"
-    },
-    {
-      "id": "t2",
-      "name": "Certificate Email Notification",
-      "type": "email",
-      "content": "<p>Your certificate <strong>{{certificate_number}}</strong> is ready...</p>",
-      "is_locked": false,
-      "created_at": "2026-01-10T08:00:00Z",
-      "updated_at": "2026-01-10T08:00:00Z"
-    }
-  ],
-  "dashboard_stats": {
-    "total_events": 12,
-    "total_certificates": 342,
-    "total_templates": 8,
-    "pending_reviews": 5
-  },
-  "audit_logs": [
-    {
-      "id": "al1",
-      "action": "certificate.issued",
-      "entity_type": "certificate",
-      "entity_id": "c1",
-      "user_id": "admin-uuid-001",
-      "user_email": "admin@loa.edu.ph",
-      "details": { "certificate_number": "LOA-2026-COM-001" },
-      "created_at": "2026-04-15T16:00:00Z"
-    }
-  ]
+  "event_attendees": [...],
+  "certificates": [...],
+  "templates": [...],
+  "audit_logs": [...],
+  "sequences": [...]
 }
 ```
 
@@ -264,25 +125,59 @@ Realistic LOA data matching the Cert API schema:
 
 # 6. Vercel Rewrite for Local Dev
 
-The `next.config.js` rewrite routes `/api/v1/*` to the mock server in dev:
+The `next.config.ts` rewrite routes `/api/v1/*` to the mock server in dev and the live Cert API in production:
 
-```javascript
-// next.config.js
+```typescript
+// next.config.ts
 async rewrites() {
-  const apiBase = process.env.NODE_ENV === "development"
-    ? "http://localhost:3001"
-    : "https://cert-api.lyceumalabang.edu.ph";
-
+  if (process.env.NEXT_PUBLIC_CERT_API_TARGET === "live") {
+    return [{
+      source: "/api/v1/:path*",
+      destination: "https://cert-api.lyceumalabang.edu.ph/api/v1/:path*",
+    }];
+  }
+  // Default: local mock server
   return [{
     source: "/api/v1/:path*",
-    destination: `${apiBase}/api/v1/:path*`,
+    destination: "http://localhost:3001/api/v1/:path*",
   }];
 }
 ```
 
 ---
 
-# 7. Local Env
+# 7. Mock-to-Live Handoff
+
+## 7.1 How It Works
+
+The handoff is controlled entirely by the `NEXT_PUBLIC_CERT_API_TARGET` environment variable:
+
+| Value | Behavior | When |
+|-------|----------|------|
+| `mock` (default in `.env.local`) | Rewrite `/api/v1/*` → `localhost:3001` | Local dev, Playwright tests |
+| `live` | Rewrite `/api/v1/*` → `cert-api.lyceumalabang.edu.ph` | When C-Auth phase complete |
+
+## 7.2 What Changes When Switching to Live
+
+**Zero code changes.** The mock server and the live Cert API have identical:
+
+- Endpoint paths (`/api/v1/*`)
+- Response envelope format (`{ data: ..., meta?: ..., status?: "error" }`)
+- Error shape (`{ status: "error", message: string, errors?: {...} }`)
+- Auth flows (callback returns `{ access_token, expires_in }`)
+
+The only difference: the mock always succeeds, while the live API enforces real authorization.
+
+## 7.3 When to Switch
+
+Switch `NEXT_PUBLIC_CERT_API_TARGET=live` when:
+- Phase C + C-Auth are complete
+- Cert API has `jwt.auth`/`jwt.endpoint` middleware deployed
+- Auth Platform has the `loa` tenant, cert catalog, and seed groups configured (per Auth runbook `cert-readiness.md`)
+
+---
+
+# 8. Local Env
 
 ```env
 # .env.local
@@ -290,60 +185,47 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_AUTH_BASE_URL=https://auth.lyceumalabang.edu.ph
 NEXT_PUBLIC_CERT_TENANT_SLUG=loa
 NEXT_PUBLIC_CERT_API_BASE_URL=http://localhost:3001
+NEXT_PUBLIC_CERT_API_TARGET=mock
 ```
-
-Point `NEXT_PUBLIC_AUTH_BASE_URL` to the real Auth Platform (SSO redirect works locally) or to a mock auth server for full offline dev.
 
 ---
 
-# 8. Dev Workflow
+# 9. Dev Workflow
 
 ```bash
-# Terminal 1: Mock API
-npm run mock
+# Combined dev (mock + Next.js)
+npm run dev:local
 
-# Terminal 2: Next.js dev
-npm run dev
+# Standalone mock (for testing endpoints)
+npm run mock:start
 
 # Browser: http://localhost:3000
 ```
 
-Or combined:
-
-```bash
-npm run dev:local  # concurrently runs next dev + json-server
-```
-
-Add to `package.json`:
-
+`package.json` scripts:
 ```json
 {
   "scripts": {
     "dev": "next dev",
-    "mock": "npx tsx mock/server.ts",
-    "dev:local": "concurrently \"npm run mock\" \"npm run dev\"",
-    "test": "npx playwright test",
-    "test:local": "concurrently \"npm run mock\" \"npm run test\""
-  },
-  "devDependencies": {
-    "json-server": "^3.x",
-    "concurrently": "^9.x"
+    "dev:local": "npx concurrently \"npm run mock:start\" \"npm run dev\"",
+    "mock:start": "npx tsx mock/server.ts",
+    "test:e2e": "npx playwright test"
   }
 }
 ```
 
 ---
 
-# 9. Playwright Against JSON Server
+# 10. Playwright Integration
 
-Playwright starts JSON Server before running tests:
+Playwright starts the mock server before running tests:
 
 ```typescript
 // playwright.config.ts
 export default defineConfig({
   webServer: [
     {
-      command: "npx tsx mock/server.ts",
+      command: "npm run mock:start",
       port: 3001,
       reuseExistingServer: !process.env.CI,
     },
@@ -356,55 +238,26 @@ export default defineConfig({
 });
 ```
 
-No MSW needed. JSON Server is the single mock layer.
-
 ---
 
-# 10. Auth Mock
+# 11. Auth Mock
 
-For local dev and e2e, mock the SSO flow:
+For local dev and e2e, the SSO flow is mocked:
 
-```typescript
-// mock/routes/auth.ts
-router.post("/api/v1/auth/callback", (req, res) => {
-  const { payload } = req.body;
+- `POST /api/v1/auth/callback` ignores the encrypted payload and returns a hardcoded JWT
+- `POST /api/v1/auth/refresh` always returns a fresh JWT
+- `POST /api/v1/auth/logout` returns `{ status: "ok" }`
+- `GET /api/v1/auth/access` returns test admin user info
 
-  // In dev: ignore payload, return mock token
-  // In real: Cert decrypts payload, validates, returns token
-  res.json({
-    access_token: createMockJWT({
-      sub: "test-user-uuid",
-      email: "admin@test.com",
-      name: "Test Admin",
-      groups: ["cert-admin"],
-      permissions: ["admin:/api/v1/*"],
-      tenant: { id: "test-tenant", slug: "loa" },
-    }),
-    expires_in: 3600,
-  });
-});
-```
+JWT is a mock token (base64url encode, no real signature) — the client never verifies it.
 
-Playwright tests can hit the callback endpoint directly with a mock payload.
+**Test users:**
 
----
-
-# 11. File Structure
-
-```
-mock/
-├── server.ts              # JSON Server entry point
-├── db.json                # Seed data
-├── routes/
-│   ├── auth.ts            # /api/v1/auth/* custom handlers
-│   ├── events.ts          # /api/v1/events/* custom handlers
-│   ├── certificates.ts    # /api/v1/certificates/* custom handlers
-│   ├── templates.ts       # /api/v1/templates/* custom handlers
-│   ├── dashboard.ts       # /api/v1/dashboard/* custom handlers
-│   └── audit.ts           # /api/v1/admin/* custom handlers
-└── helpers/
-    └── jwt.ts             # createMockJWT() for dev tokens
-```
+| Email | Permissions | Role |
+|-------|-------------|------|
+| `admin@test.com` | `admin:/api/v1/*` | admin |
+| `staff@test.com` | `write:/api/v1/events`, `read:/api/v1/*` | staff |
+| `participant@test.com` | `read:/api/v1/me/certificates` | participant |
 
 ---
 
@@ -413,12 +266,12 @@ mock/
 | Anti-Pattern | Why It Violates |
 |--------------|-----------------|
 | Hitting production Cert API from local dev | Tests should be isolated; no cross-env contamination |
-| Using MSW + JSON Server together | Pick one mock layer; JSON Server is simpler for this use case |
+| Hardcoded URLs in tests | Use `NEXT_PUBLIC_CERT_API_TARGET` to control routing |
 | Mocking in `src/` | Mock layer is `mock/`, separate from app code |
-| Hardcoded URLs in tests | Use `baseURL` from Playwright config |
+| Complex mock logic | Keep handlers simple; the mock mirrors the contract, not business logic |
 
 ---
 
 # 13. Guiding Principle
 
-> **One mock server, one truth.** JSON Server mirrors the Cert API for local dev and e2e tests. No MSW, no production calls, no ambiguity.
+> **One mock server, one truth.** The Express server mirrors the Cert API for local dev and e2e tests. Flipping `NEXT_PUBLIC_CERT_API_TARGET=live` points to the real API with zero code changes.

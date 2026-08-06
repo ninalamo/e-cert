@@ -1,17 +1,24 @@
 import type { NextConfig } from "next";
-import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
   compress: true,
   poweredByHeader: false,
-  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
-    serverActions: {
-      bodySizeLimit: "5mb",
-    },
+  },
+  async rewrites() {
+    if (process.env.NEXT_PUBLIC_CERT_API_TARGET === "live") {
+      return [{
+        source: "/api/v1/:path*",
+        destination: "https://cert-api.lyceumalabang.edu.ph/api/v1/:path*",
+      }];
+    }
+    return [{
+      source: "/api/v1/:path*",
+      destination: "http://localhost:3001/api/v1/:path*",
+    }];
   },
 };
 
-export default withWorkflow(nextConfig);
+export default nextConfig;
