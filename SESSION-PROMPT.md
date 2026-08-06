@@ -73,15 +73,22 @@ Then:
 - (none)
 
 ### Next Action
-- [ ] **Wait for C-Auth phase** — Phase D gate requires C-Auth (Cert API auth middleware) complete
-- [ ] **Begin Phase D** — Auth swap (delete legacy auth, add SSO fragment, in-memory token, route guard)
-- [ ] **Start Phase E prep** — Implement typed API client (`src/lib/api/`) while waiting for C-Auth
+- [ ] Wait for C-Auth phase — Phase D gate requires C-Auth (Cert API auth middleware) complete
+- [ ] Begin Phase D — Auth swap (delete legacy auth, add SSO fragment, in-memory token, route guard)
+- [ ] Begin Phase E prep — Implement typed API client (`src/lib/api/`) while waiting for C-Auth
 
 ### Backlog / Known Gaps
 - Phase D blocked: needs C-Auth phase completed (Cert API `jwt.auth`/`jwt.endpoint` middleware + SSO endpoints)
 - `api-client/` and `components/` specs have implementation sketches but could use more detail on resource modules
-- Mock server exists but no component code yet to consume it (Phase E)
+- Mock server has expanded auth API but no component code yet to consume it (Phase E)
 - Legacy app won't compile — Supabase/bcrypt deps removed but code still imports them
+
+### Today's Additional Work
+- **Mock auth API added** (`mock/server.ts`): Full auth endpoints with role-based JWT issuance, session store, refresh cookie handling, direct token endpoint for tests
+  - Test users: `admin@test.com` (admin), `staff@test.com` (staff), `participant@test.com` (participant)
+  - Endpoints: `/sso/login`, `/callback`, `/tokens`, `/refresh`, `/logout`, `/access`, `/test-users`
+  - Added `cookie-parser` dependency for HTTP-only cookie handling
+- **Updated e2e test fixtures** (`e2e/fixtures/auth.ts`): Now uses mock auth API (`/tokens` endpoint) instead of inline JWT creation; aligned with role-based test users
 
 ---
 
@@ -94,6 +101,7 @@ Then:
 | 2026-08-06 (3) | All 14 specs reviewed and promoted to Final (v2.0); bumped data-flow.md to v2.0; added `NEXT_PUBLIC_CERT_API_BASE_URL` to environment spec (4-var contract); governing `legacy-e-cert-integration.md` v2.0 promoted to Final; updated SESSION-PROMPT.md | Begin Phase D — Auth swap implementation |
 | 2026-08-06 (5) | Synced governing spec to v2.1 (D9: Cert API auth deferred to new C-Auth phase; Phase D gate now requires C-Auth done); auth-provisioning sections refactored to side-notes; updated SESSION-PROMPT.md next actions | Wait for C-Auth → begin Phase D |
 | 2026-08-06 (6) | Built mock API server (mock/server.ts) with Express + realistic seed data (db.json); Playwright e2e scaffold (e2e/); updated next.config.ts with mock/live rewrite toggle; created .env.example; cleaned package.json (removed legacy deps, added express/concurrently/playwright); created AI-RULES.md | Wait for C-Auth → begin Phase D |
+| 2026-08-06 (7) | Enhanced mock auth API: full auth endpoints with role-based JWT issuance, session store, refresh cookie handling, direct token endpoint for tests. Added `cookie-parser` dependency. Updated e2e fixtures to use mock auth API. | Wait for C-Auth → begin Phase D |
 
 ---
 
