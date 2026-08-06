@@ -2,6 +2,7 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 const app = express();
 const PORT = process.env.MOCK_PORT || 3001;
@@ -11,9 +12,13 @@ const dbPath = path.join(__dirname, "db.json");
 let db = JSON.parse(fs.readFileSync(dbPath, "utf8"));
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:3000", "https://e-cert.vercel.app"],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Envelope wrapper - wraps all responses in { data: ... } format
 const envelope = (req: any, res: any, next: any) => {
@@ -42,28 +47,6 @@ const envelope = (req: any, res: any, next: any) => {
 // Helper to save db to disk
 const saveDb = () => {
   fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
-};
-
-// Helper to generate mock JWT
-const createMockJWT = (payload: any) => {
-  const fullPayload = {
-    sub: "test-user-uuid",
-    email: "admin@test.com",
-    name: "Test Admin",
-    groups: ["cert-admin"],
-    permissions: ["admin:/api/v1/*"],
-    tenant: { id: "test-tenant", slug: "loa" },
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 3600,
-    type: "access",
-    ...payload,
-  };
-
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const payloadBase64 = Buffer.from(JSON.stringify(fullPayload)).toString("base64url");
-  const signature = Buffer.from("mock-signature").toString("base64url");
-
-  return `${header}.${payloadBase64}.${signature}`;
 };
 
 applyAuthHandlers(app, envelope);
@@ -179,7 +162,7 @@ function applyCRUDHandlers(server: any, envelope: any, db: any, saveDb: any) {
 app.listen(PORT, () => {
   console.log(`Mock Cert API (v1.2) running on http://localhost:${PORT}`);
   console.log("Endpoints:");
-  console.log("  Auth:         /api/v1/auth/callback, /refresh, /logout, /access");
+  console.log("  Auth:         /api/v1/auth/sso/login, /auth/callback, /auth/tokens, /auth/refresh, /auth/logout, /auth/access, /auth/test-users");
   console.log("  Events:       /api/v1/events/*");
   console.log("  Attendees:    /api/v1/events/:id/attendees/*, /api/v1/attendees/*");
   console.log("  Certificates: /api/v1/certificates/*, /api/v1/me/certificates/*, /api/v1/certificates/qr");
@@ -189,61 +172,252 @@ app.listen(PORT, () => {
   console.log("  Public:       /api/v1/verify/*, /api/v1/view/*");
 });
 
+// In-memory session store (refresh token → user info)
+const sessions: Record<string, { user: any; refresh_token: string; created_at: string }> = {};
+const refreshTokens: Record<string, { user: any; expires_at: number }> = {};
+
+const testUsers: Record<string, any> = {
+  "admin@test.com": {
+    sub: "admin-uuid",
+    email: "admin@test.com",
+    name: "Admin User",
+    groups: ["cert-admin"],
+    permissions: ["admin:/api/v1/*", "read:/api/v1/events"],
+    role: "admin",
+    password: "admin", // Only for mock - never in production
+  },
+  "staff@test.com": {
+    sub: "staff-uuid",
+    email: "staff@test.com",
+    name: "Staff User",
+    groups: ["cert-staff"],
+    permissions: ["write:/api/v1/events", "write:/api/v1/certificates", "read:/api/v1/*"],
+    role: "staff",
+    password: "staff",
+  },
+  "participant@test.com": {
+    sub: "participant-uuid",
+    email: "participant@test.com",
+    name: "Participant User",
+    groups: ["cert-user"],
+    permissions: ["read:/api/v1/me/certificates"],
+    role: "participant",
+    password: "participant",
+  },
+};
+
+const createMockJWT = (user: any) => {
+  const fullPayload = {
+    sub: user.sub,
+    email: user.email,
+    name: user.name,
+    groups: user.groups,
+    permissions: user.permissions,
+    scopes: [],
+    tenant: { id: "test-tenant", slug: "loa" },
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    type: "access",
+  };
+
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const payloadBase64 = Buffer.from(JSON.stringify(fullPayload)).toString("base64url");
+  const signature = Buffer.from("mock-signature").toString("base64url");
+
+  return `${header}.${payloadBase64}.${signature}`;
+};
+
+const issueRefreshToken = (user: any): string => {
+  const refreshToken = Buffer.from(`${user.email}:${Date.now()}:${Math.random()}`).toString("hex");
+  refreshTokens[refreshToken] = {
+    user,
+    expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
+  sessions[refreshToken] = {
+    user,
+    refresh_token: refreshToken,
+    created_at: new Date().toISOString(),
+  };
+  return refreshToken;
+};
+
 // Handlers for auth endpoints
 function applyAuthHandlers(server: any, envelope: any) {
-  server.post("/api/v1/auth/callback", envelope, (req: any, res: any) => {
-    const { payloadEncrypted } = req.body;
+  // SSO login - initiates SSO flow (mock)
+  server.get("/api/v1/auth/sso/login", envelope, (_req: any, res: any) => {
+    res.json({
+      data: {
+        redirect_url: "https://auth.lyceumalabang.edu.ph/sso/login?redirect=http://localhost:3000",
+        auth_url: "https://auth.lyceumalabang.edu.ph/sso/login?redirect=http://localhost:3000",
+      },
+    });
+  });
 
-    if (!payloadEncrypted && !req.body.payload) {
+  // SSO callback - processes SSO response and issues tokens
+  server.post("/api/v1/auth/callback", envelope, (req: any, res: any) => {
+    const { payload } = req.body;
+
+    if (!payload) {
       return res.status(400).json({
         status: "error",
         message: "Missing SSO payload",
       });
     }
 
-    const token = createMockJWT({
-      sub: "test-user-uuid",
-      email: "admin@test.com",
-      name: "Test Admin",
-      groups: ["cert-admin"],
-      permissions: ["admin:/api/v1/*"],
+    // In real SSO, payload would be decrypted. For mock, we use the email from payload
+    const email = payload.email || "admin@test.com";
+    const user = testUsers[email] || testUsers["admin@test.com"];
+
+    const accessToken = createMockJWT(user);
+    const refreshToken = issueRefreshToken(user);
+
+    res.cookie("loa_cert_refresh", refreshToken, {
+      httpOnly: true,
+      secure: false, // Set to true in production
+      sameSite: "lax",
+      path: "/api/v1/auth",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
-      access_token: token,
+      access_token: accessToken,
+      token_type: "Bearer",
       expires_in: 3600,
     });
   });
 
+  // Token refresh - issues new access token using refresh cookie
   server.post("/api/v1/auth/refresh", envelope, (req: any, res: any) => {
-    const token = createMockJWT({
-      sub: "test-user-uuid",
-      email: "admin@test.com",
-      name: "Test Admin",
-    });
+    const refreshToken = req.cookies?.loa_cert_refresh;
 
+    if (!refreshToken) {
+      return res.status(401).json({
+        status: "error",
+        message: "Missing refresh token",
+      });
+    }
+
+    const session = refreshTokens[refreshToken];
+    if (!session) {
+      return res.status(401).json({
+        status: "error",
+        message: "Invalid or expired refresh token",
+      });
+    }
+
+    if (session.expires_at < Date.now()) {
+      delete refreshTokens[refreshToken];
+      delete sessions[refreshToken];
+      return res.status(401).json({
+        status: "error",
+        message: "Refresh token expired",
+      });
+    }
+
+    const accessToken = createMockJWT(session.user);
     res.json({
-      access_token: token,
+      access_token: accessToken,
+      token_type: "Bearer",
       expires_in: 3600,
     });
   });
 
+  // Logout - clears session and refresh token
   server.post("/api/v1/auth/logout", envelope, (req: any, res: any) => {
-    res.json({ status: "ok" });
+    const refreshToken = req.cookies?.loa_cert_refresh;
+
+    if (refreshToken && refreshTokens[refreshToken]) {
+      delete refreshTokens[refreshToken];
+      delete sessions[refreshToken];
+    }
+
+    res.clearCookie("loa_cert_refresh", { path: "/api/v1/auth" });
+    res.json({ status: "ok", message: "Logged out successfully" });
   });
 
+  // Access check - returns current user info
   server.get("/api/v1/auth/access", envelope, (req: any, res: any) => {
+    const refreshToken = req.cookies?.loa_cert_refresh;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        status: "error",
+        message: "Not authenticated",
+      });
+    }
+
+    const session = refreshTokens[refreshToken];
+    if (!session || session.expires_at < Date.now()) {
+      return res.status(401).json({
+        status: "error",
+        message: "Session expired",
+      });
+    }
+
     res.json({
       data: {
         user: {
-          sub: "test-user-uuid",
-          email: "admin@test.com",
-          name: "Test Admin",
+          sub: session.user.sub,
+          email: session.user.email,
+          name: session.user.name,
         },
-        groups: ["cert-admin"],
-        permissions: ["admin:/api/v1/*"],
+        groups: session.user.groups,
+        permissions: session.user.permissions,
         tenant: { id: "test-tenant", slug: "loa" },
+        role: session.user.role,
       },
+    });
+  });
+
+  // Direct token issuance for testing (bypass SSO)
+  server.post("/api/v1/auth/tokens", envelope, (req: any, res: any) => {
+    const { email, password } = req.body;
+
+    let user: any = null;
+
+    if (email && password) {
+      const candidate = testUsers[email];
+      if (candidate && candidate.password === password) {
+        user = candidate;
+      }
+    } else if (email) {
+      user = testUsers[email] || null;
+    }
+
+    if (!user) {
+      return res.status(401).json({
+        status: "error",
+        message: "Invalid credentials",
+      });
+    }
+
+    const accessToken = createMockJWT(user);
+    const refreshToken = issueRefreshToken(user);
+
+    res.cookie("loa_cert_refresh", refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/api/v1/auth",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      access_token: accessToken,
+      token_type: "Bearer",
+      expires_in: 3600,
+    });
+  });
+
+  // Get available test users (mock-only, for development/testing)
+  server.get("/api/v1/auth/test-users", envelope, (_req: any, res: any) => {
+    res.json({
+      data: Object.entries(testUsers).map(([email, user]: [string, any]) => ({
+        email,
+        name: user.name,
+        role: user.role,
+        groups: user.groups,
+      })),
     });
   });
 }
@@ -296,7 +470,7 @@ function applyEventsHandlers(server: any, envelope: any, db: any, saveDb: any) {
     });
   });
 
-  server.post("/api/v1/events/:id/clone-email-template", envelope, (req: any) => {
+  server.post("/api/v1/events/:id/clone-email-template", envelope, (req: any, res: any) => {
     res.status(201).json({
       data: {
         id: `clone-email-${Date.now()}`,

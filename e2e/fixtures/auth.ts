@@ -1,22 +1,6 @@
 import { test as base, type Page } from "@playwright/test";
 
-function createMockJWT(email: string, permissions: string[]): string {
-  const payload = {
-    sub: "test-user-uuid",
-    email,
-    name: "Test User",
-    groups: ["loa-cert-test"],
-    permissions,
-    tenant: { id: "test-tenant", slug: "loa" },
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 3600,
-    type: "access",
-  };
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = Buffer.from("mock-signature").toString("base64url");
-  return `${header}.${payloadBase64}.${signature}`;
-}
+const MOCK_AUTH_URL = "http://localhost:3001/api/v1/auth";
 
 type Fixtures = {
   adminPage: Page;
@@ -24,42 +8,53 @@ type Fixtures = {
   participantPage: Page;
 };
 
+async function authenticateAs(role: "admin" | "staff" | "participant", page: Page): Promise<string> {
+  const email = `${role}@test.com`;
+  const password = role; // Mock password matches role name
+
+  const response = await page.request.post(`${MOCK_AUTH_URL}/tokens`, {
+    data: { email, password },
+  });
+
+  if (!response.ok()) {
+    console.error(`Failed to authenticate as ${role}:`, await response.text());
+  }
+
+  const data = await response.json();
+  return data.data?.access_token || data.access_token;
+}
+
 export const test = base.extend<Fixtures>({
   adminPage: async ({ browser }, use) => {
     const context = await browser.newContext();
-    await context.addCookies([
-      {
-        name: "loa_cert_refresh",
-        value: "test-refresh-token",
-        domain: "localhost",
-        path: "/api/v1/auth",
-      },
-    ]);
     const page = await context.newPage();
+
+    // Authenticate via mock API
+    await authenticateAs("admin", page);
+
+    // Navigate to app - cookies will be set automatically
     await page.goto("/");
-    await page.evaluate((token) => {
-      (window as any).__setAccessToken?.(token);
-    }, createMockJWT("admin@test.com", ["admin:/api/v1/*"]));
+
     await use(page);
     await context.close();
   },
   staffPage: async ({ browser }, use) => {
     const context = await browser.newContext();
     const page = await context.newPage();
+
+    await authenticateAs("staff", page);
     await page.goto("/");
-    await page.evaluate((token) => {
-      (window as any).__setAccessToken?.(token);
-    }, createMockJWT("staff@test.com", ["write:/api/v1/events", "read:/api/v1/*"]));
+
     await use(page);
     await context.close();
   },
   participantPage: async ({ browser }, use) => {
     const context = await browser.newContext();
     const page = await context.newPage();
+
+    await authenticateAs("participant", page);
     await page.goto("/");
-    await page.evaluate((token) => {
-      (window as any).__setAccessToken?.(token);
-    }, createMockJWT("participant@test.com", ["read:/api/v1/me/certificates"]));
+
     await use(page);
     await context.close();
   },
