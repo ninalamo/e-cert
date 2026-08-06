@@ -17,7 +17,9 @@ Paste this block into the first message of a new session:
 ```
 Read these files IN ORDER and report your understanding of where we left off:
 
-0. AI-RULES.md                          - project rules (spec-first, CSR architecture, anti-patterns)
+0a. AI-RULES.md                          - project rules (spec-first, CSR architecture, anti-patterns)
+0b. ../loa-apache-server-apps/AI-GUIDE.md  - platform architecture guide (layers, dependencies, ownership)
+0c. ../loa-apache-server-apps/AGENT.md     - AI agent instructions (spec check, no auto-pilot)
 1. specs/README.md                        - assembly overview, spec map, governing decisions (CSR approach)
 2. specs/auth/README.md                   - auth & SSO integration overview
 3. specs/auth/session-handling.md         - in-memory token store (v2.0, CSR)
