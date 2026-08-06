@@ -1,8 +1,8 @@
 # LOA e-cert — Data Flow & Security Boundaries
 ## Product Assembly Component Specification
 
-**Version:** 1.0
-**Status:** Draft
+**Version:** 2.0
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) — Architecture Module
 **Audience:** Engineers, AI Development Agents
 

@@ -26,6 +26,7 @@ It answers:
 |----------|---------|
 | `NEXT_PUBLIC_AUTH_BASE_URL` | `https://auth.lyceumalabang.edu.ph` (SSO login redirect) |
 | `NEXT_PUBLIC_CERT_TENANT_SLUG` | `loa` (for client-side JWT tenant check) |
+| `NEXT_PUBLIC_CERT_API_BASE_URL` | `https://cert-api.lyceumalabang.edu.ph` (server-to-server if needed; browser uses rewrite) |
 
 ## 2.2 Kept
 
@@ -54,9 +55,10 @@ It answers:
 NEXT_PUBLIC_BASE_URL=https://e-cert.vercel.app
 NEXT_PUBLIC_AUTH_BASE_URL=https://auth.lyceumalabang.edu.ph
 NEXT_PUBLIC_CERT_TENANT_SLUG=loa
+NEXT_PUBLIC_CERT_API_BASE_URL=https://cert-api.lyceumalabang.edu.ph
 ```
 
-That's it. Three client-side variables. No server-side secrets.
+Four client-side variables. No server-side secrets.
 
 ---
 

@@ -55,24 +55,24 @@ Then:
   - Env naming already consistent (`NEXT_PUBLIC_CERT_TENANT_SLUG` matches retrofit spec §10.1)
 - **Committed and pushed** to `migration-plan/api-migration-docs`
 - **New branch created:** `migration/implementation`
+- **All 14 specs promoted to Final** — v2.0 (CSR approach):
+  - `specs/README.md`, `specs/auth/README.md`, `specs/auth/session-handling.md`, `specs/auth/jwt-verification.md`, `specs/auth/sso-fragment.md`, `specs/auth/role-resolution.md`, `specs/auth/proxy.md`
+  - `specs/api-client/README.md`, `specs/testing/README.md`, `specs/data-flow.md`, `specs/pages/README.md`, `specs/components/README.md`, `specs/environment/README.md`, `specs/deployment/README.md`
+- **Environment spec updated** — added `NEXT_PUBLIC_CERT_API_BASE_URL` for server-to-server use
+- **Governing `legacy-e-cert-integration.md` v2.0 promoted to Final** — aligned with specs/ v2.0 CSR approach
 
 ### In Progress
-- (none — specs are Draft, awaiting review)
+- (none — all specs are Final)
 
 ### Next Action
-- [ ] **Review specs** — read through all 14 files, mark anything that needs changes
-- [ ] **Review governing `legacy-e-cert-integration.md` v2.0** — promoted to Final alongside `api-endpoints.md` v1.3 (Phase A)
-- [ ] **Promote to Final** — update `Status: Draft` to `Status: Final` in each spec when satisfied
 - [ ] **Begin Phase D** — Auth swap implementation (delete legacy auth, add SSO fragment, in-memory token, route guard, delete server actions)
-- [ ] **Or: flesh out stub specs** — `api-client/`, `pages/`, `components/` could use more detail before coding
+- [ ] **Update `.env.example`** for the new 4-var env contract
+- [ ] **Delete `src/proxy.ts`** — no longer needed
 
 ### Backlog / Known Gaps
-- All specs are **Draft** — no code until Final (Rule 0)
 - `api-client/` spec has implementation sketches but could use more detail on each resource module
 - `pages/` and `components/` specs list what stays/removes but don't detail the adaptation work
 - Testing spec references MSW mocks but no actual mock handlers exist yet
-- No `.env.example` updated for the new 3-var env contract
-- `src/proxy.ts` still exists — needs deletion when Phase D starts
 
 ---
 
@@ -82,6 +82,7 @@ Then:
 |------|-----------|-------------|
 | 2026-08-06 | Created 14 spec files (v2.0, CSR approach): auth layer (6), api-client, testing, data-flow, pages, components, environment, deployment. Committed + pushed to `migration-plan/api-migration-docs`. Created `migration/implementation` branch. | Review specs → promote to Final → begin Phase D |
 | 2026-08-06 (2) | Cross-boundary: `legacy-e-cert-integration.md` → Draft v2.0 (D8 superseded, CSR — matches specs/), synced per D7; fixed specs stale bits (seed groups `cert-admin/staff/user`, attendee import JSON, CSV client-side) | Review + promote retrofit spec v2.0 + specs → Final → begin Phase D |
+| 2026-08-06 (3) | All 14 specs reviewed and promoted to Final (v2.0); bumped data-flow.md to v2.0; added `NEXT_PUBLIC_CERT_API_BASE_URL` to environment spec (4-var contract); governing `legacy-e-cert-integration.md` v2.0 promoted to Final; updated SESSION-PROMPT.md | Begin Phase D — Auth swap implementation |
 
 ---
 
@@ -89,20 +90,20 @@ Then:
 
 | Spec | Version | Status | Gate |
 |------|---------|--------|------|
-| `specs/README.md` | 2.0 | Draft | — |
-| `specs/auth/README.md` | 2.0 | Draft | Phase D |
-| `specs/auth/jwt-verification.md` | 2.0 | Draft | Phase D |
-| `specs/auth/session-handling.md` | 2.0 | Draft | Phase D |
-| `specs/auth/sso-fragment.md` | 2.0 | Draft | Phase D |
-| `specs/auth/role-resolution.md` | 2.0 | Draft | Phase D |
-| `specs/auth/proxy.md` | 2.0 | Draft | Phase D |
-| `specs/api-client/README.md` | 2.0 | Draft | Phase E |
-| `specs/pages/README.md` | 2.0 | Draft | Phase E/F |
-| `specs/components/README.md` | 2.0 | Draft | Phase E/F |
-| `specs/environment/README.md` | 2.0 | Draft | Phase D |
-| `specs/deployment/README.md` | 2.0 | Draft | Phase D |
-| `specs/testing/README.md` | 2.0 | Draft | Phase D |
-| `specs/data-flow.md` | 1.0 | Draft | — |
+| `specs/README.md` | 2.0 | Final | — |
+| `specs/auth/README.md` | 2.0 | Final | Phase D |
+| `specs/auth/jwt-verification.md` | 2.0 | Final | Phase D |
+| `specs/auth/session-handling.md` | 2.0 | Final | Phase D |
+| `specs/auth/sso-fragment.md` | 2.0 | Final | Phase D |
+| `specs/auth/role-resolution.md` | 2.0 | Final | Phase D |
+| `specs/auth/proxy.md` | 2.0 | Final | Phase D |
+| `specs/api-client/README.md` | 2.0 | Final | Phase E |
+| `specs/pages/README.md` | 2.0 | Final | Phase E/F |
+| `specs/components/README.md` | 2.0 | Final | Phase E/F |
+| `specs/environment/README.md` | 2.0 | Final | Phase D |
+| `specs/deployment/README.md` | 2.0 | Final | Phase D |
+| `specs/testing/README.md` | 2.0 | Final | Phase D |
+| `specs/data-flow.md` | 2.0 | Final | — |
 
 ---
 
