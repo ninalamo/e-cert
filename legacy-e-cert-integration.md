@@ -1,7 +1,7 @@
 # LOA Cert Platform — Legacy `e-cert` Integration & Refactor
 ## Product Assembly Component Specification
 
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Final
 **Layer:** Product Assembly (`loa-cert-platform`)
 **Audience:** Architects, Engineers, AI Development Agents
@@ -175,6 +175,8 @@ Locked with the user on 2026-08-05. These are normative for this spec.
 
 > D8 (superseded) rationale: the earlier SSR model mirrored the access token into an httpOnly `session` cookie because server components/server actions cannot read an in-memory token. The CSR decision removes the server-rendered layer entirely — no server components consume the token, so the mirror cookie is unnecessary complexity. All `~75` server actions are deleted and replaced by a client-side HTTP client; route protection is a client-side guard (UI only), not a security boundary.
 
+| D9 | **Cert API authentication deferred (2026-08-06)** | Phase C scaffolds the **domain CRUD endpoints only** (events/attendees/templates/certificates) with **no authentication**: no `jwt.auth` / `jwt.endpoint` middleware, and no SSO `callback` / `refresh` / `logout` endpoints yet. They land in a later **C-Auth** phase (§12). Domain endpoints are implemented and tested unauthenticated in the interim; the §9 auth contract and §4.4 level model remain the target. |
+
 ---
 
 # 6. Identity & SSO Integration
@@ -326,15 +328,18 @@ Legacy roles are **not** a Cert-local concept and **not** a per-app enum. They a
 - Cert enforces levels at runtime (`jwt.endpoint`, `api-endpoints.md` §9.5); the **frontend** derives a coarse role from the same claim for UI gating.
 - `cert.*` permission keys remain *defined* in `group-permission-management.md` but are **not** consulted by Cert or `e-cert` for enforcement (`api-endpoints.md` §4.5). This section supersedes the `cert.*` key table in `web-ui.md` §5.1.
 
-## 7.2 Seed Groups (proposed, `loa` tenant)
+## 7.2 Cert Groups (expected on the `loa` tenant)
 
-| Seed group | Maps from legacy role | Grant pattern (`api-endpoints.md` §4.4) |
+These are the user-groups the Cert Platform **expects** on the `loa` tenant. **Creating them in Auth is a side-note** — provisioned manually by an Auth operator per the Auth runbook `assemblies/loa-auth-platform/cert-readiness.md` (§6–§7). Per the 2026-08-06 decision they are **not** seeded: no `DatabaseSeeder.php` entry, nothing in `database/seeders/database.sql`.
+
+| Group | Maps from legacy role | Grant pattern (`api-endpoints.md` §4.4) |
 |------------|----------------------|----------------------------------------|
 | `cert-admin` | `admin` | `admin` on every cataloged Cert path (Appendix A). Bypasses owner rule. |
 | `cert-staff` | `staff` | `write` on management paths (events, attendees, templates, certificates issue/email), `read` on read paths, `read`/`write` on author-scoped item paths + `read` on `/me/events`, `/me/templates`. No grants on `admin` paths. |
 | `cert-user` | `participant` | `read` on `/me/certificates`, `/me/certificates/{id}`, `/certificates/{id}`, `/{id}/pdf`, `/{id}/download`, `/events/{id}`, `/certificates/qr` (owner rule applies). |
 
 - Group names confirmed (Q-4 resolved 2026-08-06): `cert-admin`, `cert-staff`, `cert-user`; existing LOA groups (Faculty, Students) are **not** reused.
+- **Dashboard ownership (confirmed 2026-08-06):** `GET /api/v1/dashboard/stats` and `/api/v1/dashboard/activity` are **org-wide unscoped aggregates** (`api-endpoints.md` §5.7). Their `read` grants belong to `cert-admin` and `cert-staff` only; `cert-user` is **not** granted these paths (participants see only their own `/me/certificates`). The dashboard nav item renders for admin/staff roles only.
 - Because D2 (fresh start), there is **no bulk role migration** — users register and are assigned to groups by an Auth admin. A public registration user lands in `cert-user` (or unassigned) by default; the Auth admin promotes staff/admin.
 
 ## 7.3 Who Decides Access
@@ -581,10 +586,14 @@ All client fetches carry `Authorization: Bearer <in-memory access>`; on `401` th
 
 ## 10.2 Auth Platform Configuration (prereq)
 
-- `AUTH_ALLOWED_REDIRECTS` must include `https://e-cert.vercel.app` (and tenant `redirect_origins`).
-- Seed the `loa` tenant Cert catalog (Appendix A of `api-endpoints.md` via `POST /api/v1/admin/tenants/{tenant}/endpoints/bulk`).
-- Seed `cert-admin` / `cert-staff` / `cert-user` groups with level grants (§7.2).
+> **Side-note — how Auth is provisioned:** the Auth-side work (creating the `loa` tenant, importing the Cert catalog, creating the Cert groups, applying the grants, setting allowlists) is **owned by Auth** and is an operator-run procedure — see the Auth runbook **`assemblies/loa-auth-platform/cert-readiness.md`** (§4–§7 production, §8 local Docker). It is **not** baked into Auth seeders (2026-08-06 decision). This spec only records what the Cert Platform **depends on**:
+
+- The `loa` tenant exists (active) with `redirect_origins` = `https://e-cert.vercel.app` (SSO redirect target).
+- The Cert endpoint catalog (Appendix A of `api-endpoints.md`) is present on that tenant.
+- `cert-admin` / `cert-staff` / `cert-user` groups exist with the §7.2 grants.
 - `JWT_SECRET` identical across Auth and Cert only (`assemblies/loa-auth-platform/environment.md`); **not** present in `e-cert`.
+
+> These dependencies matter once the **C-Auth** phase (D9) implements the Cert-side consumers; Phase C's domain CRUD runs without them.
 
 ## 10.3 Topology (Q-1 — resolved: split origin)
 
@@ -595,17 +604,15 @@ The e-cert UI is deployed to Vercel (`e-cert.vercel.app`); the Laravel Cert API 
 
 ## 10.4 Auth Platform Wiring (concrete)
 
-| Item | Where | Value / Command |
-|------|-------|-----------------|
+The concrete provisioning steps (tenant creation, catalog import, group creation, grants, `.env` allowlists) are the **Auth runbook's** job — `assemblies/loa-auth-platform/cert-readiness.md` §4–§7 (production) and §8 (local Docker) — performed manually by an Auth operator, **not** this spec. Only the **e-cert-facing contracts** are recorded here:
+
+| Item | Where | Value / Contract |
+|------|-------|------------------|
 | Shared `JWT_SECRET` | Auth `.env` `JWT_SECRET` — must equal Cert; **not** needed by e-cert | random 32+ chars, e.g. `openssl rand -base64 48`; never commit (auth `environment.md`) |
 | `ENCRYPTION_KEY` | Auth `.env` (shared with Cert **only**, not e-cert) | 32 bytes hex-encoded (auth `web-ui.md` §4.1) |
-| Redirect allowlist | Auth `.env` `AUTH_ALLOWED_REDIRECTS` + `loa` tenant `redirect_origins` | must include `https://e-cert.vercel.app` (`.env.example` now lists it) |
-| `AUTH_REDIRECT_URL` | Auth `.env` | default `https://aces-api.lyceumalabang.edu.ph`; tenant SSO resolves from `?redirect=`, not this fallback |
-| CORS | Auth `.env` `CORS_ALLOWED_ORIGINS` | include `https://e-cert.vercel.app` (needed for the cross-origin `GET /api/v1/auth/access` call) |
-| Cert endpoint catalog | Auth `POST /api/v1/admin/tenants/{tenant}/endpoints/bulk` | body = `api-endpoints.md` Appendix A |
-| Group grants | Auth `POST /api/v1/admin/tenants/{tenant}/groups/{group}/endpoints` | one call per group per cataloged path, level per §7.2 |
+| Redirect allowlist | must include `https://e-cert.vercel.app` | applied in Auth (`.env` `AUTH_ALLOWED_REDIRECTS` + `loa` tenant `redirect_origins`); no implicit fallback |
 
-> These admin calls require a `users.manage`-granted Auth admin JWT (`routes/api.php` lines 69–86). The catalog/grant setup can also be driven through `access-config-import-export.md` (template → export → import) instead of one-by-one calls.
+> The Cert-side consumers of this wiring (SSO `callback`/`refresh`/`logout` + `jwt.auth`/`jwt.endpoint` middleware) are deferred to the **C-Auth** phase (D9, 2026-08-06).
 
 ## 10.5 Access-Token Claim Contract (e-cert parse-only)
 
@@ -717,16 +724,17 @@ Spec-gated (AI-RULES.md Rule 0). Each phase requires the governing spec to be Fi
 
 | Phase | Work | Gate |
 |-------|------|------|
-| **A** | Review + promote `api-endpoints.md` v1.3 → Final; review + promote this spec v2.0 → Final | user review |
-| **B** | Auth readiness: redirect allowlist, cert catalog import, seed groups + grants (§10.2) | Auth `tenant-group-endpoint-grants.md` / catalog Final |
-| **C** | Cert scaffold: `jwt.auth`/`jwt.endpoint`, callback/refresh/logout, core slice (events/attendees/templates/certificates) + tests | `api-endpoints.md` Final |
-| **D** | `e-cert` auth swap (CSR): env, in-memory token store + silent refresh, SSO fragment handler, parse-only JWT, client auth guard, delete `src/proxy.ts` + auth pages/actions | this spec Final |
+| **A** | ✅ **Complete 2026-08-06** — `api-endpoints.md` v1.3 and this spec v2.0 promoted to **Final** | user review |
+| **B** | Auth readiness — provisioned **manually at deploy-time** per the Auth runbook `cert-readiness.md` (§10.2 side-note) | Auth runbook `cert-readiness.md` Final |
+| **C** | Cert scaffold: **domain CRUD slice only** — events / attendees / templates / certificates + tests, **no authentication** (D9, 2026-08-06) | `api-endpoints.md` Final |
+| **C-Auth** | Cert API authentication (deferred from C, D9): `jwt.auth` + `jwt.endpoint` middleware and SSO `callback` / `refresh` / `logout` (§9) | prerequisite of Phase D |
+| **D** | `e-cert` auth swap (CSR): env, in-memory token store + silent refresh, SSO fragment handler, parse-only JWT, client auth guard, delete `src/proxy.ts` + auth pages/actions | this spec Final + **C-Auth** done |
 | **E** | `e-cert` data swap: typed client API modules (§8.1), delete all server actions, components call endpoints directly (§8.2), PDF/QR/email/upload via API, remove legacy modules | this spec Final |
 | **F** | UI cleanup + verification: removed pages/components, silent refresh, parity checks (login, event, issue, download, verify, view, audit) | — |
 | **G** | Decommission legacy DB + deps (§11) | cutover verified |
 | **H** | Phase 4 integration: cross-app JWT validation tests, OpenAPI, audit consistency (`PROJECT.md` Phase 4) | — |
 
-Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`): SSO/session + events + attendees + templates + certificates against the Cert API; PDF/QR/email/audit/dashboard afterwards.
+Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`): events + attendees + templates + certificates against the Cert API (**unauthenticated** — D9); SSO/session and the auth middleware follow in the **C-Auth** phase; PDF/QR/email/audit/dashboard afterwards.
 
 ---
 
@@ -752,7 +760,7 @@ Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`):
 
 | Spec / doc | Role |
 |------------|------|
-| `assemblies/loa-cert-platform/api-endpoints.md` (v1.3) | Cert API source of truth; §4 levels, §6 routes, §7 data model, §9 SSO/JWT/permissions, Appendix A catalog |
+| `assemblies/loa-cert-platform/api-endpoints.md` (Final v1.3) | Cert API source of truth; §4 levels, §6 routes, §7 data model, §9 SSO/JWT/permissions, Appendix A catalog |
 | `assemblies/loa-cert-platform/web-ui.md` (v1.0) | Frontend spec; §4 SSO fragment, §5 permission mapping (superseded for roles by this spec §7), §6 token lifecycle (refined by the CSR decision, D8 superseded) |
 | `assemblies/loa-cert-platform/README.md` (v1.2) | Assembly scope, §11 SSO contract, §10 REST conventions |
 | `assemblies/loa-auth-platform/tenant-group-endpoint-grants.md` (Final v1.1) | Level-based grants model (authority for levels) |
@@ -768,6 +776,6 @@ Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`):
 
 ## Document Control
 
-- **Status:** Draft v2.0 — CSR rewrite (D8 superseded 2026-08-06); Q-2..Q-7 resolved (2026-08-06); not to be implemented against until Final.
+- **Status:** Final v2.1 — 2026-08-06: **D9 — Cert API authentication deferred** (Phase C = unauth domain CRUD only; SSO + `jwt.auth`/`jwt.endpoint` move to a new **C-Auth** phase). Auth-provisioning sections (§7.2 title, §10.2, §10.4) refactored to **side-notes** pointing at the Auth runbook `cert-readiness.md` (no "seeding" language). v2.0 (2026-08-06): CSR rewrite, D8 superseded; Q-2..Q-7 resolved; Q-17 proxy + dashboard ownership confirmed.
 - **Authoritative source:** `loa-apache-server-apps/assemblies/loa-cert-platform/legacy-e-cert-integration.md`.
 - **Synced working copy:** `D:\loa\e-cert\legacy-e-cert-integration.md` (same content; refactor drives from the `e-cert` copy).

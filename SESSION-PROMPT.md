@@ -66,6 +66,7 @@ Then:
 - (none)
 
 ### Next Action
+- [ ] **Wait for C-Auth phase** — Phase D gate now requires C-Auth (Cert API auth middleware) complete (D9: 2026-08-06)
 - [ ] **Begin Phase D** — Auth swap implementation (delete legacy auth, add SSO fragment, in-memory token, route guard, delete server actions)
 - [ ] **Update `.env.example`** for the new 4-var env contract
 - [ ] **Delete `src/proxy.ts`** — no longer needed
@@ -85,7 +86,7 @@ Then:
 | 2026-08-06 | Created 14 spec files (v2.0, CSR approach): auth layer (6), api-client, testing, data-flow, pages, components, environment, deployment. Committed + pushed to `migration-plan/api-migration-docs`. Created `migration/implementation` branch. | Review specs → promote to Final → begin Phase D |
 | 2026-08-06 (2) | Cross-boundary: `legacy-e-cert-integration.md` → Draft v2.0 (D8 superseded, CSR — matches specs/), synced per D7; fixed specs stale bits (seed groups `cert-admin/staff/user`, attendee import JSON, CSV client-side) | Review + promote retrofit spec v2.0 + specs → Final → begin Phase D |
 | 2026-08-06 (3) | All 14 specs reviewed and promoted to Final (v2.0); bumped data-flow.md to v2.0; added `NEXT_PUBLIC_CERT_API_BASE_URL` to environment spec (4-var contract); governing `legacy-e-cert-integration.md` v2.0 promoted to Final; updated SESSION-PROMPT.md | Begin Phase D — Auth swap implementation |
-| 2026-08-06 (4) | Created `specs/local-dev/README.md` (v1.0) — local dev workflow with JSON Server mock for dev + Playwright e2e; updated testing, data-flow, specs/README.md refs to JSON Server; updated SESSION-PROMPT.md; promoted local-dev spec to Final | Begin Phase D — Auth swap implementation |
+| 2026-08-06 (5) | Synced governing spec to v2.1 (D9: Cert API auth deferred to new C-Auth phase; Phase D gate now requires C-Auth done); auth-provisioning sections refactored to side-notes; updated SESSION-PROMPT.md next actions | Wait for C-Auth → begin Phase D |
 
 ---
 
