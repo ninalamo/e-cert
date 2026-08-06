@@ -34,7 +34,7 @@ It answers:
 | All React components using server actions | Replace `import { someAction } from "..."` with client API calls |
 | PDF preview/download buttons | Point to Cert PDF endpoints via client API |
 | QR display | Use `/api/v1/certificates/qr` via client API |
-| CSV upload flow | Multipart upload via client API |
+| CSV import flow | Parse CSV client-side → `POST` JSON to `/attendees/import` |
 | Event/certificate detail | Envelope-shaped responses from client API |
 
 ---

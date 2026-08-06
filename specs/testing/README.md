@@ -77,7 +77,7 @@ e2e/
 │   │   └── participant-gating.spec.ts # Participant own-data only
 │   ├── events/
 │   │   ├── event-crud.spec.ts        # Create, list, update, delete
-│   │   ├── attendee-import.spec.ts   # CSV upload (multipart)
+│   │   ├── attendee-import.spec.ts   # CSV parse → JSON import
 │   │   └── certificate-issue.spec.ts # Issue, bulk issue
 │   ├── certificates/
 │   │   ├── certificate-list.spec.ts  # List, search
@@ -247,7 +247,7 @@ export const eventHandlers = [
 | Test | Scenario | Expected |
 |------|----------|----------|
 | `event-crud.spec.ts` | Create event → list shows it | API mock called, UI updates |
-| `attendee-import.spec.ts` | Upload CSV → attendees created | Multipart upload, success toast |
+| `attendee-import.spec.ts` | Parse CSV client-side → `POST` JSON import → attendees created | JSON payload to `/attendees/import`, success toast |
 | `certificate-issue.spec.ts` | Issue cert → cert appears | API mock called, list refresh |
 | `certificate-pdf.spec.ts` | Click download → PDF blob | API mock returns blob, download triggered |
 | `template-crud.spec.ts` | Edit template → save | TipTap content saved via PATCH mock |

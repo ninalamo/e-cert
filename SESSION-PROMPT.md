@@ -47,17 +47,12 @@ Then:
 ### Date: 2026-08-06
 
 ### Completed
-- **Specs created (14 files, all Draft v2.0, CSR approach):**
-  - `specs/README.md` — assembly overview, architecture note (CSR), spec map, governing decisions, anti-patterns
-  - `specs/auth/` — 6 specs: SSO integration, in-memory token store, client-side JWT parsing, SSO fragment handler, role resolution, client-side route guard
-  - `specs/api-client/README.md` — typed Cert API client with base client, resource modules, error handling
-  - `specs/testing/README.md` — Playwright + MSW single test layer, 20+ scenarios, fixtures, acceptance criteria
-  - `specs/data-flow.md` — service dependency map, auth requirements, data storage, tampering prevention, 3 trust boundaries
-  - `specs/pages/README.md` — pages to keep/remove, feature semantics changes
-  - `specs/components/README.md` — modules to keep/remove/adapt, file count impact
-  - `specs/environment/README.md` — 3 env vars (NEXT_PUBLIC_* only)
-  - `specs/deployment/README.md` — Vercel topology, same-origin rewrite
-- **Architecture decision: CSR over SSR** — no server actions, no httpOnly session cookie, no proxy middleware, in-memory token only, MSW mocks 100% of API calls
+- **Governing retrofit spec aligned to CSR — `legacy-e-cert-integration.md` → Draft v2.0** (authoritative in `loa-apache-server-apps/assemblies/loa-cert-platform/`, synced here per D7):
+  - D8 superseded 2026-08-06 (CSR wins — matches `specs/` v2.0); §3 SPA architecture, §6 in-memory session + parse-only client JWT + route guard, §8 server actions deleted (typed API client), §10 env drops `JWT_SECRET`/cookie vars (adds `NEXT_PUBLIC_CERT_TENANT_SLUG`), §13 Q-2=CSR, R-4=XSS/in-memory risk.
+- **`specs/` stale bits fixed** to match the Cert API:
+  - Seed groups `loa-cert-admin/staff/participant` → **`cert-admin` / `cert-staff` / `cert-user`** (`auth/role-resolution.md` §4, `auth/jwt-verification.md` claim example)
+  - Attendee bulk import is a **JSON payload** (not multipart CSV): `api-client/README.md` (client features, module tree, decision table), `components/README.md`, `pages/README.md`, `testing/README.md` (2 spots), `data-flow.md`; CSV parsing stays client-side
+  - Env naming already consistent (`NEXT_PUBLIC_CERT_TENANT_SLUG` matches retrofit spec §10.1)
 - **Committed and pushed** to `migration-plan/api-migration-docs`
 - **New branch created:** `migration/implementation`
 
@@ -66,6 +61,7 @@ Then:
 
 ### Next Action
 - [ ] **Review specs** — read through all 14 files, mark anything that needs changes
+- [ ] **Review governing `legacy-e-cert-integration.md` v2.0** — promoted to Final alongside `api-endpoints.md` v1.3 (Phase A)
 - [ ] **Promote to Final** — update `Status: Draft` to `Status: Final` in each spec when satisfied
 - [ ] **Begin Phase D** — Auth swap implementation (delete legacy auth, add SSO fragment, in-memory token, route guard, delete server actions)
 - [ ] **Or: flesh out stub specs** — `api-client/`, `pages/`, `components/` could use more detail before coding
@@ -85,6 +81,7 @@ Then:
 | Date | Work Done | Next Action |
 |------|-----------|-------------|
 | 2026-08-06 | Created 14 spec files (v2.0, CSR approach): auth layer (6), api-client, testing, data-flow, pages, components, environment, deployment. Committed + pushed to `migration-plan/api-migration-docs`. Created `migration/implementation` branch. | Review specs → promote to Final → begin Phase D |
+| 2026-08-06 (2) | Cross-boundary: `legacy-e-cert-integration.md` → Draft v2.0 (D8 superseded, CSR — matches specs/), synced per D7; fixed specs stale bits (seed groups `cert-admin/staff/user`, attendee import JSON, CSV client-side) | Review + promote retrofit spec v2.0 + specs → Final → begin Phase D |
 
 ---
 

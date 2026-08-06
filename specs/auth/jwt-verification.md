@@ -45,7 +45,7 @@ This is **not** security enforcement. The Cert API enforces authorization server
   "sub": "<user-uuid>",
   "email": "user@example.com",
   "name": "Juan Dela Cruz",
-  "groups": ["loa-cert-staff"],
+  "groups": ["cert-staff"],
   "permissions": [
     "cert.certificates.issue",
     "read:/api/v1/events",
