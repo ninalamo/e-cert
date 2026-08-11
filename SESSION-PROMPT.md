@@ -47,6 +47,38 @@ Then:
 
 ## Last Session Notes
 
+### Date: 2026-08-11 — Platform readiness check (no code changes)
+
+Verified `D:\loa\loa-apache-server-apps` against this refactor's integration requirements. We're on the right branch (`migration/implementation`, clean). **Verdict: platform side NOT yet ready — 3 blockers + 2 cleanup items.**
+
+### Ready
+- **Docker stack runs** (auth-app `:8080`, cert-app `:9001`, mysql, mailpit, seq — all up).
+- **Cert API Phase C CRUD live + tested**: `GET /api/v1/events` returns the spec envelope `{"data":[],"meta":{...}}`. Events/attendees/templates/certificates controllers implemented (no stubs) with `tests/Feature/` coverage.
+- **Auth API mature** (Phase 1 complete 2026-08-08, ~172 tests): `/api/v1/auth/*` (login/refresh/logout/me/access/password/verify), tenants, user-groups, endpoint catalog + grants, access-config import/export, user import, activation.
+- **Runbooks Final**: `assemblies/loa-auth-platform/cert-readiness.md` v0.4 (48-endpoint catalog + 48-row grant matrix), root `LOCAL-DEV-RUNBOOK.md`, `scripts/reset-all.ps1`.
+
+### Blocker 1 — C-Auth phase not done (Phase D gate)
+Cert app has **no** `jwt.auth`/`jwt.endpoint` middleware and **no** `/api/v1/auth/callback|refresh|logout`. All cert endpoints are unauthenticated. Per `legacy-e-cert-integration.md` §12, **Phase D (auth swap) is gated on C-Auth done** — this is the spec's explicit blocker.
+
+### Blocker 2 — Auth SSO flow broken/missing
+- No `/sso/login` route (verified via `artisan route:list`); `web-ui.md` §4.2 requires it.
+- `/redirect` → `WebAuthController@showRedirect` is **registered but the method does not exist** (`redirect.blade.php` exists; controller has no `showRedirect`). The current hybrid `/login?redirect=...` flow (encrypts payload via `EncryptionService`) breaks at the final splash-redirect step.
+
+### Blocker 3 — Cert endpoints the UI depends on not live
+Missing vs the 48-endpoint catalog: `/me/certificates`, `/me/events`, `/me/templates`, `/dashboard/stats|activity`, `/admin/audit-logs(+export)`, public `/verify/{number}` + `/view/{id}`. Phase D/E pages (dashboard, audit, participant `/my/*`, verify/view) need these.
+
+### Cleanup items
+- `e-cert/.env.local` still holds legacy Supabase/SMTP/JWT secrets; the 4-var contract (`.env.example`) isn't applied (expected — Phase D not started).
+- Typecheck (`npx tsc --noEmit`, 51 errors) passes only because node_modules still has removed deps (jose/bcryptjs/@supabase/puppeteer/nodemailer/qrcode). A clean install will fail until Phase E deletes the legacy imports; also `vitest`, `@playwright/test`, `@types/express`, `cookie-parser` types aren't installed despite being in package.json.
+
+### Suggested follow-through order (when platform work resumes)
+1. Finish **C-Auth** on cert-app (unblocks Phase D).
+2. Fix auth-app SSO: implement `/sso/login` + `/redirect` handler (or reconcile spec to current `/login` behavior).
+3. Add remaining cert endpoints (dashboard / audit / `/me/*` / verify / view) — needed by Phase E/F.
+4. Then Phase D → E on e-cert per this tracker.
+
+---
+
 ### Date: 2026-08-06
 
 ### Completed
@@ -109,6 +141,7 @@ Then:
 | 2026-08-06 (6) | Built mock API server (mock/server.ts) with Express + realistic seed data (db.json); Playwright e2e scaffold (e2e/); updated next.config.ts with mock/live rewrite toggle; created .env.example; cleaned package.json (removed legacy deps, added express/concurrently/playwright); created AI-RULES.md | Wait for C-Auth → begin Phase D |
 | 2026-08-06 (7) | Enhanced mock auth API: full auth endpoints with role-based JWT issuance, session store, refresh cookie handling, direct token endpoint for tests. Added `cookie-parser` dependency. Updated e2e fixtures to use mock auth API. | Wait for C-Auth → begin Phase D |
 | 2026-08-06 (8) | Added mock Auth Platform SSO simulation (port 3002) with full SSO redirect flow. Updated local-dev spec, e2e fixtures, CLI test script. All auth tests pass. | Wait for C-Auth → begin Phase D |
+| 2026-08-11 | Readiness check on `loa-apache-server-apps` (no code changes). Verified: Docker stack up, Cert Phase C CRUD live + tested, Auth API mature + runbooks Final. Found 3 blockers: (1) C-Auth not done on cert-app (no jwt.auth/jwt.endpoint, no auth callback/refresh/logout) — Phase D gate; (2) auth SSO broken — no `/sso/login` route, `/redirect` → `showRedirect` registered but method missing; (3) cert endpoints for dashboard/audit/`/me`/verify/view not live. Cleanup: `.env.local` legacy secrets, typecheck green only via leftover node_modules. Updated SESSION-PROMPT.md with findings. | Finish C-Auth → fix auth SSO (`/sso/login` + `/redirect`) → add remaining cert endpoints → begin Phase D |
 
 ---
 
