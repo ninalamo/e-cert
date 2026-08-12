@@ -1,0 +1,747 @@
+openapi: 3.0.3
+info:
+  title: LOA VERICERT — Cert Platform API
+  description: |
+    Client-side SPA API for LOA VERICERT certificate management.
+    All operations are client-side via `/api/v1/*` Vercel rewrite.
+    Bearer token auth via in-memory access token (JWT).
+  version: "2.0"
+  contact:
+    name: Lyceum Alabang Vericert
+servers:
+  - url: https://api.certplatform.vercel.app/v1
+    description: Production Cert API
+  - url: http://localhost:3001/api/v1
+    description: Mock Cert API (local dev)
+paths:
+  /events:
+    get:
+      summary: List events with pagination and filters
+      operationId: listEvents
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+            description: Search by event name
+        - name: status
+          in: query
+          schema:
+            type: string
+            description: Filter by event status (active, upcoming, archived)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 25
+            description: Items per page
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            description: Pagination offset
+      responses:
+        "200":
+          description: Paginated event list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+    post:
+      summary: Create a new event
+      operationId: createEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventInput"
+      responses:
+        "201":
+          description: Created event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+    parameters:
+      - name: X-Tenant-Slug
+        in: header
+        required: true
+        schema:
+          type: string
+          description: JWT tenant slug for authorization
+    tags:
+      - events
+  /events/{id}:
+    get:
+      summary: Get event by ID with stats
+      operationId: getEvent
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event with stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventWithStats"
+    patch:
+      summary: Update event
+      operationId: updateEvent
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialEvent"
+      responses:
+        "200":
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+    delete:
+      summary: Delete event
+      operationId: deleteEvent
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Event deleted
+    tags:
+      - events
+  /events/{id}/stats:
+    get:
+      summary: Get event statistics
+      operationId: getEventStats
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventStats"
+  /events/{id}/clone-template:
+    post:
+      summary: Clone event template
+      operationId: cloneTemplate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody: {}
+      responses:
+        "201":
+          description: Cloned template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClonedTemplate"
+  /events/{id}/clone-email-template:
+    post:
+      summary: Clone email template
+      operationId: cloneEmailTemplate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody: {}
+      responses:
+        "201":
+          description: Cloned email template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClonedEmailTemplate"
+  /events/{id}/attendees:
+    get:
+      summary: List event attendees
+      operationId: listAttendees
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 25
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Paginated attendee list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendeeList"
+    post:
+      summary: Import attendees (CSV/JSON)
+      operationId: importAttendees
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendeeImport"
+      responses:
+        "201":
+          description: Attendees imported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+  /events/{id}/attendees/import:
+    post:
+      summary: Bulk import attendees
+      operationId: bulkImportAttendees
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendeeImport"
+      responses:
+        "201":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+  /api/v1/auth/tokens:
+    post:
+      summary: Direct token issuance (bypass SSO, for testing)
+      operationId: getAuthToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthTokenRequest"
+      responses:
+        "200":
+          description: Tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokenResponse"
+    security:
+      - {}
+  /verify/{certificate_number}:
+    get:
+      summary: Public certificate verification
+      operationId: verifyCertificate
+      parameters:
+        - name: certificate_number
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Tenant-Slug
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verified certificate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateVerify"
+        "404":
+          description: Certificate not found or revoked
+components:
+  schemas:
+    Event:
+      type: object
+      required: [id, name, description, startDate, endDate, location, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        location:
+          type: string
+        status:
+          type: string
+          enum: [active, upcoming, archived]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EventStats:
+      type: object
+      required: [id, totalAttendees, issued, pending, revoked, byStatus]
+      properties:
+        id:
+          type: string
+          format: uuid
+        totalAttendees:
+          type: integer
+        issued:
+          type: integer
+        pending:
+          type: integer
+        revoked:
+          type: integer
+        byStatus:
+          type: object
+          properties:
+            active:
+              type: integer
+            upcoming:
+              type: integer
+            archived:
+              type: integer
+    EventList:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    PaginationMeta:
+      type: object
+      required: [limit, offset, total, has_more]
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    CreateEventInput:
+      type: object
+      required: [name, description, startDate, endDate, location]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        location:
+          type: string
+        templateId:
+          type: string
+          format: uuid
+    PartialEvent:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        location:
+          type: string
+    ClonedTemplate:
+      type: object
+      required: [id, name, type, content, is_locked, eventId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        content:
+          type: string
+        is_locked:
+          type: boolean
+        eventId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+    ClonedEmailTemplate:
+      type: object
+      required: [id, name, type, content, is_locked, eventId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        content:
+          type: string
+        is_locked:
+          type: boolean
+        eventId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+    Attendee:
+      type: object
+      required: [id, eventId, name, email, status, createdAt]
+      properties:
+        id:
+          type: string
+        eventId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+          enum: [pending, issued, revoked]
+        certificateNumber:
+          type: string
+          nullable: true
+        certificateId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    AttendeeList:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attendee"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    AttendeeImport:
+      type: object
+      required: [attendees]
+      properties:
+        attendees:
+          type: array
+          items:
+            $ref: "#/components/schemas.Attendee"
+    ImportResult:
+      type: object
+      required: [success, failed, errors, results]
+      properties:
+        success:
+          type: integer
+        failed:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              attendee_id:
+                type: string
+              errors:
+                type: array
+                items:
+                  type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas.AttendeeWithCertificate"
+    AttendeeWithCertificate:
+      type: object
+      required: [id, eventId, name, email, certificateNumber, status]
+      properties:
+        id:
+          type: string
+        eventId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        certificateNumber:
+          type: string
+        status:
+          type: string
+    AuthTokenRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthTokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+        expires_in:
+          type: integer
+    CertificateVerify:
+      type: object
+      required: [certificate_number, attendee_name, event_name, issued_at, status, template_name]
+      properties:
+        certificate_number:
+          type: string
+        attendee_name:
+          type: string
+        event_name:
+          type: string
+        issued_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [valid, revoked, invalid]
+        template_name:
+          type: string
+    PaginationLink:
+      type: object
+      properties:
+        url:
+          type: string
+        label:
+          type: string
+          enum: [previous, next]
+        active:
+          type: boolean
+responses:
+  "400":
+    description: Bad request - invalid input
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/ApiError"
+  "401":
+    description: Unauthorized - missing or invalid token
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/ApiError"
+  "403":
+    description: Forbidden - insufficient permissions
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/ApiError"
+  "422":
+    description: Validation failed
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/ValidationError"
+  "500":
+    description: Internal server error
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/ApiError"
+components:
+  schemas:
+    ApiError:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    ValidationError:
+      type: object
+      required: [status, message, errors]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+          nullable: true
+security:
+  - BearerAuth: []
+securitySchemes:
+  BearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
+tags:
+  - name: events
+    description: Event management operations
+  - name: attendees
+    description: Attendee management operations
+  - name: certificates
+    description: Certificate issue/verify operations
+  - name: dashboard
+    description: Dashboard stats and activity
+  - name: audit
+    description: Audit logs and export
+  - name: verify
+    description: Public certificate verification
+"""
+Now let me create JWT validation tests and audit consistency checks. First, let me check what test infrastructure exists:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Let me also update the whats-next.md to reflect Phase H starting.
+<tool_call>
+<function=edit>
+<parameter=filePath>
+D:\loa\e-cert\whats-next.md

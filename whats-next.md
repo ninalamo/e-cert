@@ -14,9 +14,9 @@
 | C-Auth | ✅ Complete | 2026-08-11 |
 | **D** | **✅ Complete** | **2026-08-12** |
 | **E** | **✅ Complete** | **2026-08-12** |
-| **F** | **← Next** | — |
-| G | Pending | — |
-| H | Pending | — |
+| **F** | ✅ Complete | — |
+| **G** | ✅ Complete | — |
+| **H** | **← Next** | — |
 
 ---
 
