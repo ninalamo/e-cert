@@ -35,6 +35,8 @@
 
 ## Phase E — Data Swap ✅ Complete
 
+**Commit:** `b613c22` — *Phase E: Complete data swap — replace server actions with typed Cert API client modules*
+**Files changed:** 122 (1652 insertions, 5789 deletions)
 **Governing spec:** `specs/api-client/README.md`
 
 **Work:** Replace all server actions with typed Cert API client modules. Components call the API directly from the browser.

@@ -81,7 +81,7 @@ All specs live in `specs/` within this repo. The authoritative copy of the gover
 | Phase | Work | Spec Gate | Status |
 |-------|------|-----------|--------|
 | **D** | Auth swap: env, SSO fragment, in-memory token, role resolution, delete auth pages/actions/server actions | Specs Final + C-Auth done | ✅ Complete — auth module, SSO flow, env cleanup, legacy deleted, stubs for build |
-| **E** | Data swap: typed Cert API client, delete server actions, delete legacy modules | Specs Final | Not started |
+| **E** | Data swap: typed Cert API client, delete server actions, delete legacy modules | Specs Final | ✅ Complete — 122 files changed (1652 insertions, 5789 deletions); server actions deleted; typed Cert API client (`src/api/`) replaces all data operations; proxy.ts deleted |
 | **F** | UI cleanup + verification: removed pages/components, silent refresh, parity checks | e2e full suite passes | Not started |
 
 **Note:** C-Auth is complete (2026-08-11). Phase D is unblocked.
