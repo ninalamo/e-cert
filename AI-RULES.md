@@ -80,11 +80,11 @@ All specs live in `specs/` within this repo. The authoritative copy of the gover
 
 | Phase | Work | Spec Gate | Status |
 |-------|------|-----------|--------|
-| **D** | Auth swap: env, SSO fragment, in-memory token, role resolution, delete auth pages/actions/server actions | Specs Final + C-Auth done | Not started |
+| **D** | Auth swap: env, SSO fragment, in-memory token, role resolution, delete auth pages/actions/server actions | Specs Final + C-Auth done | In progress — auth module created, layouts rewritten |
 | **E** | Data swap: typed Cert API client, delete server actions, delete legacy modules | Specs Final | Not started |
 | **F** | UI cleanup + verification: removed pages/components, silent refresh, parity checks | e2e full suite passes | Not started |
 
-**Note:** Phase D is blocked until the **C-Auth** phase completes (D9: Cert API auth middleware). The mock server exists for local dev and UI component testing, but auth flow testing requires the live Cert API endpoints.
+**Note:** C-Auth is complete (2026-08-11). Phase D is unblocked.
 
 ---
 
