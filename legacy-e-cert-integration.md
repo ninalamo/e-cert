@@ -1,7 +1,7 @@
 # LOA Cert Platform — Legacy `e-cert` Integration & Refactor
 ## Product Assembly Component Specification
 
-**Version:** 2.2
+**Version:** 2.3
 **Status:** Final
 **Layer:** Product Assembly (`loa-cert-platform`)
 **Audience:** Architects, Engineers, AI Development Agents
@@ -728,7 +728,7 @@ Spec-gated (AI-RULES.md Rule 0). Each phase requires the governing spec to be Fi
 | **B** | Auth readiness — provisioned **manually at deploy-time** per the Auth runbook `cert-readiness.md` (§10.2 side-note) | Auth runbook `cert-readiness.md` Final |
 | **C** | ✅ **Complete 2026-08-10** — Cert scaffold: domain CRUD slice — events / attendees / templates / certificates + tests | `api-endpoints.md` Final |
 | **C-Auth** | ✅ **Complete 2026-08-11** — `jwt.auth` + `jwt.endpoint` middleware and SSO `callback` / `refresh` / `logout` (§9). 126 tests, 386 assertions, all green. | prerequisite of Phase D |
-| **D** | `e-cert` auth swap (CSR): env, in-memory token store + silent refresh, SSO fragment handler, parse-only JWT, client auth guard, delete `src/proxy.ts` + auth pages/actions | this spec Final + **C-Auth** done ✅ |
+| **D** | ✅ **Complete 2026-08-12** — `e-cert` auth swap (CSR): env (4 NEXT_PUBLIC_* vars), SSO fragment handler + silent restore, in-memory token store, parse-only JWT, client auth guard, role resolution from JWT claims. Deleted: auth pages, legacy auth lib, proxy.ts, supabase/storage/email/pdf/qr/seed/rate-limit. Stubs for build. | this spec Final + **C-Auth** done ✅ |
 | **E** | `e-cert` data swap: typed client API modules (§8.1), delete all server actions, components call endpoints directly (§8.2), PDF/QR/email/upload via API, remove legacy modules | this spec Final |
 | **F** | UI cleanup + verification: removed pages/components, silent refresh, parity checks (login, event, issue, download, verify, view, audit) | — |
 | **G** | Decommission legacy DB + deps (§11) | cutover verified |
@@ -776,6 +776,6 @@ Suggested first implementation slice (core-first): events + attendees + template
 
 ## Document Control
 
-- **Status:** Final v2.2 — 2026-08-11: **C-Auth complete** (§12 C-Auth row marked done; Phase D unblocked). v2.1 (2026-08-06): D9 — Cert API authentication deferred. v2.0 (2026-08-06): CSR rewrite, D8 superseded; Q-2..Q-7 resolved; Q-17 proxy + dashboard ownership confirmed.
+- **Status:** Final v2.3 — 2026-08-12: **Phase D complete** (auth swap: SSO fragment, in-memory token, JWT parse, auth guard, env cleanup, legacy deleted, stubs for build). v2.2 (2026-08-11): C-Auth complete. v2.1 (2026-08-06): D9 — Cert API authentication deferred. v2.0 (2026-08-06): CSR rewrite, D8 superseded; Q-2..Q-7 resolved; Q-17 proxy + dashboard ownership confirmed.
 - **Authoritative source:** `loa-apache-server-apps/assemblies/loa-cert-platform/legacy-e-cert-integration.md`.
 - **Synced working copy:** `D:\loa\e-cert\legacy-e-cert-integration.md` (same content; refactor drives from the `e-cert` copy).
