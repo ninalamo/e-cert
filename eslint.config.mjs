@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // Generated workflow files:
     ".well-known/**",
     "src/app/.well-known/**",
+    // Pre-existing mock/test infrastructure (not part of app):
+    "mock/**",
+    "e2e/**",
   ]),
 ]);
 

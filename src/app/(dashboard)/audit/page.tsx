@@ -1,7 +1,7 @@
-import { requireRole } from "@/lib/permissions";
+"use client";
+
 import AuditLogPage from "@/features/audit/components/audit-log-page";
 
-export default async function AuditLogRoute() {
-  await requireRole(["admin"]);
+export default function AuditLogRoute() {
   return <AuditLogPage />;
 }

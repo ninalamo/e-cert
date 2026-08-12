@@ -1,10 +1,17 @@
-import { requireSession } from "@/lib/permissions";
+"use client";
+
+import { parseAccessToken, getAccessToken } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import UpdateEmailForm from "@/features/auth/components/update-email-form";
 import ChangePasswordRequestForm from "@/features/auth/components/change-password-request-form";
 
-export default async function MyProfilePage() {
-  const session = await requireSession();
+export default function MyProfilePage() {
+  const token = getAccessToken();
+  const payload = token ? parseAccessToken(token) : null;
+  const name = payload?.name ?? null;
+  const email = payload?.email ?? null;
+  const permissions = payload?.permissions ?? [];
+  const role = permissions.includes("admin") ? "admin" : permissions.includes("staff") ? "staff" : "participant";
 
   return (
     <div className="space-y-6">
@@ -23,21 +30,21 @@ export default async function MyProfilePage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase text-tertiary">Name</p>
-              <p className="font-medium text-primary">{session.name ?? "—"}</p>
+              <p className="font-medium text-primary">{name ?? "—"}</p>
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase text-tertiary">Email</p>
-              <p className="text-primary">{session.email ?? "—"}</p>
+              <p className="text-primary">{email ?? "—"}</p>
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase text-tertiary">Role</p>
-              <p className="capitalize text-primary">{session.role}</p>
+              <p className="capitalize text-primary">{role}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <UpdateEmailForm currentEmail={session.email ?? ""} />
+      <UpdateEmailForm />
 
       <ChangePasswordRequestForm />
     </div>

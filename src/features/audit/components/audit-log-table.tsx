@@ -27,6 +27,7 @@ import {
   FileDownIcon,
   Loader2Icon,
 } from "lucide-react";
+import { auditApi } from "@/lib/api/audit";
 import type { AuditLog } from "@/types/audit-log";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -121,12 +122,11 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
   const [exportLoading, setExportLoading] = useState(false);
 
   const fetchPage = useCallback(async (p: number, ps: number, f: typeof filters) => {
-    const { getAuditLogsAction } = await import("../server/audit.actions");
-    const result = await getAuditLogsAction({
+    const result = await auditApi.list({
       action: f.action || undefined,
       source: f.source || undefined,
-      fromDate: f.fromDate || undefined,
-      toDate: f.toDate || undefined,
+      from_date: f.fromDate || undefined,
+      to_date: f.toDate || undefined,
       limit: ps,
       offset: p * ps,
     });
@@ -194,13 +194,16 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
     setExportLoading(true);
     try {
       if (selectedIds.length > 0) {
-        const { getAuditLogsByIdsAction } = await import("../server/audit.actions");
-        const logs = await getAuditLogsByIdsAction(selectedIds);
-        triggerDownload(buildAuditCsv(logs), `audit-logs-selected-${new Date().toISOString().slice(0, 10)}.csv`);
+        const result = await auditApi.getByIds(selectedIds);
+        triggerDownload(buildAuditCsv(result.data ?? []), `audit-logs-selected-${new Date().toISOString().slice(0, 10)}.csv`);
       } else {
-        const { getAuditLogsForExportAction } = await import("../server/audit.actions");
-        const logs = await getAuditLogsForExportAction(filters);
-        triggerDownload(buildAuditCsv(logs), `audit-logs-all-${new Date().toISOString().slice(0, 10)}.csv`);
+        const result = await auditApi.getForExport({
+          action: filters.action || undefined,
+          source: filters.source || undefined,
+          from_date: filters.fromDate || undefined,
+          to_date: filters.toDate || undefined,
+        });
+        triggerDownload(buildAuditCsv(result.data ?? []), `audit-logs-all-${new Date().toISOString().slice(0, 10)}.csv`);
       }
       toast.success("CSV downloaded");
     } catch (err) {
@@ -213,25 +216,28 @@ export default function AuditLogTable({ initialData }: AuditLogTableProps) {
   async function handleDelete() {
     setDeleteLoading(true);
     try {
-      const { deleteAuditLogsAction, deleteAllAuditLogsAction } = await import("../server/audit.actions");
       let deleted: AuditLog[] = [];
       if (deleteTarget === "selected") {
-        const res = await deleteAuditLogsAction(selectedIds);
-        deleted = res.data;
+        const res = await auditApi.deleteByIds(selectedIds);
+        deleted = res.data ?? [];
       } else {
-        const res = await deleteAllAuditLogsAction(filters);
-        deleted = res.data;
+        const res = await auditApi.deleteAll({
+          action: filters.action || undefined,
+          source: filters.source || undefined,
+          from_date: filters.fromDate || undefined,
+          to_date: filters.toDate || undefined,
+        });
+        deleted = res.data ?? [];
       }
       triggerDownload(buildAuditCsv(deleted), `audit-logs-deleted-${new Date().toISOString().slice(0, 10)}.csv`);
       setSelectedIds([]);
       setShowDeleteConfirm(false);
       setPage(0);
-      const { getAuditLogsAction } = await import("../server/audit.actions");
-      const result = await getAuditLogsAction({
+      const result = await auditApi.list({
         action: filters.action || undefined,
         source: filters.source || undefined,
-        fromDate: filters.fromDate || undefined,
-        toDate: filters.toDate || undefined,
+        from_date: filters.fromDate || undefined,
+        to_date: filters.toDate || undefined,
         limit: pageSize,
         offset: 0,
       });

@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import {
-  listUsersAction,
-  banUserAction,
-  unbanUserAction,
-  deleteUserAction,
-  setUserRoleAction,
-} from "../server/user.actions";
+import { usersApi } from "@/lib/api/users";
 import type { UserRole } from "@/types/organization";
 import { usePagination, Paginator } from "@/components/ui/paginator";
 
@@ -33,46 +27,50 @@ export default function UsersList({ initialUsers, currentUserId }: UsersListProp
   const [search, setSearch] = useState("");
 
   const loadUsers = useCallback(async () => {
-    const data = await listUsersAction();
-    setUsers(data as ManagedUser[]);
+    const result = await usersApi.list();
+    setUsers((result.data ?? []) as ManagedUser[]);
   }, []);
 
   async function handleBan(userId: string) {
     if (!confirm("Ban this user? They will not be able to log in.")) return;
-    const result = await banUserAction(userId);
-    if (result?.error) {
-      alert(result.error);
-    } else {
+    try {
+      await usersApi.ban(userId);
       loadUsers();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to ban user";
+      alert(msg);
     }
   }
 
   async function handleUnban(userId: string) {
     if (!confirm("Unban this user?")) return;
-    const result = await unbanUserAction(userId);
-    if (result?.error) {
-      alert(result.error);
-    } else {
+    try {
+      await usersApi.unban(userId);
       loadUsers();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to unban user";
+      alert(msg);
     }
   }
 
   async function handleDelete(userId: string) {
     if (!confirm("Delete this user permanently? This cannot be undone.")) return;
-    const result = await deleteUserAction(userId);
-    if (result?.error) {
-      alert(result.error);
-    } else {
+    try {
+      await usersApi.delete(userId);
       loadUsers();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to delete user";
+      alert(msg);
     }
   }
 
   async function handleRoleChange(userId: string, role: UserRole) {
-    const result = await setUserRoleAction(userId, role);
-    if (result?.error) {
-      alert(result.error);
-    } else {
+    try {
+      await usersApi.setRole(userId, role);
       loadUsers();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to change role";
+      alert(msg);
     }
   }
 

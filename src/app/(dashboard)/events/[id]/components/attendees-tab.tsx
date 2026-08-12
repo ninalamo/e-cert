@@ -5,7 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import type { Event } from "@/types/event";
-import { PlusIcon, UploadIcon, Loader2Icon, InfoIcon, XIcon, DownloadIcon, CheckCircle2Icon, XCircleIcon, ShieldIcon, RefreshCwIcon } from "lucide-react";
+import { PlusIcon, UploadIcon, Loader2Icon, InfoIcon, XIcon, DownloadIcon, CheckCircle2Icon, XCircleIcon, ShieldIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -55,7 +55,6 @@ export default function AttendeesTab({
   const [confirmIssueOpen, setConfirmIssueOpen] = useState(false);
   const [confirmReissueOpen, setConfirmReissueOpen] = useState(false);
   const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
-  const [reissueBusy, setReissueBusy] = useState(false);
   const [revokeBusy, setRevokeBusy] = useState(false);
   const [expiredCount, setExpiredCount] = useState(0);
 

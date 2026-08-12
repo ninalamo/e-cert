@@ -1,40 +1,28 @@
-import { Suspense } from "react";
+"use client";
+
 import EventDetail from "./event-detail";
-import { getCurrentSession, canDelete } from "@/lib/permissions";
-import { getEventWithStats } from "@/features/events/server/event.service";
-import { getCertificateTemplatesWithLockState, getEmailTemplatesWithLockState } from "@/features/templates/server/template.service";
-import { SkeletonEventDetail } from "@/components/ui/skeleton";
-import { ORG_ID } from "@/lib/org";
+import { parseAccessToken, getAccessToken } from "@/lib/auth";
+import { canDelete, type UserRole } from "@/lib/permissions";
+import { useSearchParams, useParams } from "next/navigation";
 
-export default async function EventDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const { id } = await params;
-  const { tab } = await searchParams;
+export default function EventDetailPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const id = params.id as string;
+  const tab = searchParams.get("tab");
 
-  const [session, initialData, initialTemplates, initialEmailTemplates] = await Promise.all([
-    getCurrentSession(),
-    getEventWithStats(id),
-    getCertificateTemplatesWithLockState(ORG_ID),
-    getEmailTemplatesWithLockState(ORG_ID),
-  ]);
-
-  const canUserDelete = canDelete(session?.role ?? "participant");
+  const token = getAccessToken();
+  const parsed = token ? parseAccessToken(token) : null;
+  const permissions = parsed?.permissions ?? [];
+  const hasAdmin = permissions.some((p: string) => p.startsWith("admin:"));
+  const role: UserRole = hasAdmin ? "admin" : "participant";
+  const canUserDelete = canDelete(role);
 
   return (
-    <Suspense fallback={<SkeletonEventDetail activeTab={tab === "attendees" ? "attendees" : "details"} />}>
-      <EventDetail
-        eventId={id}
-        canDelete={canUserDelete}
-        initialTab={tab === "attendees" ? "attendees" : "details"}
-        initialData={initialData}
-        initialTemplates={initialTemplates.filter((t) => !t.locked)}
-        initialEmailTemplates={initialEmailTemplates.filter((t) => !t.locked)}
-      />
-    </Suspense>
+    <EventDetail
+      eventId={id}
+      canDelete={canUserDelete}
+      initialTab={tab === "attendees" ? "attendees" : "details"}
+    />
   );
 }

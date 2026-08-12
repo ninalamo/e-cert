@@ -1,11 +1,12 @@
+"use client";
+
 import { ORG_NAME } from "@/lib/org";
 import Sidebar from "@/components/sidebar";
 import MobileNav from "@/components/mobile-nav";
 import UserMenu from "@/components/user-menu";
 import WhatsNew from "@/components/whats-new";
-import RoleSwitcher from "@/components/role-switcher";
-import { listActiveUsers } from "@/features/users/server/user.service";
-import type { SessionUser } from "@/lib/permissions";
+import { parseAccessToken, getAccessToken } from "@/lib/auth";
+import type { UserRole } from "@/types/organization";
 
 const roleHeaderColors: Record<string, string> = {
   admin: "border-b-red-500/50",
@@ -13,25 +14,29 @@ const roleHeaderColors: Record<string, string> = {
   participant: "border-b-green-500/50",
 };
 
-export default async function DashboardShell({
+export default function DashboardShell({
   children,
-  session,
 }: {
   children: React.ReactNode;
-  session: SessionUser;
 }) {
-  const isDemo = process.env.DEMO === "true";
-  const borderClass = isDemo ? (roleHeaderColors[session.role] ?? "") : "";
+  const token = getAccessToken();
+  const payload = token ? parseAccessToken(token) : null;
+  const permissions = payload?.permissions ?? [];
+  const role: UserRole = permissions.includes("admin") ? "admin" : permissions.includes("staff") ? "staff" : "participant";
+  const name = payload?.name ?? null;
+  const email = payload?.email ?? null;
+  const userId = payload?.sub ?? "";
+  const isDemo = process.env.NEXT_PUBLIC_DEMO === "true";
+  const borderClass = isDemo ? (roleHeaderColors[role] ?? "") : "";
   const version = process.env.NEXT_PUBLIC_VERSION ?? "";
-  const participants = isDemo ? await listActiveUsers() : [];
 
   return (
     <div className="flex h-screen bg-surface-muted">
-      <Sidebar role={session.role} />
+      <Sidebar role={role} />
       <div className="flex-1 overflow-y-auto">
         <header className={`flex items-center justify-between border-b border-default bg-surface px-4 py-3 lg:px-6 ${borderClass}`}>
           <div className="flex items-center gap-2">
-            <MobileNav role={session.role} />
+            <MobileNav role={role} />
             <span className="text-sm font-medium text-secondary">{ORG_NAME}</span>
             {version && (
               <span className="rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-[0.625rem] font-medium text-[var(--color-text-muted)]">
@@ -40,21 +45,10 @@ export default async function DashboardShell({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {session.role !== "participant" && (
-              <WhatsNew userKey={session.email ?? session.id} />
+            {role !== "participant" && (
+              <WhatsNew userKey={email ?? userId} />
             )}
-            {isDemo && (
-              <RoleSwitcher
-                currentUser={{
-                  id: session.id,
-                  name: session.name,
-                  email: session.email,
-                  role: session.role,
-                }}
-                participants={participants}
-              />
-            )}
-            <UserMenu name={session.name ?? session.email} />
+            <UserMenu name={name ?? email} />
           </div>
         </header>
         <main className="p-4 pb-safe lg:p-6">

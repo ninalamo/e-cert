@@ -1,8 +1,8 @@
 import AuditLogTable from "./audit-log-table";
-import { getAuditLogsAction } from "../server/audit.actions";
+import { auditApi } from "@/lib/api/audit";
 
 export default async function AuditLogPage() {
-  const initialData = await getAuditLogsAction({ limit: 20, offset: 0 });
+  const initialData = await auditApi.list({ limit: 20, offset: 0 });
 
   return (
     <div className="space-y-6">

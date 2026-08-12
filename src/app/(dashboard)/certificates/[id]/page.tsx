@@ -1,46 +1,63 @@
-import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
-import { EventRepository } from "@/features/events/server/event.repository";
-import { generateQrCodeDataUrl } from "@/lib/qr";
-import { env } from "@/lib/env";
-import { requireRole } from "@/lib/permissions";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { certificatesApi } from "@/lib/api/certificates";
+import { eventsApi } from "@/lib/api/events";
+import { verifyApi } from "@/lib/api/verify";
+import { parseAccessToken, getAccessToken } from "@/lib/auth";
 import CertificateDetail from "@/features/certificates/components/certificate-detail";
+import { SkeletonDetail } from "@/components/ui/skeleton";
+import type { Certificate } from "@/types/certificate";
+import type { Event } from "@/types/event";
 
-export default async function CertificateDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ eventId?: string }>;
-}) {
-  const { id } = await params;
-  const { eventId } = await searchParams;
+export default function CertificateDetailPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const id = params.id as string;
+  const eventId = searchParams.get("eventId");
 
-  const [session, supabase] = await Promise.all([
-    requireRole(["admin", "staff", "participant"]),
-    createClient(),
-  ]);
+  const token = getAccessToken();
+  const payload = token ? parseAccessToken(token) : null;
+  const isAdmin = payload?.permissions?.includes("admin") || payload?.permissions?.includes("staff") || false;
 
-  const certRepo = new CertificateRepository(supabase);
-  const eventRepo = new EventRepository(supabase);
+  const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const certificate = await certRepo.findById(id);
-  if (!certificate) notFound();
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data: cert } = await certificatesApi.get(id);
+        if (!cert) return;
+        setCertificate(cert);
 
-  const eventToShow = eventId || certificate.event_id;
-  const event = eventToShow ? await eventRepo.findById(eventToShow) : null;
+        const eventToShow = eventId || cert.event_id;
+        if (eventToShow) {
+          const { data: ev } = await eventsApi.get(eventToShow);
+          setEvent(ev);
+        }
 
-  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
-  const verifyUrl = `${baseUrl}/verify?number=${encodeURIComponent(certificate.certificate_number)}`;
-  const qrDataUrl = await generateQrCodeDataUrl(verifyUrl, { width: 200, margin: 2 });
+        const { data: qr } = await verifyApi.view(id);
+        if (qr?.qr_data_url) setQrDataUrl(qr.qr_data_url);
+      } catch {
+        // ignore
+      }
+      setLoading(false);
+    }
+    load();
+  }, [id, eventId]);
+
+  if (loading) return <SkeletonDetail />;
+  if (!certificate) return <p className="text-red-600 text-sm">Certificate not found</p>;
 
   return (
     <CertificateDetail
       certificate={certificate}
       event={event}
       qrDataUrl={qrDataUrl}
-      isAdmin={session.role === "admin" || session.role === "staff"}
+      isAdmin={isAdmin}
       eventIdParam={eventId ?? null}
     />
   );

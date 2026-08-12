@@ -13,8 +13,8 @@
 | C | ✅ Complete | 2026-08-10 |
 | C-Auth | ✅ Complete | 2026-08-11 |
 | **D** | **✅ Complete** | **2026-08-12** |
-| **E** | **← Next** | — |
-| F | Pending | — |
+| **E** | **✅ Complete** | **2026-08-12** |
+| **F** | **← Next** | — |
 | G | Pending | — |
 | H | Pending | — |
 
@@ -33,11 +33,31 @@
 
 ---
 
-## Phase E — Data Swap (Next)
+## Phase E — Data Swap ✅ Complete
 
 **Governing spec:** `specs/api-client/README.md`
 
 **Work:** Replace all server actions with typed Cert API client modules. Components call the API directly from the browser.
+
+### Done
+- Created `src/lib/api/client.ts` — base HTTP client with auth, refresh, envelope handling
+- Created `src/lib/api/types.ts` — shared response/pagination/error types
+- Created 7 typed API modules: `events.ts`, `attendees.ts`, `templates.ts`, `certificates.ts`, `dashboard.ts`, `audit.ts`, `verify.ts`
+- Created `src/lib/api/users.ts`, `src/lib/api/organizations.ts` — added by agents during page migration
+- Updated `src/lib/auth/token-store.ts` — added `refreshAccessToken()`
+- Converted all ~28 pages from server components to client components using API modules
+- Converted `DashboardShell`, `FaqLayout` to client components
+- Deleted all server actions: `event.actions.ts`, `attendee.actions.ts`, `template.actions.ts`, `certificate.actions.ts`, `dashboard.actions.ts`, `audit.actions.ts`, `user.actions.ts`, `organization.actions.ts`
+- Deleted all server services/repositories: `*/server/*.service.ts`, `*/server/*.repository.ts`
+- Deleted stubs: `supabase/`, `storage/`, `email/`, `pdf/`, `qr/`, `repository/`, `auth.actions.ts`, `demo.actions.ts`
+- Deleted old API routes: `api/certificates/`, `api/events/`, `api/verify/`, `api/storage/`, `api/workflow-status/`
+- Deleted pages per spec: `users/`, `templates/auth-emails/`
+- Deleted `workflows/` directory
+- Removed `requireRole`/`requireSession` stubs from `permissions.ts`
+- Fixed `BaseRepository` stub to accept generics
+- Fixed `resolveRoleFromPermissions` to not return invalid `"guest"` role
+- Excluded `e2e/`, `mock/`, `scripts/`, `vitest.config.ts` from tsconfig
+- Build passes clean (`npx next build` — zero errors)
 
 ### 1. Create base HTTP client (`src/lib/api/client.ts`)
 - Same-origin fetch to `/api/v1/*` (Vercel rewrite)

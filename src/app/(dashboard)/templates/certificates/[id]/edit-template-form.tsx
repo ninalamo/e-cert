@@ -3,11 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import {
-  getTemplateAction,
-  updateTemplateAction,
-  isTemplateLockedAction,
-} from "@/features/templates/server/template.actions";
+import { templatesApi } from "@/lib/api/templates";
 
 const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
@@ -29,12 +25,12 @@ export default function EditTemplateForm({ id }: { id: string }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const data = await getTemplateAction(id);
+      const { data: templateData } = await templatesApi.get(id);
       if (!active) return;
-      setTemplate(data);
-      const isLocked = await isTemplateLockedAction(id);
+      setTemplate(templateData);
+      const { data: lockData } = await templatesApi.isLocked(id);
       if (!active) return;
-      setLocked(isLocked);
+      setLocked(lockData.is_locked);
       setLoading(false);
     })();
     return () => { active = false; };
@@ -104,10 +100,16 @@ export default function EditTemplateForm({ id }: { id: string }) {
          submitLabel="Save Changes"
          fullscreen={fullscreen}
          onFullscreenChange={setFullscreen}
-         onSubmit={async (data) => {
-           if (locked) return { template: null, error: "Template is locked." };
-           return await updateTemplateAction(id, data);
-         }}
+          onSubmit={async (data) => {
+            if (locked) return { template: null, error: "Template is locked." };
+            try {
+              await templatesApi.update(id, data);
+              return {};
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : "Failed to update template";
+              return { error: msg };
+            }
+          }}
        />
     </div>
   );

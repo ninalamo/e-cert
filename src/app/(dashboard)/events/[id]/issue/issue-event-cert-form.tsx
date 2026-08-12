@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
-import { getEventAction, issueEventCertificateAction } from "@/features/events/server/event.actions";
+import { eventsApi } from "@/lib/api/events";
+import { certificatesApi } from "@/lib/api/certificates";
 import type { Event } from "@/types/event";
 import { SkeletonDetail } from "@/components/ui/skeleton";
 import { InfoIcon } from "lucide-react";
@@ -19,7 +20,7 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
 
   useEffect(() => {
     let active = true;
-    getEventAction(eventId).then((e) => {
+    eventsApi.get(eventId).then(({ data: e }) => {
       if (active) {
         setEvent(e);
         if (e && e.status !== "active") {
@@ -40,7 +41,7 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
     setSuccess(null);
     setLoading(true);
 
-    const result = await issueEventCertificateAction({
+    const { data: result } = await certificatesApi.issueFromEvent({
       event_id: eventId,
       organization_id: ORG_ID,
       recipient_name: name,

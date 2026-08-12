@@ -1,17 +1,36 @@
-import { getCurrentUser } from "@/features/auth/server/auth.actions";
+"use client";
+
+import { useState, useEffect } from "react";
+import { parseAccessToken, getAccessToken } from "@/lib/auth";
 import StatsCards from "@/features/dashboard/components/stats-cards";
 import ActivityFeed from "@/features/dashboard/components/activity-feed";
 import DashboardSearch from "@/features/dashboard/components/dashboard-search";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getDashboardStats, getRecentActivity } from "@/features/dashboard/server/dashboard.service";
+import { dashboardApi, type DashboardStats, type ActivityItem } from "@/lib/api/dashboard";
 import { ORG_ID } from "@/lib/org";
 
-export default async function DashboardPage() {
-  const [user, stats, activities] = await Promise.all([
-    getCurrentUser(),
-    getDashboardStats(ORG_ID),
-    getRecentActivity(ORG_ID),
-  ]);
+export default function DashboardPage() {
+  const token = getAccessToken();
+  const user = token ? parseAccessToken(token) : null;
+
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [statsResult, activitiesResult] = await Promise.all([
+          dashboardApi.getStats(ORG_ID),
+          dashboardApi.getRecentActivity(ORG_ID),
+        ]);
+        setStats(statsResult.data);
+        setActivities(activitiesResult.data ?? []);
+      } catch {
+        // ignore
+      }
+    }
+    load();
+  }, []);
 
   return (
     <div className="space-y-6">

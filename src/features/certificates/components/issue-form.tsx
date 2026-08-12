@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 import { ORG_ID } from "@/lib/org";
-import {
-  issueCertificateAction,
-  uploadCertificateFileAction,
-} from "../server/certificate.actions";
+import { certificatesApi } from "@/lib/api/certificates";
 import type { CertificateTemplate } from "@/types/template";
 
 type IssueMode = "template" | "file";
@@ -37,16 +34,12 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
     let filePath: string | undefined;
 
     if (mode === "file" && selectedFile) {
-      const base64 = await fileToBase64(selectedFile);
-      const uploadResult = await uploadCertificateFileAction(
-        ORG_ID,
-        "pending",
-        base64,
-        selectedFile.name
-      );
-      if (typeof uploadResult === "string") {
-        filePath = uploadResult;
-      } else {
+      // Upload requires a certificate_number; generate a temp one for upload
+      const tempNumber = `TEMP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      try {
+        const uploadResult = await certificatesApi.upload(ORG_ID, tempNumber, selectedFile);
+        filePath = uploadResult?.data?.file_path;
+      } catch {
         setError("Failed to upload file");
         setLoading(false);
         return;
@@ -62,25 +55,29 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
       return;
     }
 
-    const result = await issueCertificateAction({
-      organization_id: ORG_ID,
-      template_id: templateId,
-      recipient_name: recipientName,
-      recipient_email: recipientEmail,
-      expires_at: expiresAt,
-      file_path: filePath,
-      send_email: sendEmail,
-    });
+    try {
+      const result = await certificatesApi.issue({
+        organization_id: ORG_ID,
+        template_id: templateId,
+        recipient_name: recipientName,
+        recipient_email: recipientEmail,
+        expires_at: expiresAt,
+        file_path: filePath,
+        send_email: sendEmail,
+      });
 
-    if (result?.error) {
-      setError(result.error);
-    } else if (result?.certificate) {
-      const emailMsg = result.emailSent ? " Email sent." : "";
-      setSuccess(
-        `Certificate ${result.certificate.certificate_number} issued!${emailMsg}`
-      );
-      (e.target as HTMLFormElement).reset();
-      setSelectedFile(null);
+      if (result?.data?.error) {
+        setError(result.data.error);
+      } else if (result?.data?.certificate) {
+        setSuccess(
+          `Certificate ${result.data.certificate.certificate_number} issued!`
+        );
+        (e.target as HTMLFormElement).reset();
+        setSelectedFile(null);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to issue certificate";
+      setError(msg);
     }
 
     setLoading(false);
@@ -212,17 +209,4 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
       </div>
     </form>
   );
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(",")[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }

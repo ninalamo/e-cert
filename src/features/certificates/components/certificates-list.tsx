@@ -4,10 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
 import { countExpired } from "@/lib/certificate-utils";
-import {
-  getCertificatesWithEventAction,
-  deleteCertificateAction,
-} from "../server/certificate.actions";
+import { certificatesApi } from "@/lib/api/certificates";
 import type { Certificate } from "@/types/certificate";
 import {
   Dialog,
@@ -58,8 +55,8 @@ export default function CertificatesList({
 
   async function loadCertificates() {
     try {
-      const result = await getCertificatesWithEventAction(ORG_ID);
-      return result.data;
+      const result = await certificatesApi.listWithEvent(ORG_ID);
+      return result.data ?? [];
     } catch {
       setLoadError("Failed to load certificates.");
       return [];
@@ -70,17 +67,19 @@ export default function CertificatesList({
     if (!deleteTarget) return;
     setDeleting(true);
     setDeleteError(null);
-    const result = await deleteCertificateAction(deleteTarget.id);
-    setDeleting(false);
-    if (result?.error) {
-      setDeleteError(result.error);
-      return;
-    }
-    setDeleteDialogOpen(false);
-    setDeleteTarget(null);
-    const updated = await loadCertificates();
-    if (updated.length > 0) {
-      setCertificates(updated);
+    try {
+      await certificatesApi.delete(deleteTarget.id);
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+      const updated = await loadCertificates();
+      if (updated.length > 0) {
+        setCertificates(updated);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to delete certificate";
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
     }
   }
 

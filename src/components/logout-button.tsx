@@ -1,13 +1,14 @@
 "use client";
 
-import { logout } from "@/features/auth/server/auth.actions";
+import { clearAccessToken } from "@/lib/auth";
 
 export default function LogoutButton() {
   return (
     <button
       type="button"
       onClick={() => {
-        logout();
+        clearAccessToken();
+        window.location.href = "/";
       }}
       className="text-sm text-tertiary hover:text-text transition-colors"
     >

@@ -4,11 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import {
-  getEmailTemplateAction,
-  updateTemplateAction,
-  isEmailTemplateLockedAction,
-} from "@/features/templates/server/template.actions";
+import { templatesApi } from "@/lib/api/templates";
 
 const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
@@ -34,12 +30,12 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const data = await getEmailTemplateAction(id);
+      const { data: templateData } = await templatesApi.get(id);
       if (!active) return;
-      setTemplate(data);
-      const isLocked = await isEmailTemplateLockedAction(id);
+      setTemplate(templateData);
+      const { data: lockData } = await templatesApi.isEmailLocked(id);
       if (!active) return;
-      setLocked(isLocked);
+      setLocked(lockData.is_locked);
       setLoading(false);
     })();
     return () => { active = false; };
@@ -107,7 +103,13 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
         onPreview={onPreview}
         onSubmit={async (data) => {
           if (locked) return { error: "Template is locked." };
-          return await updateTemplateAction(id, data);
+          try {
+            await templatesApi.update(id, data);
+            return {};
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Failed to update template";
+            return { error: msg };
+          }
         }}
       />
 

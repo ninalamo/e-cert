@@ -1,14 +1,19 @@
-import DashboardShell from "@/components/dashboard-shell";
-import { getCurrentSession } from "@/lib/permissions";
+"use client";
 
-export default async function FaqLayout({
+import DashboardShell from "@/components/dashboard-shell";
+import { parseAccessToken, getAccessToken } from "@/lib/auth";
+
+export default function FaqLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getCurrentSession();
-  if (session) {
-    return <DashboardShell session={session}>{children}</DashboardShell>;
+  const token = getAccessToken();
+  const payload = token ? parseAccessToken(token) : null;
+  const hasToken = !!payload;
+
+  if (hasToken) {
+    return <DashboardShell>{children}</DashboardShell>;
   }
   return <>{children}</>;
 }

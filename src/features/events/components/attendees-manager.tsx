@@ -2,15 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import {
-  getAttendeesAction,
-  addAttendeeAction,
-  updateAttendeeAction,
-  removeAttendeeAction,
-  removeAttendeeWithCertAction,
-  getAttendeeDeletePreviewAction,
-  getAttendeeFileDataAction,
-} from "@/features/events/server/attendee.actions";
+import { attendeesApi } from "@/lib/api/attendees";
 import type { EventAttendee } from "@/types/event-attendee";
 import {
   Dialog,
@@ -82,14 +74,13 @@ export default function AttendeesManager({
   const [removeTarget, setRemoveTarget] = useState<EventAttendee | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [deletePreview, setDeletePreview] = useState<{
-    hasCertificate: boolean;
-    otherEventCount: number;
-    hasUserAccount: boolean;
+    has_certificate: boolean;
+    certificate_number: string | null;
   } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const data = await getAttendeesAction(eventId);
+    const { data } = await attendeesApi.list(eventId);
     setAttendees(data);
     setLoading(false);
   }, [eventId]);
@@ -173,19 +164,20 @@ export default function AttendeesManager({
     setError(null);
     setMessage(null);
     setBusy(true);
-    const result = await addAttendeeAction({
-      event_id: eventId,
+    const { data: result } = await attendeesApi.add(eventId, {
       organization_id: organizationId,
       name: addName,
       email: addEmail,
-      mode: addMode,
-      file_data: addFile?.data,
-      file_name: addFile?.name,
-      file_type: addFile?.type,
+      metadata: addMode === "file" && addFile ? {
+        generation_mode: "file",
+        file_data: addFile.data,
+        file_name: addFile.name,
+        file_type: addFile.type,
+      } : { generation_mode: "template" },
     });
     setBusy(false);
-    if (result.error) {
-      setError(result.error);
+    if (!result) {
+      setError("Failed to add attendee");
     } else {
       setAddName("");
       setAddEmail("");
@@ -220,7 +212,7 @@ export default function AttendeesManager({
       metadata.file_name = editFile.name;
       metadata.file_type = editFile.type;
     } else if (editMode === "file" && !editFile) {
-      const fileData = await getAttendeeFileDataAction(editTarget.id);
+      const { data: fileData } = await attendeesApi.getFileData(eventId, editTarget.id);
       metadata.file_data = fileData?.file_data ?? null;
       metadata.file_name = fileData?.file_name ?? null;
       metadata.file_type = fileData?.file_type ?? null;
@@ -230,14 +222,14 @@ export default function AttendeesManager({
       metadata.file_type = null;
     }
 
-    const result = await updateAttendeeAction(editTarget.id, {
+    const { data: result } = await attendeesApi.update(eventId, editTarget.id, {
       name: editName,
       email: editEmail,
       metadata,
     });
     setBusy(false);
-    if (result.error) {
-      setEditError(result.error);
+    if (!result) {
+      setEditError("Failed to update attendee");
     } else {
       setEditName("");
       setEditEmail("");
@@ -253,14 +245,14 @@ export default function AttendeesManager({
   async function handleRemove(id: string) {
     setRemoveBusy(true);
     const target = attendees.find((a) => a.id === id);
-    const result = isAdmin && target?.certificate_id
-      ? await removeAttendeeWithCertAction(id)
-      : await removeAttendeeAction(id);
+    const apiResult = isAdmin && target?.certificate_id
+      ? await attendeesApi.removeWithCert(eventId, id)
+      : await attendeesApi.remove(eventId, id);
     setRemoveBusy(false);
     setRemoveTarget(null);
     setDeletePreview(null);
-    if (result.error) {
-      setError(result.error);
+    if (!apiResult) {
+      setError("Failed to remove attendee");
     } else {
       setSelected((prev) => {
         const next = new Set(prev);
@@ -421,7 +413,7 @@ export default function AttendeesManager({
                                 setRemoveTarget(a);
                                 setPreviewLoading(true);
                                 setDeletePreview(null);
-                                const preview = await getAttendeeDeletePreviewAction(a.id);
+                                const { data: preview } = await attendeesApi.getDeletePreview(eventId, a.id);
                                 setDeletePreview(preview);
                                 setPreviewLoading(false);
                               }}
@@ -787,8 +779,8 @@ export default function AttendeesManager({
               <p className="font-medium text-[var(--color-danger-text)]">The following will be permanently deleted:</p>
               <ul className="list-disc list-inside text-[var(--color-danger-text)] opacity-80 space-y-0.5">
                 <li>Attendee record</li>
-                {deletePreview.hasCertificate && <li>Issued certificate</li>}
-                {deletePreview.hasUserAccount && deletePreview.otherEventCount === 0 && (
+                {deletePreview.has_certificate && <li>Issued certificate</li>}
+                {deletePreview.has_certificate && (
                   <li>User account (no other event records found)</li>
                 )}
               </ul>
@@ -805,9 +797,7 @@ export default function AttendeesManager({
             >
               {removeBusy
                 ? "Removing..."
-                : deletePreview?.hasCertificate && deletePreview?.hasUserAccount && deletePreview?.otherEventCount === 0
-                  ? "Delete All & Remove"
-                  : deletePreview?.hasCertificate
+                : deletePreview?.has_certificate
                     ? "Delete Certificate & Remove"
                     : "Remove"}
             </Button>

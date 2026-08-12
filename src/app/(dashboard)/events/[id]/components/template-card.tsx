@@ -2,20 +2,12 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { updateEventAction } from "@/features/events/server/event.actions";
+import { eventsApi } from "@/lib/api/events";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
-import { MailIcon, FileTextIcon } from "lucide-react";
+import { FileTextIcon } from "lucide-react";
 
-export default function TemplateCard({
-  event,
-  templates,
-  currentTemplate,
-  emailTemplates = [],
-  currentEmailTemplate = null,
-  onUpdated,
-  onEmailTemplateUpdated,
-}: {
+interface TemplateCardProps {
   event: Event;
   templates: CertificateTemplate[];
   currentTemplate: CertificateTemplate | null;
@@ -23,13 +15,17 @@ export default function TemplateCard({
   currentEmailTemplate?: CertificateTemplate | null;
   onUpdated: (event: Event, template: CertificateTemplate | null) => void;
   onEmailTemplateUpdated: (event: Event, emailTemplate: CertificateTemplate | null) => void;
-}) {
+}
+
+export default function TemplateCard({
+  event,
+  templates,
+  currentTemplate,
+  onUpdated,
+}: TemplateCardProps) {
   const [selected, setSelected] = useState(event.template_id ?? "");
-  const [selectedEmail, setSelectedEmail] = useState(event.email_template_id ?? "");
   const [saving, setSaving] = useState(false);
-  const [savingEmail, setSavingEmail] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [emailMessage, setEmailMessage] = useState<string | null>(null);
 
   const displayTemplates = useMemo(() => {
     if (currentTemplate && !templates.some((t) => t.id === currentTemplate.id)) {
@@ -41,35 +37,18 @@ export default function TemplateCard({
   async function handleSave() {
     setSaving(true);
     setMessage(null);
-    const result = await updateEventAction(event.id, {
+    const { data: result } = await eventsApi.update(event.id, {
       template_id: selected || undefined,
     });
-    if (result?.error) {
-      setMessage(result.error ?? "Failed to update template");
-    } else if (result?.event) {
+    if (!result) {
+      setMessage("Failed to update template");
+    } else {
       const updatedTemplate =
         displayTemplates.find((t) => t.id === (selected || undefined)) ?? null;
-      onUpdated(result.event, updatedTemplate);
+      onUpdated(result, updatedTemplate);
       setMessage("Template updated.");
     }
     setSaving(false);
-  }
-
-  async function handleEmailSave() {
-    setSavingEmail(true);
-    setEmailMessage(null);
-    const result = await updateEventAction(event.id, {
-      email_template_id: selectedEmail || undefined,
-    });
-    if (result?.error) {
-      setEmailMessage(result.error ?? "Failed to update email template");
-    } else if (result?.event) {
-      const updatedEmailTemplate =
-        emailTemplates.find((t) => t.id === (selectedEmail || undefined)) ?? null;
-      onEmailTemplateUpdated(result.event, updatedEmailTemplate);
-      setEmailMessage("Email template updated.");
-    }
-    setSavingEmail(false);
   }
 
   return (

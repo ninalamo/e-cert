@@ -1,71 +1,58 @@
-import { requireSession } from "@/lib/permissions";
-import { createClient } from "@/lib/supabase/server";
-import { CertificateRepository } from "@/features/certificates/server/certificate.repository";
-import { CertificateTemplateRepository } from "@/features/templates/server/template.repository";
-import { EventRepository } from "@/features/events/server/event.repository";
-import { generateQrCodeDataUrl } from "@/lib/qr";
-import { env } from "@/lib/env";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { certificatesApi } from "@/lib/api/certificates";
+import { templatesApi } from "@/lib/api/templates";
+import { eventsApi } from "@/lib/api/events";
 import { ORG_NAME } from "@/lib/org";
-import { notFound, redirect } from "next/navigation";
 import CertificateViewer from "./certificate-viewer";
-import { logAudit } from "@/features/audit/server/audit.service";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { Certificate } from "@/types/certificate";
+import type { CertificateTemplate } from "@/types/template";
+import type { Event } from "@/types/event";
 
-export default async function CertificateViewPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const session = await requireSession();
-  const { id } = await params;
+export default function CertificateViewPage() {
+  const params = useParams();
+  const id = params.id as string;
 
-  const supabase = await createClient();
-  const certRepo = new CertificateRepository(supabase);
-  const certificate = await certRepo.findById(id);
+  const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const [template, setTemplate] = useState<CertificateTemplate | null>(null);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [qrDataUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!certificate) notFound();
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data: cert } = await certificatesApi.get(id);
+        if (!cert) return;
+        setCertificate(cert);
 
-  if (session.role === "participant" && certificate.recipient_email !== session.email) {
-    redirect("/my/certificates");
-  }
+        if (cert.template_id) {
+          const { data: tmpl } = await templatesApi.get(cert.template_id);
+          setTemplate(tmpl);
+        }
+        if (cert.event_id) {
+          const { data: ev } = await eventsApi.get(cert.event_id);
+          setEvent(ev);
+        }
+      } catch {
+        // ignore
+      }
+      setLoading(false);
+    }
+    load();
+  }, [id]);
 
-  logAudit({
-    organization_id: certificate.organization_id,
-    user_id: session.id,
-    user_email: session.email ?? undefined,
-    action: "certificate.viewed",
-    source: "ui",
-    entity_type: "certificate",
-    entity_id: certificate.id,
-    details: {
-      certificate_number: certificate.certificate_number,
-      recipient_email: certificate.recipient_email,
-    },
-    client: supabaseAdmin,
-  }).catch(() => {});
-
-  const templateRepo = new CertificateTemplateRepository(supabase);
-  const eventRepo = new EventRepository(supabase);
-
-  const [template, event] = await Promise.all([
-    certificate.template_id
-      ? templateRepo.findById(certificate.template_id)
-      : null,
-    certificate.event_id
-      ? eventRepo.findById(certificate.event_id)
-      : null,
-  ]);
-
-  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
-  const verifyUrl = `${baseUrl}/verify?number=${certificate.certificate_number}`;
-  const qrDataUrl = await generateQrCodeDataUrl(verifyUrl, { width: 200, margin: 2 });
+  if (loading) return <div className="p-8 text-center text-sm text-tertiary">Loading...</div>;
+  if (!certificate) return <div className="p-8 text-center text-sm text-red-600">Certificate not found</div>;
 
   return (
     <CertificateViewer
       certificate={certificate}
       template={template}
       event={event}
-      qrDataUrl={qrDataUrl}
+      qrDataUrl={qrDataUrl ?? ""}
       orgName={ORG_NAME}
     />
   );

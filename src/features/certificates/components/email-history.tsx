@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, startTransition } from "react";
-import { getEmailLogsAction, sendCertificateEmailAction } from "../server/certificate.actions";
+import { certificatesApi } from "@/lib/api/certificates";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 
 export default function EmailHistory({ certificateId }: { certificateId: string }) {
@@ -14,8 +14,8 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
 
   const loadLogs = useCallback(async () => {
     setLoading(true);
-    const data = await getEmailLogsAction(certificateId);
-    setLogs(data);
+    const result = await certificatesApi.getEmailLogs(certificateId);
+    setLogs(result.data ?? []);
     setLoaded(true);
     setLoading(false);
   }, [certificateId]);
@@ -32,14 +32,20 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
     setSending(true);
     setError(null);
     setSuccess(null);
-    const result = await sendCertificateEmailAction(certificateId);
-    if (result?.success) {
-      setSuccess("Email sent successfully!");
-      loadLogs();
-    } else {
-      setError(result?.error || "Failed to send email");
+    try {
+      const result = await certificatesApi.sendEmail(certificateId);
+      if (result?.data?.sent) {
+        setSuccess("Email sent successfully!");
+        loadLogs();
+      } else {
+        setError("Failed to send email");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to send email";
+      setError(msg);
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   }
 
   const successfulLogs = logs.filter((l) => l.status === "sent");

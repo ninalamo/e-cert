@@ -1,19 +1,22 @@
-import type { DashboardStats } from "../server/dashboard.service";
+import type { DashboardStats } from "@/lib/api/dashboard";
 
 interface StatsCardsProps {
-  initialStats: DashboardStats;
+  initialStats: DashboardStats | null;
 }
 
 export default function StatsCards({ initialStats }: StatsCardsProps) {
+  if (!initialStats) return null;
+
   const cards = [
-    { label: "Total Certificates", value: initialStats.totalCertificates, color: "text-brand-700" },
-    { label: "Active", value: initialStats.activeCertificates, color: "text-green-600" },
-    { label: "Revoked", value: initialStats.revokedCertificates, color: "text-red-600" },
-    { label: "Emails Sent", value: initialStats.totalEmails, color: "text-blue-600" },
+    { label: "Total Events", value: initialStats.total_events, color: "text-brand-700" },
+    { label: "Active Events", value: initialStats.active_events, color: "text-green-600" },
+    { label: "Total Certificates", value: initialStats.total_certificates, color: "text-blue-600" },
+    { label: "Issued This Month", value: initialStats.certificates_issued_this_month, color: "text-purple-600" },
+    { label: "Total Attendees", value: initialStats.total_attendees, color: "text-orange-600" },
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-5 gap-4">
       {cards.map((card) => (
         <div key={card.label} className="app-card app-card-hover p-4">
           <p className="text-sm text-muted-foreground">{card.label}</p>

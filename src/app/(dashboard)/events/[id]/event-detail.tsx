@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  getEventWithStatsAction,
-} from "@/features/events/server/event.actions";
-import { getTemplatesAction, getEmailTemplatesWithLockStateAction } from "@/features/templates/server/template.actions";
+import { eventsApi } from "@/lib/api/events";
+import { templatesApi } from "@/lib/api/templates";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonEventDetail } from "@/components/ui/skeleton";
@@ -71,9 +69,9 @@ export default function EventDetail({
   useEffect(() => {
     if (initialData) return;
     let active = true;
-    getEventWithStatsAction(eventId).then((result) => {
+    eventsApi.get(eventId).then((result) => {
       if (active) {
-        setData(result);
+        setData(result as unknown as EventDetailData);
         setLoading(false);
       }
     });
@@ -85,8 +83,8 @@ export default function EventDetail({
     const orgId = data?.event.organization_id;
     if (!orgId) return;
     let active = true;
-    getTemplatesAction(orgId)
-      .then((t) => { if (active) setTemplates(t); })
+    templatesApi.list(orgId)
+      .then((t) => { if (active) setTemplates(t.data ?? []); })
       .catch(console.error);
     return () => { active = false; };
   }, [data?.event.organization_id, initialTemplates.length]);
@@ -96,8 +94,8 @@ export default function EventDetail({
     const orgId = data?.event.organization_id;
     if (!orgId) return;
     let active = true;
-    getEmailTemplatesWithLockStateAction(orgId)
-      .then((t) => { if (active) setEmailTemplates(t); })
+    templatesApi.listEmailWithLock(orgId)
+      .then((t) => { if (active) setEmailTemplates(t.data ?? []); })
       .catch(console.error);
     return () => { active = false; };
   }, [data?.event.organization_id, initialEmailTemplates.length]);
@@ -113,10 +111,9 @@ export default function EventDetail({
   async function handleNameSave() {
     if (!data || !nameValue.trim()) return;
     setNameSaving(true);
-    const { updateEventAction } = await import("@/features/events/server/event.actions");
-    const result = await updateEventAction(eventId, { name: nameValue.trim() });
-    if (!result?.error && result?.event) {
-      setData((prev) => prev ? { ...prev, event: result.event! } : prev);
+    const { data: result } = await eventsApi.update(eventId, { name: nameValue.trim() });
+    if (result) {
+      setData((prev) => prev ? { ...prev, event: result } : prev);
     }
     setNameSaving(false);
     setEditName(false);

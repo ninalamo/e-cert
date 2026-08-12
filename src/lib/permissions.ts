@@ -1,4 +1,4 @@
-import { parseAccessToken, type JwtPayload } from "@/lib/auth/jwt";
+import { parseAccessToken } from "@/lib/auth/jwt";
 import { getAccessToken } from "@/lib/auth/token-store";
 import type { UserRole } from "@/types/organization";
 
@@ -23,7 +23,7 @@ export function resolveRoleFromPermissions(permissions: string[]): UserRole {
   if (hasLevel(permissions, "admin")) return "admin";
   if (hasLevel(permissions, "write")) return "staff";
   if (hasLevel(permissions, "read")) return "participant";
-  return "guest";
+  return "participant";
 }
 
 export function getCurrentSession(): SessionUser | null {
@@ -73,17 +73,4 @@ export function canViewAllCertificates(role: UserRole): boolean {
 
 export function getHomePathForRole(role: UserRole): string {
   return role === "participant" ? "/my" : "/dashboard";
-}
-
-// Phase D stubs — server-side guards replaced by AuthGuard (client-side)
-// These exist only so remaining server components/actions compile.
-export async function requireSession(): Promise<SessionUser> {
-  return { id: "stub", email: null, name: null, role: DEFAULT_ROLE };
-}
-
-export async function requireRole(
-  roles: UserRole[],
-  redirectTo = "/dashboard"
-): Promise<SessionUser> {
-  return { id: "stub", email: null, name: null, role: DEFAULT_ROLE };
 }
