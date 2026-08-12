@@ -74,3 +74,16 @@ export function canViewAllCertificates(role: UserRole): boolean {
 export function getHomePathForRole(role: UserRole): string {
   return role === "participant" ? "/my" : "/dashboard";
 }
+
+// Phase D stubs — server-side guards replaced by AuthGuard (client-side)
+// These exist only so remaining server components/actions compile.
+export async function requireSession(): Promise<SessionUser> {
+  return { id: "stub", email: null, name: null, role: DEFAULT_ROLE };
+}
+
+export async function requireRole(
+  roles: UserRole[],
+  redirectTo = "/dashboard"
+): Promise<SessionUser> {
+  return { id: "stub", email: null, name: null, role: DEFAULT_ROLE };
+}

@@ -1,13 +1,2 @@
-import type { StorageProvider } from "./types";
-import { SupabaseStorageProvider } from "./supabase.provider";
-
-export type { StorageProvider } from "./types";
-
-let provider: StorageProvider | null = null;
-
-export function getStorageProvider(): StorageProvider {
-  if (!provider) {
-    provider = new SupabaseStorageProvider();
-  }
-  return provider;
-}
+// Phase D stub — Storage removed; file ops move to Cert API (Phase E)
+export function getStorageProvider() { return null as any; }
