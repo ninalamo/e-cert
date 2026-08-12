@@ -1,7 +1,7 @@
 # LOA Cert Platform — Legacy `e-cert` Integration & Refactor
 ## Product Assembly Component Specification
 
-**Version:** 2.1
+**Version:** 2.2
 **Status:** Final
 **Layer:** Product Assembly (`loa-cert-platform`)
 **Audience:** Architects, Engineers, AI Development Agents
@@ -175,7 +175,7 @@ Locked with the user on 2026-08-05. These are normative for this spec.
 
 > D8 (superseded) rationale: the earlier SSR model mirrored the access token into an httpOnly `session` cookie because server components/server actions cannot read an in-memory token. The CSR decision removes the server-rendered layer entirely — no server components consume the token, so the mirror cookie is unnecessary complexity. All `~75` server actions are deleted and replaced by a client-side HTTP client; route protection is a client-side guard (UI only), not a security boundary.
 
-| D9 | **Cert API authentication deferred (2026-08-06)** | Phase C scaffolds the **domain CRUD endpoints only** (events/attendees/templates/certificates) with **no authentication**: no `jwt.auth` / `jwt.endpoint` middleware, and no SSO `callback` / `refresh` / `logout` endpoints yet. They land in a later **C-Auth** phase (§12). Domain endpoints are implemented and tested unauthenticated in the interim; the §9 auth contract and §4.4 level model remain the target. |
+| D9 | ~~**Cert API authentication deferred (2026-08-06)**~~ **Resolved 2026-08-11 — C-Auth complete.** `jwt.auth` + `jwt.endpoint` middleware enforced; SSO `callback`/`refresh`/`logout` live; 126 tests green. Phase D (e-cert auth swap) is unblocked. | |
 
 ---
 
@@ -726,15 +726,15 @@ Spec-gated (AI-RULES.md Rule 0). Each phase requires the governing spec to be Fi
 |-------|------|------|
 | **A** | ✅ **Complete 2026-08-06** — `api-endpoints.md` v1.3 and this spec v2.0 promoted to **Final** | user review |
 | **B** | Auth readiness — provisioned **manually at deploy-time** per the Auth runbook `cert-readiness.md` (§10.2 side-note) | Auth runbook `cert-readiness.md` Final |
-| **C** | Cert scaffold: **domain CRUD slice only** — events / attendees / templates / certificates + tests, **no authentication** (D9, 2026-08-06) | `api-endpoints.md` Final |
-| **C-Auth** | Cert API authentication (deferred from C, D9): `jwt.auth` + `jwt.endpoint` middleware and SSO `callback` / `refresh` / `logout` (§9) | prerequisite of Phase D |
-| **D** | `e-cert` auth swap (CSR): env, in-memory token store + silent refresh, SSO fragment handler, parse-only JWT, client auth guard, delete `src/proxy.ts` + auth pages/actions | this spec Final + **C-Auth** done |
+| **C** | ✅ **Complete 2026-08-10** — Cert scaffold: domain CRUD slice — events / attendees / templates / certificates + tests | `api-endpoints.md` Final |
+| **C-Auth** | ✅ **Complete 2026-08-11** — `jwt.auth` + `jwt.endpoint` middleware and SSO `callback` / `refresh` / `logout` (§9). 126 tests, 386 assertions, all green. | prerequisite of Phase D |
+| **D** | `e-cert` auth swap (CSR): env, in-memory token store + silent refresh, SSO fragment handler, parse-only JWT, client auth guard, delete `src/proxy.ts` + auth pages/actions | this spec Final + **C-Auth** done ✅ |
 | **E** | `e-cert` data swap: typed client API modules (§8.1), delete all server actions, components call endpoints directly (§8.2), PDF/QR/email/upload via API, remove legacy modules | this spec Final |
 | **F** | UI cleanup + verification: removed pages/components, silent refresh, parity checks (login, event, issue, download, verify, view, audit) | — |
 | **G** | Decommission legacy DB + deps (§11) | cutover verified |
 | **H** | Phase 4 integration: cross-app JWT validation tests, OpenAPI, audit consistency (`PROJECT.md` Phase 4) | — |
 
-Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`): events + attendees + templates + certificates against the Cert API (**unauthenticated** — D9); SSO/session and the auth middleware follow in the **C-Auth** phase; PDF/QR/email/audit/dashboard afterwards.
+Suggested first implementation slice (core-first): events + attendees + templates + certificates against the Cert API (**unauthenticated** — D9); SSO/session and the auth middleware follow in the **C-Auth** phase; PDF/QR/email/audit/dashboard afterwards.
 
 ---
 
@@ -760,8 +760,8 @@ Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`):
 
 | Spec / doc | Role |
 |------------|------|
-| `assemblies/loa-cert-platform/api-endpoints.md` (Final v1.3) | Cert API source of truth; §4 levels, §6 routes, §7 data model, §9 SSO/JWT/permissions, Appendix A catalog |
-| `assemblies/loa-cert-platform/web-ui.md` (v1.0) | Frontend spec; §4 SSO fragment, §5 permission mapping (superseded for roles by this spec §7), §6 token lifecycle (refined by the CSR decision, D8 superseded) |
+| `assemblies/loa-cert-platform/api-endpoints.md` (Final v1.5) | Cert API source of truth; §4 levels, §6 routes, §7 data model, §9 SSO/JWT/permissions, Appendix A catalog |
+| `assemblies/loa-cert-platform/authenticated-endpoints-spec.md` (v1.1) | Endpoint reference card with required levels |
 | `assemblies/loa-cert-platform/README.md` (v1.2) | Assembly scope, §11 SSO contract, §10 REST conventions |
 | `assemblies/loa-auth-platform/tenant-group-endpoint-grants.md` (Final v1.1) | Level-based grants model (authority for levels) |
 | `assemblies/loa-auth-platform/group-permission-management.md` (Final v2.0) | User-groups + permission definitions (`cert.*` defined, not enforced) |
@@ -776,6 +776,6 @@ Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`):
 
 ## Document Control
 
-- **Status:** Final v2.1 — 2026-08-06: **D9 — Cert API authentication deferred** (Phase C = unauth domain CRUD only; SSO + `jwt.auth`/`jwt.endpoint` move to a new **C-Auth** phase). Auth-provisioning sections (§7.2 title, §10.2, §10.4) refactored to **side-notes** pointing at the Auth runbook `cert-readiness.md` (no "seeding" language). v2.0 (2026-08-06): CSR rewrite, D8 superseded; Q-2..Q-7 resolved; Q-17 proxy + dashboard ownership confirmed.
+- **Status:** Final v2.2 — 2026-08-11: **C-Auth complete** (§12 C-Auth row marked done; Phase D unblocked). v2.1 (2026-08-06): D9 — Cert API authentication deferred. v2.0 (2026-08-06): CSR rewrite, D8 superseded; Q-2..Q-7 resolved; Q-17 proxy + dashboard ownership confirmed.
 - **Authoritative source:** `loa-apache-server-apps/assemblies/loa-cert-platform/legacy-e-cert-integration.md`.
 - **Synced working copy:** `D:\loa\e-cert\legacy-e-cert-integration.md` (same content; refactor drives from the `e-cert` copy).

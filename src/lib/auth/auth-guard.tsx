@@ -2,22 +2,24 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getCurrentSession, getHomePathForRole } from "@/lib/permissions";
+import { getAccessToken } from "./token-store";
+import { parseAccessToken } from "./jwt";
 
 const AUTH_LOGIN_URL = "https://auth.lyceumalabang.edu.ph/sso/login";
 
-export default function Home() {
+export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const session = getCurrentSession();
-    if (session) {
-      router.replace(getHomePathForRole(session.role));
-    } else {
+    const token = getAccessToken();
+    if (!token || !parseAccessToken(token)) {
       const redirect = encodeURIComponent(window.location.origin);
       router.replace(`${AUTH_LOGIN_URL}?redirect=${redirect}`);
     }
   }, [router]);
 
-  return null;
+  const token = getAccessToken();
+  if (!token || !parseAccessToken(token)) return null;
+
+  return <>{children}</>;
 }

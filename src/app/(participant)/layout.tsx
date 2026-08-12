@@ -1,11 +1,16 @@
-import DashboardShell from "@/components/dashboard-shell";
-import { requireSession } from "@/lib/permissions";
+"use client";
 
-export default async function ParticipantLayout({
+import { AuthGuard } from "@/lib/auth";
+import DashboardShell from "@/components/dashboard-shell";
+
+export default function ParticipantLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireSession();
-  return <DashboardShell session={session}>{children}</DashboardShell>;
+  return (
+    <AuthGuard>
+      <DashboardShell>{children}</DashboardShell>
+    </AuthGuard>
+  );
 }
