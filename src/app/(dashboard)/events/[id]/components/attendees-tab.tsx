@@ -156,7 +156,7 @@ export default function AttendeesTab({
   }
 
   async function handleReissueSelected() {
-    setReissueBusy(true);
+    setIssueBusy(true);
     try {
       const res = await fetch(`/api/events/${event.id}/reissue`, {
         method: "POST",
@@ -178,7 +178,7 @@ export default function AttendeesTab({
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to re-issue certificates");
     } finally {
-      setReissueBusy(false);
+      setIssueBusy(false);
     }
   }
 

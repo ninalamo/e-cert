@@ -1,45 +1,6 @@
 import { vi } from "vitest";
-import { createMockSupabaseClient } from "./helpers/supabase-mock";
 
-process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
-process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-key";
-process.env.SMTP_HOST = "smtp.example.com";
-process.env.SMTP_PORT = "587";
-process.env.SMTP_USER = "test@example.com";
-process.env.SMTP_PASS = "test-password";
-process.env.SMTP_FROM = "test@example.com";
 process.env.NEXT_PUBLIC_BASE_URL = "http://localhost:3000";
-
-const mockSupabase = createMockSupabaseClient();
-
-vi.mock("@/lib/supabase/admin", () => ({
-  supabaseAdmin: mockSupabase,
-}));
-
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(() => mockSupabase),
-}));
-
-vi.mock("@/lib/supabase", () => ({
-  supabaseAdmin: mockSupabase,
-  createClient: vi.fn(() => mockSupabase),
-  createServerClient: vi.fn(() => mockSupabase),
-}));
-
-vi.mock("@/lib/seed", () => ({
-  ORG_ID: "d4444444-4444-4444-4444-444444444444",
-  SEED_PASSWORD: "Password123!",
-  SEED_USERS: [
-    { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", email: "admin@lyceumalabang.edu.ph", name: "Admin User", role: "admin" },
-    { id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2", email: "staff@lyceumalabang.edu.ph", name: "Staff User", role: "staff" },
-    { id: "cccccccc-cccc-cccc-cccc-ccccccccccc3", email: "participant@lyceumalabang.edu.ph", name: "Participant User", role: "participant" },
-  ],
-  reseed: vi.fn(),
-  recreateAdmin: vi.fn(),
-  seedUsers: vi.fn(),
-  deleteSeededUsers: vi.fn(),
-}));
 
 vi.mock("@/lib/permissions", () => ({
   getCurrentSession: vi.fn(),
@@ -80,8 +41,19 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn((url: string) => { throw new Error(`NEXT_REDIRECT:${url}`) }),
 }));
 
-vi.mock("@/lib/auth", () => ({
-  hashPassword: vi.fn((pw: string) => Promise.resolve(`hashed_${pw}`)),
+vi.mock("@//lib/auth", () => ({
+  getAccessToken: vi.fn(() => sessionStorage.getItem("access_token")),
+  setAccessToken: vi.fn(() => sessionStorage.setItem("access_token", "")),
+  clearAccessToken: vi.fn(() => sessionStorage.removeItem("access_token")),
+  parseAccessToken: vi.fn((token: string) => {
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload;
+    } catch {
+      return null;
+    }
+  }),
+  hashPassword: vi.fn(() => Promise.resolve("hashed_pw")),
   comparePassword: vi.fn((pw: string, hash: string) => Promise.resolve(pw === hash.replace("hashed_", ""))),
   setSession: vi.fn(() => Promise.resolve()),
   clearSession: vi.fn(() => Promise.resolve()),
@@ -94,22 +66,10 @@ vi.mock("@/lib/auth", () => ({
   verifyConfirmToken: vi.fn(() => Promise.resolve({ userId: "user-1" })),
 }));
 
-vi.mock("@/lib/email/auth-emails", () => ({
-  sendConfirmationEmail: vi.fn(() => Promise.resolve()),
-  sendPasswordResetEmail: vi.fn(() => Promise.resolve()),
-  sendWelcomeEmail: vi.fn(() => Promise.resolve()),
-  sendEmailConfirmedEmail: vi.fn(() => Promise.resolve()),
+vi.mock("@/lib/org", () => ({
+  ORG_NAME: "Lyceum Alabang",
 }));
 
-vi.mock("workflow/api", () => ({
-  start: vi.fn(() => Promise.resolve({ runId: "mock-run-id" })),
-  getRun: vi.fn(() => ({
-    exists: Promise.resolve(true),
-    status: Promise.resolve("completed"),
-    returnValue: Promise.resolve({ issued: 5, failed: 0 }),
-  })),
+vi.mock("./components/whats-new", () => ({
+  WhatsNew: () => null,
 }));
-
-export function getMockSupabase() {
-  return mockSupabase;
-}
