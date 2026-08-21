@@ -31,7 +31,7 @@ export default function DashboardShell({
   const version = process.env.NEXT_PUBLIC_VERSION ?? "";
 
   return (
-    <div className="flex h-screen bg-surface-muted">
+    <div className="flex h-screen bg-surface-muted" suppressHydrationWarning>
       <Sidebar role={role} />
       <div className="flex-1 overflow-y-auto">
         <header className={`flex items-center justify-between border-b border-default bg-surface px-4 py-3 lg:px-6 ${borderClass}`}>

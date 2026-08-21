@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { hasSSOPayload } from "./sso-fragment";
+
 import { useRouter } from "next/navigation";
 import { getAccessToken } from "./token-store";
 import { parseAccessToken } from "./jwt";

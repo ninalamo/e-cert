@@ -16,7 +16,7 @@
 | **E** | **✅ Complete** | **2026-08-12** |
 | **F** | ✅ Complete | — |
 | **G** | ✅ Complete | — |
-| **H** | **← Next** | — |
+| **H** | **✅ Complete** | **2026-08-13** |
 
 ---
 
@@ -156,11 +156,35 @@
 
 ---
 
-## Phase H — Phase 4 Integration
+## Phase H — Phase 4 Integration ✅ Complete
 
-- Cross-app JWT validation tests
-- OpenAPI spec
-- Audit consistency checks
+**Work:** Cross-app JWT validation tests, OpenAPI spec completion, audit consistency checks.
+
+### Done
+- Enhanced JWT validation tests (`src/__tests__/phase-h/jwt-validation.test.ts`):
+  - Tests real `parseAccessToken` function with valid/invalid tokens
+  - Tests token type rejection, expiry detection, tenant slug validation
+  - Tests `resolveRoleFromPermissions` with admin/write/read scopes
+  - Tests precedence rules and wildcard permissions
+  - Fixed `resolveRoleFromPermissions` mock in `setup.ts` (was missing from mock)
+- Enhanced audit consistency tests (`src/__tests__/phase-h/audit-consistency.test.ts`):
+  - Uses real `AuditAction` and `AuditSource` types
+  - Validates all 21 audit actions against actual type definition
+  - Tests entity reference integrity and type/id pairing
+  - Tests CSV export format with valid audit actions
+  - Tests action-category prefix mapping (auth.*, certificate.*, event.*, member.*)
+- Completed OpenAPI spec (`specs/openapi/cert-api.yaml`):
+  - Added all missing endpoints: certificates (14 endpoints), templates (5), dashboard (2), audit (4), view (1)
+  - Added reusable response definitions (`BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`)
+  - Added reusable path parameters (`EventId`, `AttendeeId`, `CertificateId`, `TemplateId`)
+  - Fixed response schema nesting (was at wrong level)
+  - Removed garbage text at end of file
+  - Fixed YAML indentation error in `PartialEvent.valid_until`
+  - All 50+ endpoints now documented with schemas
+
+### Test Results
+- 32 tests passing (15 JWT validation + 17 audit consistency)
+- OpenAPI spec validates as clean YAML
 
 ---
 

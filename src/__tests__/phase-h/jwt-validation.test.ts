@@ -1,63 +1,171 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { parseAccessToken, type JwtPayload } from "@/lib/auth/jwt";
+import { resolveRoleFromPermissions } from "@/lib/permissions";
+
+function encodePayload(payload: Record<string, unknown>): string {
+  const header = btoa(JSON.stringify({ alg: "none", typ: "JWT" }));
+  const body = btoa(JSON.stringify(payload));
+  return `${header}.${body}.`;
+}
+
+function validPayload(overrides: Partial<JwtPayload> = {}): JwtPayload {
+  return {
+    sub: "user-uuid-123",
+    email: "user@test.com",
+    name: "Test User",
+    groups: ["cert-user"],
+    permissions: ["read:/api/v1/me/certificates"],
+    tenant: { id: "tenant-1", slug: "loa" },
+    iat: Math.floor(Date.now() / 1000) - 60,
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    type: "access" as const,
+    ...overrides,
+  };
+}
 
 describe("JWT Validation — Cross-app Token Integrity", () => {
-  it("token payload has required claims", () => {
-    // Simulated JWT payload (decoded token object)
-    const payload = {
-      sub: "user-uuid-123",
-      email: "user@test.com",
-      name: "Test User",
-      groups: ["cert-user"],
-      permissions: ["read:/api/v1/me/certificates"],
-      tenant: { id: "tenant-1", slug: "loa" },
-      iat: 1723456789,
-      exp: 1723456789 + 3600,
-      type: "access",
-    };
+  const originalEnv = process.env.NEXT_PUBLIC_CERT_TENANT_SLUG;
 
-    expect(payload.sub).toBe("user-uuid-123");
-    expect(payload.email).toBe("user@test.com");
-    expect(payload.name).toBe("Test User");
-    expect(Array.isArray(payload.groups)).toBe(true);
-    expect(payload.permissions).toContain("read:/api/v1/me/certificates");
-    expect(payload.tenant).toBeDefined();
-    expect(payload.tenant.slug).toBe("loa");
-    expect(payload.iat).toBeDefined();
-    expect(payload.exp).toBeDefined();
-    expect(payload.exp).toBeGreaterThan(payload.iat);
-    expect(payload.type).toBe("access");
-  });
-
-  it("tenant.slug matches env config", () => {
+  beforeEach(() => {
     process.env.NEXT_PUBLIC_CERT_TENANT_SLUG = "loa";
-    expect(process.env.NEXT_PUBLIC_CERT_TENANT_SLUG).toBe("loa");
-
-    const jwtTenantSlug = "loa";
-    expect(jwtTenantSlug).toBe(process.env.NEXT_PUBLIC_CERT_TENANT_SLUG);
   });
 
-  it("permissions include resource-specific scopes", () => {
-    const permissions = ["read:/api/v1/me/certificates", "read:/api/v1/events"];
-
-    const hasReadScope = permissions.some((p) => p.startsWith("read:"));
-    expect(hasReadScope).toBe(true);
+  afterEach(() => {
+    if (originalEnv !== undefined) {
+      process.env.NEXT_PUBLIC_CERT_TENANT_SLUG = originalEnv;
+    } else {
+      delete process.env.NEXT_PUBLIC_CERT_TENANT_SLUG;
+    }
   });
 
-  it("expired token detection", () => {
-    const now = Date.now() / 1000;
-    const expired = now - 3600;
-    const fresh = now + 3600;
+  describe("parseAccessToken", () => {
+    it("parses a valid token", () => {
+      const payload = validPayload();
+      const token = encodePayload(payload);
+      const result = parseAccessToken(token);
+      expect(result).not.toBeNull();
+      expect(result!.sub).toBe("user-uuid-123");
+      expect(result!.email).toBe("user@test.com");
+      expect(result!.name).toBe("Test User");
+      expect(result!.groups).toEqual(["cert-user"]);
+      expect(result!.permissions).toEqual(["read:/api/v1/me/certificates"]);
+      expect(result!.tenant).toEqual({ id: "tenant-1", slug: "loa" });
+      expect(result!.type).toBe("access");
+    });
 
-    expect(expired).toBeLessThan(now);
-    expect(fresh).toBeGreaterThan(now);
+    it("rejects token with wrong type", () => {
+      const payload = validPayload({ type: "refresh" });
+      const token = encodePayload(payload);
+      expect(parseAccessToken(token)).toBeNull();
+    });
+
+    it("rejects expired token", () => {
+      const payload = validPayload({
+        exp: Math.floor(Date.now() / 1000) - 3600,
+      });
+      const token = encodePayload(payload);
+      expect(parseAccessToken(token)).toBeNull();
+    });
+
+    it("rejects token with wrong tenant slug", () => {
+      const payload = validPayload({
+        tenant: { id: "tenant-2", slug: "other" },
+      });
+      const token = encodePayload(payload);
+      expect(parseAccessToken(token)).toBeNull();
+    });
+
+    it("rejects malformed token", () => {
+      expect(parseAccessToken("not-a-jwt")).toBeNull();
+      expect(parseAccessToken("")).toBeNull();
+      expect(parseAccessToken("a.b")).toBeNull();
+    });
+
+    it("accepts token with missing optional fields", () => {
+      const payload = validPayload({ name: null, groups: [] });
+      const token = encodePayload(payload);
+      const result = parseAccessToken(token);
+      expect(result).not.toBeNull();
+      expect(result!.name).toBeNull();
+      expect(result!.groups).toEqual([]);
+    });
+
+    it("validates all required claims are present", () => {
+      const payload = validPayload();
+      const token = encodePayload(payload);
+      const result = parseAccessToken(token);
+      expect(result).not.toBeNull();
+      expect(result!.sub).toBeDefined();
+      expect(result!.email).toBeDefined();
+      expect(result!.permissions).toBeDefined();
+      expect(result!.tenant).toBeDefined();
+      expect(result!.tenant.id).toBeDefined();
+      expect(result!.tenant.slug).toBeDefined();
+      expect(result!.iat).toBeDefined();
+      expect(result!.exp).toBeDefined();
+      expect(result!.type).toBeDefined();
+    });
+
+    it("token expiry is after issued-at", () => {
+      const now = Math.floor(Date.now() / 1000);
+      const payload = validPayload({ iat: now - 100, exp: now + 3600 });
+      const token = encodePayload(payload);
+      const result = parseAccessToken(token);
+      expect(result).not.toBeNull();
+      expect(result!.exp).toBeGreaterThan(result!.iat);
+    });
   });
 
-  it("role resolved from permissions claim", () => {
-    // Admin
-    expect(["admin:/api/v1/*"].some((p) => p.startsWith("admin:"))).toBe(true);
-    // Staff
-    expect(["write:/api/v1/events"].some((p) => p.startsWith("write:"))).toBe(true);
-    // Participant
-    expect(["read:/api/v1/me/certificates"].every((p) => p.startsWith("read:"))).toBe(true);
+  describe("resolveRoleFromPermissions", () => {
+    it("resolves admin role from admin: scope", () => {
+      expect(
+        resolveRoleFromPermissions(["admin:/api/v1/*"])
+      ).toBe("admin");
+    });
+
+    it("resolves staff role from write: scope", () => {
+      expect(
+        resolveRoleFromPermissions(["write:/api/v1/events"])
+      ).toBe("staff");
+    });
+
+    it("resolves participant role from read: scope", () => {
+      expect(
+        resolveRoleFromPermissions(["read:/api/v1/me/certificates"])
+      ).toBe("participant");
+    });
+
+    it("defaults to participant for empty permissions", () => {
+      expect(resolveRoleFromPermissions([])).toBe("participant");
+    });
+
+    it("admin takes precedence over write and read", () => {
+      const permissions = [
+        "read:/api/v1/me/certificates",
+        "write:/api/v1/events",
+        "admin:/api/v1/*",
+      ];
+      expect(resolveRoleFromPermissions(permissions)).toBe("admin");
+    });
+
+    it("staff takes precedence over participant", () => {
+      const permissions = [
+        "read:/api/v1/me/certificates",
+        "write:/api/v1/events",
+      ];
+      expect(resolveRoleFromPermissions(permissions)).toBe("staff");
+    });
+
+    it("handles wildcard permissions", () => {
+      expect(
+        resolveRoleFromPermissions(["admin:/api/v1/*"])
+      ).toBe("admin");
+      expect(
+        resolveRoleFromPermissions(["write:/api/v1/*"])
+      ).toBe("staff");
+      expect(
+        resolveRoleFromPermissions(["read:/api/v1/*"])
+      ).toBe("participant");
+    });
   });
 });

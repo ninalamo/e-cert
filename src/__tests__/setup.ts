@@ -7,6 +7,11 @@ vi.mock("@/lib/permissions", () => ({
   requireRole: vi.fn(),
   requireSession: vi.fn(),
   DEFAULT_ROLE: "participant",
+  resolveRoleFromPermissions: vi.fn((permissions: string[]) => {
+    if (permissions.some((p: string) => p.startsWith("admin:"))) return "admin";
+    if (permissions.some((p: string) => p.startsWith("write:"))) return "staff";
+    return "participant";
+  }),
   canManageCertificates: vi.fn(() => false),
   canManageEvents: vi.fn(() => false),
   canManageTemplates: vi.fn(() => false),
