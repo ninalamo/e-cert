@@ -8,16 +8,16 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
   async rewrites() {
-    if (process.env.NEXT_PUBLIC_CERT_API_TARGET === "live") {
-      return [{
-        source: "/api/v1/:path*",
-        destination: "https://cert-api.lyceumalabang.edu.ph/api/v1/:path*",
-      }];
+    const target = process.env.NEXT_PUBLIC_CERT_API_TARGET;
+    let destination: string;
+    if (target === "live") {
+      destination = "https://cert-api.lyceumalabang.edu.ph/api/v1/:path*";
+    } else if (target === "local") {
+      destination = "http://localhost:9001/api/v1/:path*";
+    } else {
+      destination = "http://localhost:3001/api/v1/:path*";
     }
-    return [{
-      source: "/api/v1/:path*",
-      destination: "http://localhost:3001/api/v1/:path*",
-    }];
+    return [{ source: "/api/v1/:path*", destination }];
   },
 };
 

@@ -11,8 +11,10 @@ async function silentRestore(): Promise<boolean> {
   try {
     const res = await fetch(REFRESH_PATH, { method: "POST" });
     if (!res.ok) return false;
-    const { access_token } = await res.json();
-    setAccessToken(access_token);
+    const json = await res.json();
+    const token = json.access_token || json.data?.access_token;
+    if (!token) return false;
+    setAccessToken(token);
     return true;
   } catch {
     return false;
