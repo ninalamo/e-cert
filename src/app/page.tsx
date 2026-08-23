@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCurrentSession, getHomePathForRole } from "@/lib/permissions";
 import { hasSSOPayload } from "@/lib/auth/sso-fragment";
+import { FullPageLoader } from "@/components/full-page-loader";
 
 const AUTH_LOGIN_URL = `${process.env.NEXT_PUBLIC_AUTH_BASE_URL}/sso/login`;
 
@@ -22,5 +23,5 @@ export default function Home() {
     }
   }, [router]);
 
-  return null;
+  return <FullPageLoader text="Signing you in…" />;
 }

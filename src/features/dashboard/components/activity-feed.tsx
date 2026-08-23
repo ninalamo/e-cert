@@ -1,10 +1,16 @@
 import type { ActivityItem } from "@/lib/api/dashboard";
+import { SkeletonList } from "@/components/ui/skeleton";
 
 interface ActivityFeedProps {
   initialActivities: ActivityItem[];
+  isLoading?: boolean;
 }
 
-export default function ActivityFeed({ initialActivities }: ActivityFeedProps) {
+export default function ActivityFeed({ initialActivities, isLoading = false }: ActivityFeedProps) {
+  if (isLoading) {
+    return <SkeletonList rows={4} />;
+  }
+
   if (initialActivities.length === 0) {
     return (
       <div className="text-center py-8">

@@ -15,6 +15,7 @@ export default function DashboardPage() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -27,6 +28,8 @@ export default function DashboardPage() {
         setActivities(activitiesResult.data ?? []);
       } catch {
         // ignore
+      } finally {
+        setIsLoading(false);
       }
     }
     load();
@@ -43,14 +46,14 @@ export default function DashboardPage() {
 
       <DashboardSearch />
 
-      <StatsCards initialStats={stats} />
+      <StatsCards initialStats={stats} isLoading={isLoading} />
 
       <Card>
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          <ActivityFeed initialActivities={activities} />
+          <ActivityFeed initialActivities={activities} isLoading={isLoading} />
         </CardContent>
       </Card>
     </div>
