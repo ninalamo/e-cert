@@ -136,7 +136,6 @@ export default function MobileNav({
 
   const adminItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard" },
-    { label: "Profile", href: "/my/profile" },
     { label: "Events", href: "/events", roles: ["admin", "staff"] },
     { label: "Certificates", href: "/certificates", roles: ["admin", "staff"] },
     {
@@ -164,7 +163,6 @@ export default function MobileNav({
   const participantItems: NavItem[] = [
     { label: "My Dashboard", href: "/my" },
     { label: "My Certificates", href: "/my/certificates" },
-    { label: "Profile", href: "/my/profile" },
   ];
 
   const items =

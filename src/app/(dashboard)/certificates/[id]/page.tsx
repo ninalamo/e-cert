@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { certificatesApi } from "@/lib/api/certificates";
 import { eventsApi } from "@/lib/api/events";
 import { verifyApi } from "@/lib/api/verify";
-import { parseAccessToken, getAccessToken } from "@/lib/auth";
+import { canManageCertificates, getCurrentSession, DEFAULT_ROLE } from "@/lib/permissions";
 import CertificateDetail from "@/features/certificates/components/certificate-detail";
 import { SkeletonDetail } from "@/components/ui/skeleton";
 import type { Certificate } from "@/types/certificate";
@@ -17,9 +17,8 @@ export default function CertificateDetailPage() {
   const id = params.id as string;
   const eventId = searchParams.get("eventId");
 
-  const token = getAccessToken();
-  const payload = token ? parseAccessToken(token) : null;
-  const isAdmin = payload?.permissions?.includes("admin") || payload?.permissions?.includes("staff") || false;
+  const session = getCurrentSession();
+  const isAdmin = canManageCertificates(session?.role ?? DEFAULT_ROLE);
 
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [event, setEvent] = useState<Event | null>(null);

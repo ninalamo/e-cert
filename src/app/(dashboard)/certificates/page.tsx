@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CertificatesList from "@/features/certificates/components/certificates-list";
 import { certificatesApi } from "@/lib/api/certificates";
-import { parseAccessToken, getAccessToken } from "@/lib/auth";
+import { canManageCertificates, getCurrentGroups, getCurrentSession, DEFAULT_ROLE } from "@/lib/permissions";
 import { ORG_ID } from "@/lib/org";
 import type { CertificateWithEvent } from "@/lib/api/certificates";
 
@@ -13,17 +13,19 @@ export default function CertificatesPage() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
 
-  const token = getAccessToken();
-  const user = token ? parseAccessToken(token) : null;
-  const isAdmin = user?.groups?.includes("admin") ?? false;
+  const role = getCurrentSession()?.role ?? DEFAULT_ROLE;
+  const isAdmin = canManageCertificates(role);
+  const isAdminGroup = getCurrentGroups().includes("cert-admin");
 
   const [certificates, setCertificates] = useState<CertificateWithEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    certificatesApi
-      .listWithEvent(ORG_ID)
+    const request = isAdminGroup
+      ? certificatesApi.listWithEvent(ORG_ID)
+      : certificatesApi.getMy();
+    request
       .then((result) => {
         if (!active) return;
         setCertificates(result.data ?? []);
@@ -33,7 +35,7 @@ export default function CertificatesPage() {
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, []);
+  }, [isAdminGroup]);
 
   return (
     <Card>

@@ -1,6 +1,7 @@
 "use client";
 
 import { parseAccessToken, getAccessToken } from "@/lib/auth";
+import { resolveRoleFromPermissions } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import UpdateEmailForm from "@/features/auth/components/update-email-form";
 import ChangePasswordRequestForm from "@/features/auth/components/change-password-request-form";
@@ -10,8 +11,7 @@ export default function MyProfilePage() {
   const payload = token ? parseAccessToken(token) : null;
   const name = payload?.name ?? null;
   const email = payload?.email ?? null;
-  const permissions = payload?.permissions ?? [];
-  const role = permissions.includes("admin") ? "admin" : permissions.includes("staff") ? "staff" : "participant";
+  const role = resolveRoleFromPermissions(payload?.permissions ?? []);
 
   return (
     <div className="space-y-6">

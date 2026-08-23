@@ -54,10 +54,10 @@ export const certificatesApi = {
 
   get: (id: string) => api.get<ApiResponse<Certificate>>(`/certificates/${id}`),
 
-  getMy: () => api.get<{ data: CertificateWithEvent[] }>("/certificates/mine"),
+  getMy: () => api.get<{ data: CertificateWithEvent[] }>("/me/certificates"),
 
   getMyById: (id: string) =>
-    api.get<ApiResponse<Certificate>>(`/certificates/mine/${id}`),
+    api.get<ApiResponse<Certificate>>(`/me/certificates/${id}`),
 
   issue: (data: IssueCertificateInput) =>
     api.post<ApiResponse<{ certificate: Certificate; error?: string }>>(

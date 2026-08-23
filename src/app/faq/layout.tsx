@@ -1,19 +1,26 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
+
 import DashboardShell from "@/components/dashboard-shell";
 import { parseAccessToken, getAccessToken } from "@/lib/auth";
+
+const emptySubscribe = () => () => {};
 
 export default function FaqLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const token = getAccessToken();
-  const payload = token ? parseAccessToken(token) : null;
-  const hasToken = !!payload;
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 
-  if (hasToken) {
-    return <DashboardShell>{children}</DashboardShell>;
-  }
-  return <>{children}</>;
+  const token = mounted ? getAccessToken() : null;
+  const hasToken = !!(token && parseAccessToken(token));
+
+  if (!hasToken) return <>{children}</>;
+  return <DashboardShell>{children}</DashboardShell>;
 }

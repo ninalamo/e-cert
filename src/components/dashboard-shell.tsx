@@ -6,6 +6,7 @@ import MobileNav from "@/components/mobile-nav";
 import UserMenu from "@/components/user-menu";
 import WhatsNew from "@/components/whats-new";
 import { parseAccessToken, getAccessToken } from "@/lib/auth";
+import { resolveRoleFromPermissions } from "@/lib/permissions";
 import type { UserRole } from "@/types/organization";
 
 const roleHeaderColors: Record<string, string> = {
@@ -21,8 +22,7 @@ export default function DashboardShell({
 }) {
   const token = getAccessToken();
   const payload = token ? parseAccessToken(token) : null;
-  const permissions = payload?.permissions ?? [];
-  const role: UserRole = permissions.includes("admin") ? "admin" : permissions.includes("staff") ? "staff" : "participant";
+  const role: UserRole = resolveRoleFromPermissions(payload?.permissions ?? []);
   const name = payload?.name ?? null;
   const email = payload?.email ?? null;
   const userId = payload?.sub ?? "";
@@ -31,7 +31,7 @@ export default function DashboardShell({
   const version = process.env.NEXT_PUBLIC_VERSION ?? "";
 
   return (
-    <div className="flex h-screen bg-surface-muted" suppressHydrationWarning>
+    <div className="flex h-screen bg-surface-muted">
       <Sidebar role={role} />
       <div className="flex-1 overflow-y-auto">
         <header className={`flex items-center justify-between border-b border-default bg-surface px-4 py-3 lg:px-6 ${borderClass}`}>

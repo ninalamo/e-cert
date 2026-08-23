@@ -39,6 +39,12 @@ export function getCurrentSession(): SessionUser | null {
   };
 }
 
+export function getCurrentGroups(): string[] {
+  const token = getAccessToken();
+  if (!token) return [];
+  return parseAccessToken(token)?.groups ?? [];
+}
+
 export function canManageCertificates(role: UserRole): boolean {
   return role === "admin" || role === "staff";
 }
