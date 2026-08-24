@@ -30,13 +30,16 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data: templateData } = await templatesApi.get(id);
-      if (!active) return;
-      setTemplate(templateData);
-      const { data: lockData } = await templatesApi.isEmailLocked(id);
-      if (!active) return;
-      setLocked(lockData.is_locked);
-      setLoading(false);
+      try {
+        const { data: templateData } = await templatesApi.get(id);
+        if (!active) return;
+        setTemplate(templateData);
+        setLocked(templateData?.is_locked ?? false);
+      } catch {
+        if (active) setTemplate(null);
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
     return () => { active = false; };
   }, [id]);

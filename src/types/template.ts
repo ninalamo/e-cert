@@ -9,6 +9,8 @@ export interface CertificateTemplate {
   auth_process: AuthProcess | null;
   html_content: string;
   css_content: string | null;
+  is_locked?: boolean;
+  locked_reason?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -47,12 +47,6 @@ export const templatesApi = {
       `/templates/auth/${process}`
     ),
 
-  isLocked: (id: string) =>
-    api.get<ApiResponse<{ is_locked: boolean }>>(`/templates/${id}/lock-state`),
-
-  isEmailLocked: (id: string) =>
-    api.get<ApiResponse<{ is_locked: boolean }>>(`/templates/${id}/lock-state`),
-
   create: (data: {
     organization_id: string;
     name: string;
