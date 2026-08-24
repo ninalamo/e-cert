@@ -6,6 +6,7 @@ import { certificatesApi } from "@/lib/api/certificates";
 import { eventsApi } from "@/lib/api/events";
 import CertificateDetail from "@/features/certificates/components/certificate-detail";
 import { SkeletonDetail } from "@/components/ui/skeleton";
+import { NotFoundState } from "@/components/not-found-state";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 
@@ -38,7 +39,14 @@ export default function MyCertificateDetailPage() {
   }, [id]);
 
   if (loading) return <SkeletonDetail />;
-  if (!certificate) return <p className="text-red-600 text-sm">Certificate not found</p>;
+  if (!certificate)
+    return (
+      <NotFoundState
+        title="Certificate not found"
+        backHref="/my/certificates"
+        backLabel="Back to My Certificates"
+      />
+    );
 
   return (
     <CertificateDetail

@@ -8,6 +8,7 @@ import { verifyApi } from "@/lib/api/verify";
 import { canManageCertificates, getCurrentSession, DEFAULT_ROLE } from "@/lib/permissions";
 import CertificateDetail from "@/features/certificates/components/certificate-detail";
 import { SkeletonDetail } from "@/components/ui/skeleton";
+import { NotFoundState } from "@/components/not-found-state";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 
@@ -49,7 +50,15 @@ export default function CertificateDetailPage() {
   }, [id, eventId]);
 
   if (loading) return <SkeletonDetail />;
-  if (!certificate) return <p className="text-red-600 text-sm">Certificate not found</p>;
+  if (!certificate)
+    return (
+      <NotFoundState
+        title="Certificate not found"
+        description="It may have been deleted or revoked."
+        backHref="/certificates"
+        backLabel="Back to Certificates"
+      />
+    );
 
   return (
     <CertificateDetail

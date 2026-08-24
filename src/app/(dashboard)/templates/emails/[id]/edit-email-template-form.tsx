@@ -9,6 +9,7 @@ import { templatesApi } from "@/lib/api/templates";
 const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
+import { NotFoundState } from "@/components/not-found-state";
 import { useEmailPreview } from "@/features/templates/hooks/use-email-preview";
 import {
   Breadcrumb,
@@ -49,7 +50,14 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
   }
 
   if (!template) {
-    return <p className="text-red-600">Email template not found.</p>;
+    return (
+      <NotFoundState
+        title="Email template not found"
+        description="It may have been deleted."
+        backHref="/templates/emails"
+        backLabel="Back to Email Templates"
+      />
+    );
   }
 
   return (

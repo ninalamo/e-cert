@@ -8,6 +8,7 @@ import { templatesApi } from "@/lib/api/templates";
 const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
+import { NotFoundState } from "@/components/not-found-state";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -44,7 +45,14 @@ export default function EditTemplateForm({ id }: { id: string }) {
   }
 
   if (!template) {
-    return <p className="text-red-600">Template not found.</p>;
+    return (
+      <NotFoundState
+        title="Template not found"
+        description="It may have been deleted."
+        backHref="/templates/certificates"
+        backLabel="Back to Templates"
+      />
+    );
   }
 
   if (template.type === 'auth') {

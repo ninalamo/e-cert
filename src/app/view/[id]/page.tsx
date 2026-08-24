@@ -7,6 +7,7 @@ import { templatesApi } from "@/lib/api/templates";
 import { eventsApi } from "@/lib/api/events";
 import { ORG_NAME } from "@/lib/org";
 import CertificateViewer from "./certificate-viewer";
+import { NotFoundState } from "@/components/not-found-state";
 import type { Certificate } from "@/types/certificate";
 import type { CertificateTemplate } from "@/types/template";
 import type { Event } from "@/types/event";
@@ -45,7 +46,13 @@ export default function CertificateViewPage() {
   }, [id]);
 
   if (loading) return <div className="p-8 text-center text-sm text-tertiary">Loading...</div>;
-  if (!certificate) return <div className="p-8 text-center text-sm text-red-600">Certificate not found</div>;
+  if (!certificate)
+    return (
+      <NotFoundState
+        title="Certificate not found"
+        description="Check the link or certificate number."
+      />
+    );
 
   return (
     <CertificateViewer

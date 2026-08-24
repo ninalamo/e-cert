@@ -18,6 +18,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { statusConfig } from "./components/status-change-dialog";
+import { NotFoundState } from "@/components/not-found-state";
 import StatusChangeDialog from "./components/status-change-dialog";
 import DeleteDialog from "./components/delete-dialog";
 import EventFieldsCard from "./components/event-fields-card";
@@ -143,7 +144,15 @@ export default function EventDetail({
   }
 
   if (loading) return <SkeletonEventDetail activeTab={initialTab} />;
-  if (!data) return <p className="text-red-600 text-sm">Event not found</p>;
+  if (!data)
+    return (
+      <NotFoundState
+        title="Event not found"
+        description="It may have been deleted."
+        backHref="/events"
+        backLabel="Back to Events"
+      />
+    );
 
   const { event } = data;
   const template = data.template
