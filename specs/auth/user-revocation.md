@@ -1,7 +1,7 @@
 # LOA e-cert — User Access Revocation (Auth Platform Integration)
 ## Product Assembly Component Specification
 
-**Version:** 0.1
+**Version:** 0.3
 **Status:** Draft
 **Layer:** Product Assembly (`e-cert`) — Cross-cutting / Auth Platform dependency
 **Audience:** Engineers, AI Development Agents
@@ -102,3 +102,61 @@ Implementation notes:
 2. Disabled user cannot log in and all refresh tokens revoked (platform-verified)
 3. No user-deletion affordance exists anywhere in e-cert
 4. Revocation actions appear in audit trail per platform behavior
+
+---
+
+## 7.2 Auth-api change — server-side directory query (revised v0.3)
+
+**Scale reality:** tenant users grow with every event (attendee imports upsert users), so the
+directory must paginate/filter **server-side**. Client-side pagination over a full list is rejected
+(v0.2 decision reversed).
+
+`UserController::index` gains query params and returns cert-style meta:
+
+```
+GET /api/v1/users?limit=25&offset=0&search=<name|email>&group_id=<uuid>
+→ { data: [{ …existing fields, groups: [{id,name}] }],
+    meta: { limit, offset, total, has_more } }
+```
+
+Implementation notes:
+
+- `User::with('userGroups:id,name')` eager load — no N+1; `groups[]` included per user.
+- Tenant scoping + platform-admin exclusion unchanged.
+- `search`: case-insensitive LIKE on name/email. `group_id`: `whereHas('userGroups')`.
+- `limit` clamp 1–100 (default 25); `total` via base-query count before skip/take.
+
+## 7.3 e-cert UX — table layout
+
+Rendered with the shared `<Table>` primitives (`components/ui/table.tsx`) + `<Paginator>`:
+
+| Column | Content |
+|--------|---------|
+| User | Name (+ "(you)") over muted email |
+| Groups | Badge pill per group (platform-admin distinct); muted "no group" when empty |
+| Activity | Existing award/calendar badges (user-activity.md) |
+| Status | Active/Disabled pill |
+| Actions | Labeled **Revoke** button (danger, opens yes/no confirm dialog) or Enable; hidden for self / non-managers |
+
+Above the table: search input (debounced 300 ms, matches name/email) and Group `<Select>`
+(options from `GET /auth-api/v1/groups`, requires `users.manage`; default "All groups").
+Filters combine; any change resets page to 1. Pagination maps page⇄offset via `meta.total`.
+
+## 7.4 Acceptance criteria
+
+1. Each row shows at least one group badge; users with no group show a muted "no group" pill.
+2. Search matches name/email; group dropdown filters by id; both compose server-side; Paginator
+   reflects `meta.total` of the filtered set and resets on filter changes.
+3. Revoke button is text-labeled and still gated by `canManageUserStatus`, hidden for self.
+4. Directory stays responsive at large user counts (server paginates; no full-list fetch).
+5. Existing behaviors preserved: tenant scoping, platform-admin protection, failure isolation.
+
+---
+
+# 8. Doc control
+
+| Version | Date | Change |
+|---------|------|--------|
+| 0.1 | 2026-08-24 | Initial draft: platform capability verification, permission bootstrap, integration decisions, acceptance criteria. |
+| 0.2 | 2026-08-24 | §7 Users directory enhancements: auth-api index gains `groups[]` (eager-loaded), client-side search/group-filter/pagination via shared Paginator, explicit Revoke button label. |
+| 0.3 | 2026-08-24 | Scale correction: tenant users grow per-event (attendee upserts) → **server-side** limit/offset/search/group_id with `{data,meta}` envelope; UX switched to a **table** layout; group-filter options sourced from `/groups`; search narrowed to name/email. |

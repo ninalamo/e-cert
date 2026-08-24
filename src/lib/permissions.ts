@@ -39,6 +39,13 @@ export function getCurrentSession(): SessionUser | null {
   };
 }
 
+export function getCurrentTenantId(): string | null {
+  const token = getAccessToken();
+  if (!token) return null;
+  const payload = parseAccessToken(token);
+  return payload?.tenant?.id ?? null;
+}
+
 export function getCurrentGroups(): string[] {
   const token = getAccessToken();
   if (!token) return [];
