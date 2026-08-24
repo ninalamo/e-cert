@@ -183,7 +183,7 @@ Switch `NEXT_PUBLIC_CERT_API_TARGET=live` when:
 # .env.local
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_AUTH_BASE_URL=https://auth.lyceumalabang.edu.ph
-NEXT_PUBLIC_CERT_TENANT_SLUG=loa
+NEXT_PUBLIC_CERT_TENANT_SLUG=loa-e-cert
 NEXT_PUBLIC_CERT_API_BASE_URL=http://localhost:3001
 NEXT_PUBLIC_CERT_API_TARGET=mock
 ```

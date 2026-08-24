@@ -52,7 +52,7 @@ This is **not** security enforcement. The Cert API enforces authorization server
     "write:/api/v1/certificates"
   ],
   "scopes": [],
-  "tenant": { "id": "<tenant-uuid>", "slug": "loa" },
+  "tenant": { "id": "<tenant-uuid>", "slug": "loa-e-cert" },
   "iat": 1754000000,
   "exp": 1754000900,
   "type": "access"

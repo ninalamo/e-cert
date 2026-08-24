@@ -15,7 +15,7 @@ function validPayload(overrides: Partial<JwtPayload> = {}): JwtPayload {
     name: "Test User",
     groups: ["cert-user"],
     permissions: ["read:/api/v1/me/certificates"],
-    tenant: { id: "tenant-1", slug: "loa" },
+    tenant: { id: "tenant-1", slug: "loa-e-cert" },
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
     type: "access" as const,
@@ -27,7 +27,7 @@ describe("JWT Validation — Cross-app Token Integrity", () => {
   const originalEnv = process.env.NEXT_PUBLIC_CERT_TENANT_SLUG;
 
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_CERT_TENANT_SLUG = "loa";
+    process.env.NEXT_PUBLIC_CERT_TENANT_SLUG = "loa-e-cert";
   });
 
   afterEach(() => {
@@ -49,7 +49,7 @@ describe("JWT Validation — Cross-app Token Integrity", () => {
       expect(result!.name).toBe("Test User");
       expect(result!.groups).toEqual(["cert-user"]);
       expect(result!.permissions).toEqual(["read:/api/v1/me/certificates"]);
-      expect(result!.tenant).toEqual({ id: "tenant-1", slug: "loa" });
+      expect(result!.tenant).toEqual({ id: "tenant-1", slug: "loa-e-cert" });
       expect(result!.type).toBe("access");
     });
 

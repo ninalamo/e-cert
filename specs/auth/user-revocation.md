@@ -46,12 +46,17 @@ Permission enforcement is a literal claim match:
 
 ---
 
-# 3. Current state (verified against `loa_auth` DB, 2026-08-24)
+# 3. Permission state (verified against `loa_auth` DB, 2026-08-24)
 
-- `cert-admin` does **not** hold `users.view` or `users.manage`
-- `group_claims` and `user_group_permission` are empty — cert claims originate from tenant-endpoint
-  grants, not these auth-level keys
-- Only the seeded `loa-auth-admin` can perform the bootstrap grant
+- `user_group_permission` grants all seven auth keys (`users.view/manage`, `groups.*`,
+  `permissions.*`, `auth.verify`) to **`loa-auth-admin`** only — this is the full "Effective
+  Permissions" set seen in the admin panel for Super Admin, not a cert-admin property
+- `cert-admin` originally held none; on 2026-08-24 `users.view` + `users.manage` were granted to
+  the `cert-admin` group **in the local DB**, so real cert-admin logins now receive both claims at
+  token issue (log out/in after grant)
+- Production still requires the equivalent one-time grant by a platform admin (§4 runbook)
+- cert claims (`read:/…`, `write:/…`, `admin:/…` scoped entries) come from tenant-endpoint grants —
+  a separate mechanism from these flat auth keys
 
 ---
 

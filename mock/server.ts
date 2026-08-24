@@ -217,7 +217,7 @@ const createMockJWT = (user: any) => {
     groups: user.groups,
     permissions: user.permissions,
     scopes: [],
-    tenant: { id: "test-tenant", slug: "loa" },
+    tenant: { id: "test-tenant", slug: "loa-e-cert" },
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 3600,
     type: "access",
@@ -366,7 +366,7 @@ function applyAuthHandlers(server: any, envelope: any) {
         },
         groups: session.user.groups,
         permissions: session.user.permissions,
-        tenant: { id: "test-tenant", slug: "loa" },
+        tenant: { id: "test-tenant", slug: "loa-e-cert" },
         role: session.user.role,
       },
     });
