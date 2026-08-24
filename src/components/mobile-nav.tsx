@@ -240,19 +240,6 @@ export default function MobileNav({
                 onNavigate={() => setOpen(false)}
                 role={role}
               />
-              <div className="mt-4 border-t border-default pt-4">
-                <Link
-                  href="/faq"
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
-                    isActivePath(pathname, "/faq")
-                      ? "bg-brand-600 text-black font-medium"
-                      : "text-secondary hover:bg-surface-hover"
-                  }`}
-                >
-                  <span>FAQ</span>
-                </Link>
-              </div>
             </div>
           </div>
         </div>
