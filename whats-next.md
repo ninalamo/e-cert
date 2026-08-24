@@ -1,6 +1,6 @@
 # What's Next — LOA e-cert Refactor
 
-**Last updated:** 2026-08-12
+**Last updated:** 2026-08-23
 
 ---
 
@@ -188,7 +188,28 @@
 
 ---
 
-## Key Files Reference
+## Post-Phase H — UX Polish + Role Scoping ✅ Complete
+
+### Loading-state UX (`7dc4dcd`)
+- New `src/components/full-page-loader.tsx` — centered `Loader2Icon` spinner with optional text
+- Root `/` shows "Signing you in…" instead of blank while the SSO payload exchange runs (`page.tsx`)
+- `AuthGuard` renders the loader during SSR/hydration and invalid-token states (was `null` → white flash) — covers `(dashboard)` and `(participant)` layouts
+- Dashboard page tracks `isLoading`; `StatsCards` renders a 5-card skeleton grid, `ActivityFeed` renders `SkeletonList` rows while fetching
+- "No recent activity." now only appears for genuinely empty results, not pending fetches
+
+### Role resolution + scoping (`6d11a9e`)
+- Added `getCurrentGroups()` to `permissions.ts`
+- `DashboardShell`, profile page, certificate detail/list pages now resolve roles via shared helpers instead of inline permission checks
+- Certificates list: non-`cert-admin` groups load via `/me/certificates` (own certificates); admins keep org-wide listing
+- `certificatesApi.getMy*` endpoints moved from `/certificates/mine` to `/me/certificates`
+- FAQ layout: token check deferred until after hydration (`useSyncExternalStore`) to avoid SSR/localStorage mismatch
+- Removed Profile entries from mobile nav
+
+### Local dev notes
+- SSO → dashboard redirect latency in `next dev` is expected: hydration → proxied callback POST → hard navigation → on-demand compile of the dashboard segment → data fetches. Collapses in production builds.
+- The local cert stack seeds no organizations; template/certificate writes 500 with FK violation (`1452`) until a row exists for the backend-configured org (`CERT_ORGANIZATION_ID`, default `00000000-0000-0000-0000-000000000001`). Backend ignores client-sent `organization_id`. Add a Laravel seeder to the cert backend to make this permanent.
+
+---
 
 | File | Purpose |
 |------|---------|
@@ -199,5 +220,6 @@
 | `src/lib/auth/` | New auth module (token-store, jwt, sso-fragment, auth-guard) |
 | `src/lib/permissions.ts` | Role resolution + capability checks |
 | `src/components/session-initializer.tsx` | SSO fragment + silent restore |
+| `src/components/full-page-loader.tsx` | Shared full-page auth/loading spinner |
 | `src/app/layout.tsx` | Root layout (SessionInitializer wired) |
 | `next.config.ts` | Vercel rewrites (`/api/v1/*` → Cert API) |
