@@ -1,7 +1,7 @@
 # LOA e-cert — User Activity Context (Certificates & Events on the Users Page)
 ## Product Assembly Component Specification
 
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft
 **Layer:** Product Assembly (`e-cert`) — Users administration / Cert API dependency
 **Audience:** Engineers, AI Development Agents
@@ -39,6 +39,18 @@ There is no FK to `loa_auth.users` — email is the only correlation key.
 Emails must be compared **case-insensitively** (normalize both sides to lower-case in the service;
 do not rely on DB collation differences between local and production).
 
+### 2.1 "Is an attendee" — two interpretations (verified 2026-08-24)
+
+`event_attendees` carries per-event flags `attended` and `completed`. Which one the badge means
+changes what Phase 1 can show:
+
+| Interpretation | Meaning | Phase 1 (no backend change) | Phase 2 (`attendees/lookup`) |
+|----------------|---------|------------------------------|------------------------------|
+| A. Involved in events | Holds ≥1 certificate ⇒ appeared on some roster | ✅ implied by certificate count | ✅ |
+| B. Actual attendance | `attended = true` on ≥1 event, **including cert-less attendees** | ❌ invisible without certificates | ✅ `events[].attended` |
+
+Phase 1 badges therefore answer A only; interpretation B arrives with §3.3.
+
 ---
 
 # 3. API surface (verified 2026-08-24)
@@ -59,6 +71,9 @@ Authorization: Bearer <access token with claim admin:/api/v1/certificates>
   any lower requirement.
 - Split counts need two parallel calls: `status=active` and `status=revoked` (each returning its
   own `meta.total`).
+- **Verified `status=active` semantics** (source: `CertificateController::index`):
+  `revoked_at IS NULL AND (expires_at IS NULL OR expires_at >= now())` — i.e. *not revoked and not
+  expired*. This is the exact signal the revocation-decision rule in §5a needs.
 
 ## 3.2 Missing — attendance across events
 
@@ -174,6 +189,19 @@ export const userActivityApi = {
 | 4 | Failure isolation | cert-api outage degrades to "no activity shown"; identity/status unaffected |
 | 5 | Scope boundary | Read-only context. Revocation continues to use existing auth-api PATCH — no new write paths |
 
+## 5a. Revocation decision support (verified 2026-08-24)
+
+The operating rule this context enables: **"safe to revoke when active certificates = 0."**
+
+- Active count source: §3.1 `status=active` `meta.total` (Phase 1) / `totals.certificates_active`
+  (Phase 2). The badge is advisory — the Disable action itself stays manual and confirm-gated.
+- **Boundary**: disabling login (`PATCH /auth-api/v1/users/{id}/status`) revokes *access* only.
+  Existing certificates remain publicly verifiable (`/verify/{number}` is a public route); revoking
+  certificates is a separate Certificates/Events-page action. Never conflate the two in copy —
+  the confirm dialog already says "revokes sessions, never deletes".
+- An attendee with zero certificates may still be enrolled in upcoming events; Phase 2's
+  interpretation-B flag (§2.1) surfaces that risk before an admin pulls access.
+
 ---
 
 # 6. Phases & acceptance criteria
@@ -222,3 +250,4 @@ Local dev: extend `cpanel-auth-db-install.sql` catalog+grants **and**
 |---------|------|--------|
 | 0.1 | 2026-08-24 | Initial draft after investigation: verified email-keyed schema, existing `recipient_email` filter, missing cross-event lookup; defined two-phase plan + service/UI shape. |
 | 0.2 | 2026-08-24 | Review pass against cert-app source: pagination correction (`meta.total` + `limit=1` count pattern), catalog-first enforcement warning (`no_catalog_entry` 403 even for admins), level-ordinal note, concrete lazy-load trigger (IntersectionObserver), per-email memoization + invalidation, security note on email-scoped lookups, response envelope aligned to `{data}` convention. |
+| 0.3 | 2026-08-24 | Verified `status=active` semantics (not revoked AND not expired) added to §3.1; §2.1 attendee interpretations A/B with phase availability; new §5a revocation decision support — "revoke when active = 0" rule, login-disable vs certificate-revocation boundary, upcoming-event risk surfaced by Phase 2 interpretation B. |
