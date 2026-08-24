@@ -7,7 +7,7 @@ import { canManageUserStatus, canViewUsers } from "@/lib/permissions";
 import { NotFoundState } from "@/components/not-found-state";
 import { SkeletonTable } from "@/components/ui/skeleton";
 import { getCurrentSession } from "@/lib/permissions";
-import { UserActivityBadges } from "./user-activity-badges";
+import { UserActivityBadges, UserActivityDetailPanel } from "./user-activity-badges";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ type StatusAction = "active" | "disabled";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -122,47 +123,68 @@ export default function UsersPage() {
         <div className="app-card divide-y divide-border overflow-hidden">
           {users.map((user) => {
             const isSelf = user.id === currentSub;
+            const expanded = expandedEmails.has(user.email.toLowerCase());
             return (
               <div
                 key={user.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
+                className="px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
               >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-[var(--color-text)]">
-                    {user.name || "—"}
-                    {isSelf ? (
-                      <span className="ml-2 text-xs font-normal text-tertiary">(you)</span>
-                    ) : null}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-tertiary">{user.email}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <UserActivityBadges email={user.email} />
-                  {user.status === "disabled" ? (
-                    <span className="status-pill status-revoked">Disabled</span>
-                  ) : (
-                    <span className="status-pill status-active">Active</span>
-                  )}
-                  {canManage && !isSelf ? (
-                    user.status === "active" ? (
-                      <button
-                        onClick={() => setConfirmTarget({ user, next: "disabled" })}
-                        className="btn-icon btn-icon-danger"
-                        title="Disable user — revokes all sessions"
-                      >
-                        <ShieldIcon className="size-4" />
-                      </button>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-[var(--color-text)]">
+                      {user.name || "—"}
+                      {isSelf ? (
+                        <span className="ml-2 text-xs font-normal text-tertiary">(you)</span>
+                      ) : null}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-tertiary">{user.email}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <UserActivityBadges
+                      email={user.email}
+                      expanded={expanded}
+                      onToggle={() =>
+                        setExpandedEmails((prev) => {
+                          const next = new Set(prev);
+                          const key = user.email.toLowerCase();
+                          if (next.has(key)) {
+                            next.delete(key);
+                          } else {
+                            next.add(key);
+                          }
+                          return next;
+                        })
+                      }
+                    />
+                    {user.status === "disabled" ? (
+                      <span className="status-pill status-revoked">Disabled</span>
                     ) : (
-                      <button
-                        onClick={() => setConfirmTarget({ user, next: "active" })}
-                        className="btn-disclosure"
-                        title="Re-enable user"
-                      >
-                        Enable
-                      </button>
-                    )
-                  ) : null}
+                      <span className="status-pill status-active">Active</span>
+                    )}
+                    {canManage && !isSelf ? (
+                      user.status === "active" ? (
+                        <button
+                          onClick={() => setConfirmTarget({ user, next: "disabled" })}
+                          className="btn-icon btn-icon-danger"
+                          title="Disable user — revokes all sessions"
+                        >
+                          <ShieldIcon className="size-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmTarget({ user, next: "active" })}
+                          className="btn-disclosure"
+                          title="Re-enable user"
+                        >
+                          Enable
+                        </button>
+                      )
+                    ) : null}
+                  </div>
                 </div>
+                {expanded ? (
+                  <UserActivityDetailPanel email={user.email} />
+                ) : null}
               </div>
             );
           })}
