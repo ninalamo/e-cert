@@ -138,16 +138,7 @@ export default function MobileNav({
     { label: "Dashboard", href: "/dashboard" },
     { label: "Events", href: "/events", roles: ["admin", "staff"] },
     { label: "Certificates", href: "/certificates", roles: ["admin", "staff"] },
-    {
-      label: "Templates",
-      href: "/templates",
-      children: [
-        { label: "Certificates", href: "/templates/certificates" },
-        // HIDDEN: Email template management — system uses default email template
-        // { label: "Emails", href: "/templates/emails" },
-      ],
-      roles: ["admin", "staff"],
-    },
+    { label: "Templates", href: "/templates/certificates", roles: ["admin", "staff"] },
     {
       label: "Settings",
       href: "/settings",

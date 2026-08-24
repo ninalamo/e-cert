@@ -43,17 +43,7 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <DashboardIcon /> },
   { label: "Events", href: "/events", icon: <EventsIcon />, roles: ["admin", "staff"] },
   { label: "Certificates", href: "/certificates", icon: <CertIcon />, roles: ["admin", "staff"] },
-  {
-    label: "Templates",
-    href: "/templates",
-    icon: <TemplatesIcon />,
-    children: [
-      { label: "Certificates", href: "/templates/certificates" },
-      // HIDDEN: Email template management — system uses default email template
-      // { label: "Emails", href: "/templates/emails" },
-    ],
-    roles: ["admin", "staff"],
-  },
+  { label: "Templates", href: "/templates/certificates", icon: <TemplatesIcon />, roles: ["admin", "staff"] },
   {
     label: "Settings",
     href: "/settings",
