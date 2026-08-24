@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { usersAdminApi, type ManagedUser } from "@/lib/api/users-admin";
+import { userActivityApi } from "@/lib/api/user-activity";
 import { canManageUserStatus, canViewUsers } from "@/lib/permissions";
 import { NotFoundState } from "@/components/not-found-state";
 import { SkeletonTable } from "@/components/ui/skeleton";
 import { getCurrentSession } from "@/lib/permissions";
+import { UserActivityBadges } from "./user-activity-badges";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +63,7 @@ export default function UsersPage() {
     setActionError(null);
     try {
       await usersAdminApi.setStatus(confirmTarget.user.id, confirmTarget.next);
+      userActivityApi.invalidate(confirmTarget.user.email);
       setUsers((prev) =>
         prev.map((u) =>
           u.id === confirmTarget.user.id ? { ...u, status: confirmTarget.next } : u
@@ -134,6 +137,7 @@ export default function UsersPage() {
                   <p className="mt-0.5 truncate text-xs text-tertiary">{user.email}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
+                  <UserActivityBadges email={user.email} />
                   {user.status === "disabled" ? (
                     <span className="status-pill status-revoked">Disabled</span>
                   ) : (
