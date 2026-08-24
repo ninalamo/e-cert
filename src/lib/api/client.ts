@@ -1,4 +1,4 @@
-import { getAccessToken, refreshAccessToken } from "@/lib/auth";
+import { clearAccessToken, getAccessToken, refreshAccessToken } from "@/lib/auth";
 
 const BASE_URL = "/api/v1";
 
@@ -122,6 +122,10 @@ async function request<T>(
       }
       return retry.json();
     }
+    // Refresh failed: the session is gone server-side (e.g. password reset,
+    // logout-all, lockout). Drop the dead access token so guards route the
+    // user to SSO login instead of trusting stale storage.
+    clearAccessToken();
     throw { status: "error", message: "Session expired" };
   }
 
