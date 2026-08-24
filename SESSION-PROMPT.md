@@ -30,6 +30,7 @@ Read these files IN ORDER and report your understanding of where we left off:
 10. specs/data-flow.md                    - service dependencies, security boundaries
 11. specs/pages/README.md                 - pages to keep/remove
 12. specs/components/README.md            - modules to keep/remove/adapt
+12a. specs/components/template-visibility.md - template public/private visibility (v1.1, Final; API enforced by Cert)
 13. specs/environment/README.md           - env contract (4 vars)
 14. specs/deployment/README.md            - Vercel topology
 15. specs/local-dev/README.md             - local dev workflow, JSON Server mock
@@ -46,6 +47,19 @@ Then:
 ---
 
 ## Last Session Notes
+
+### Date: 2026-08-24 — Template visibility spec authored + promoted (spec-only session)
+
+**New Final spec: `specs/components/template-visibility.md` v1.1** — public/private visibility for certificate templates.
+
+- Requirement (user-stated): `public` = visible to all (`cert-admin`/`cert-staff`, no author filter); `private` = owners only; **`cert-admin` sees everything regardless**
+- Owner-set model: new `updated_by` column alongside `created_by`; `owners(t)` = unique non-null of both — **never none**; create stamps both, every PATCH re-stamps
+- Defaults: new templates `private`; existing rows backfilled `public` (no deploy-day regression); applies to both template types
+- Enforcement points: list/show **plus side-doors found during review** — `clone-template` AND `clone-email-template` (both currently serve any same-org template's full HTML/CSS by bare UUID) and event `template_id`/`email_template_id` references; 404-masking on show/clone, 422 on references; grandfathered in-flight event references
+- Clone attribution fix: clones now owned by the cloner (`created_by = updated_by = caller.sub`)
+- Status: **Final** — and **implemented in `loa-cert-platform` on 2026-08-24** (commit `9904746`: migration, controller filters/stamps, clone + event-reference guards, 23 new tests, suite 168/557 green). Remaining for e-cert: visibility badge + owner toggle in templates UI (Phase E/F).
+
+---
 
 ### Date: 2026-08-11 — Platform readiness check (no code changes)
 
@@ -142,6 +156,7 @@ Missing vs the 48-endpoint catalog: `/me/certificates`, `/me/events`, `/me/templ
 | 2026-08-06 (7) | Enhanced mock auth API: full auth endpoints with role-based JWT issuance, session store, refresh cookie handling, direct token endpoint for tests. Added `cookie-parser` dependency. Updated e2e fixtures to use mock auth API. | Wait for C-Auth → begin Phase D |
 | 2026-08-06 (8) | Added mock Auth Platform SSO simulation (port 3002) with full SSO redirect flow. Updated local-dev spec, e2e fixtures, CLI test script. All auth tests pass. | Wait for C-Auth → begin Phase D |
 | 2026-08-11 | Readiness check on `loa-apache-server-apps` (no code changes). Verified: Docker stack up, Cert Phase C CRUD live + tested, Auth API mature + runbooks Final. Found 3 blockers: (1) C-Auth not done on cert-app (no jwt.auth/jwt.endpoint, no auth callback/refresh/logout) — Phase D gate; (2) auth SSO broken — no `/sso/login` route, `/redirect` → `showRedirect` registered but method missing; (3) cert endpoints for dashboard/audit/`/me`/verify/view not live. Cleanup: `.env.local` legacy secrets, typecheck green only via leftover node_modules. Updated SESSION-PROMPT.md with findings. | Finish C-Auth → fix auth SSO (`/sso/login` + `/redirect`) → add remaining cert endpoints → begin Phase D |
+| 2026-08-24 | **Template visibility spec authored, reviewed ×2, promoted to Final v1.1** (`specs/components/template-visibility.md`): public/private flag + `updated_by` owner-set model on `certificate_templates`; enforcement covers list/show plus clone-template, clone-email-template, and event template references (side-doors found during review); 404 masking; grandfathered references; migration mechanics. **Implemented same day in `loa-cert-platform`** (commit `9904746`; 23 new tests, suite 168/557 green). e-cert UI badge/toggle deferred to Phase E/F. Updated SESSION-PROMPT.md. | Phase D auth swap → E data swap; surface badge/toggle in templates UI during Phase E/F |
 
 ---
 
@@ -159,6 +174,7 @@ Missing vs the 48-endpoint catalog: `/me/certificates`, `/me/events`, `/me/templ
 | `specs/api-client/README.md` | 2.0 | Final | Phase E |
 | `specs/pages/README.md` | 2.0 | Final | Phase E/F |
 | `specs/components/README.md` | 2.0 | Final | Phase E/F |
+| `specs/components/template-visibility.md` | 1.1 | Final | API implemented in loa-cert-platform (2026-08-24); e-cert UI in Phase E/F |
 | `specs/environment/README.md` | 2.0 | Final | Phase D |
 | `specs/deployment/README.md` | 2.0 | Final | Phase D |
 | `specs/testing/README.md` | 2.0 | Final | Phase D |
