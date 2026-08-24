@@ -8,7 +8,7 @@ import {
 } from "@/lib/api/users-admin";
 import { userActivityApi } from "@/lib/api/user-activity";
 import { NotFoundState } from "@/components/not-found-state";
-import { SkeletonTable } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Paginator } from "@/components/ui/paginator";
 import {
   Table,
@@ -51,7 +51,7 @@ export default function UsersPage() {
 
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [metaTotal, setMetaTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -76,6 +76,7 @@ export default function UsersPage() {
     // pagination/group changes.
     const timer = setTimeout(
       () => {
+        setIsFetching(true);
         usersAdminApi
           .list({
             search: searchInput.trim() || undefined,
@@ -87,12 +88,12 @@ export default function UsersPage() {
             if (!active) return;
             setUsers(result.data ?? []);
             setMetaTotal(result.meta?.total ?? result.data?.length ?? 0);
-            setLoading(false);
+            setIsFetching(false);
           })
           .catch(() => {
             if (!active) return;
             setLoadError("Failed to load users.");
-            setLoading(false);
+            setIsFetching(false);
           });
       },
       searchInput !== debouncedSearchRef.current ? SEARCH_DEBOUNCE_MS : 0
@@ -215,13 +216,11 @@ export default function UsersPage() {
         </div>
       )}
 
-      {loading ? (
-        <SkeletonTable />
-      ) : loadError ? (
+      {loadError && !isFetching ? (
         <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4 text-sm text-[var(--color-danger-text)]">
           {loadError}
         </div>
-      ) : users.length === 0 ? (
+      ) : !isFetching && users.length === 0 ? (
         <NotFoundState title="No users found" />
       ) : (
         <>
@@ -237,7 +236,28 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => {
+                {isFetching
+                  ? Array.from({ length: Math.min(pageSize, 6) }).map((_, row) => (
+                      <TableRow key={`skeleton-${row}`}>
+                        <TableCell>
+                          <Skeleton className="h-4 w-40" />
+                          <Skeleton className="mt-1.5 h-3 w-52" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-24" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-14" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-16" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="ml-auto h-6 w-20" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  : users.map((user) => {
                   const isSelf = user.id === currentSub;
                   return (
                     <TableRow key={user.id}>
