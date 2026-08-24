@@ -4,10 +4,15 @@ import type { CertificateTemplate } from "@/types/template";
 import type { ApiResponse, PaginationMeta } from "./types";
 
 export interface EventStats {
-  total_attendees: number;
-  completed_attendees: number;
-  certificates_issued: number;
-  certificates_revoked: number;
+  event_id: string;
+  attendees: { total: number; attended: number; completed: number };
+  certificates: {
+    issued: number;
+    active: number;
+    revoked: number;
+    expired: number;
+    expiring?: number;
+  };
 }
 
 export const eventsApi = {
