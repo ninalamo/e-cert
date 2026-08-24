@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ORG_NAME } from "@/lib/org";
+import { hasAuthClaim } from "@/lib/permissions";
 import type { UserRole } from "@/types/organization";
 
-type NavChild = { label: string; href: string; roles?: UserRole[] };
+type NavChild = { label: string; href: string; roles?: UserRole[]; claim?: string };
 type NavItem = {
   label: string;
   href: string;
@@ -57,7 +58,14 @@ function NavLinks({
           );
         }
 
-        const children = item.children ?? [];
+        const children = (item.children ?? []).filter(
+          (c) =>
+            (!c.roles || !role || c.roles.includes(role)) &&
+            (!c.claim || hasAuthClaim(c.claim))
+        );
+        if (item.label === "Settings" && children.length === 0) {
+          return null;
+        }
         const childActive = children.some((c) => isActivePath(pathname, c.href));
         const parentActive =
           isActivePath(pathname, item.href, true) || childActive;
@@ -95,7 +103,6 @@ function NavLinks({
             {(item.label === "Settings" ? settingsOpen : certOpen) && (
               <div className="mt-1 space-y-1 pl-3">
                 {children
-                  .filter((child) => !child.roles || !role || child.roles.includes(role))
                   .map((child) => {
                   const active = isActivePath(pathname, child.href);
                   return (
@@ -143,7 +150,7 @@ export default function MobileNav({
       label: "Settings",
       href: "/settings",
       children: [
-        { label: "Users", href: "/users" },
+        { label: "Users", href: "/users", claim: "users.view" },
         { label: "Audit Log", href: "/audit", roles: ["admin"] },
         { label: "Auth Emails", href: "/templates/auth-emails", roles: ["admin"] },
       ],

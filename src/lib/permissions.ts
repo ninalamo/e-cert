@@ -45,6 +45,20 @@ export function getCurrentGroups(): string[] {
   return parseAccessToken(token)?.groups ?? [];
 }
 
+export function hasAuthClaim(key: string): boolean {
+  const token = getAccessToken();
+  if (!token) return false;
+  return parseAccessToken(token)?.permissions?.includes(key) ?? false;
+}
+
+export function canViewUsers(): boolean {
+  return hasAuthClaim("users.view");
+}
+
+export function canManageUserStatus(): boolean {
+  return hasAuthClaim("users.manage");
+}
+
 export function canManageCertificates(role: UserRole): boolean {
   return role === "admin" || role === "staff";
 }

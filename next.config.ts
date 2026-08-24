@@ -17,7 +17,13 @@ const nextConfig: NextConfig = {
     } else {
       destination = "http://localhost:3001/api/v1/:path*";
     }
-    return [{ source: "/api/v1/:path*", destination }];
+
+    const authTarget = process.env.AUTH_API_TARGET ?? "http://localhost:8080";
+
+    return [
+      { source: "/api/v1/:path*", destination },
+      { source: "/auth-api/v1/:path*", destination: `${authTarget}/api/v1/:path*` },
+    ];
   },
 };
 
