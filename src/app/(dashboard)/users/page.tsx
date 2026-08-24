@@ -160,9 +160,17 @@ export default function UsersPage() {
             setPage(0);
           }}
         >
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="All groups" />
-        </SelectTrigger>
+          <SelectTrigger className="w-[180px]">
+            {/* Base UI Select renders the raw value in the trigger unless
+                given a resolver — map group ids back to friendly names. */}
+            <SelectValue>
+              {(value: string) =>
+                value === "all"
+                  ? "All groups"
+                  : (groups.find((g) => g.id === value)?.name ?? value)
+              }
+            </SelectValue>
+          </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All groups</SelectItem>
           {groups.map((group) => (
