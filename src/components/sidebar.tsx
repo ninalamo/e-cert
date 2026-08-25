@@ -49,11 +49,7 @@ const navItems: NavItem[] = [
     label: "Settings",
     href: "/settings",
     icon: <SettingsIcon />,
-    children: [
-      { label: "Users", href: "/users", claim: "users.view" },
-      { label: "Audit Log", href: "/audit", roles: ["admin"] },
-      { label: "Auth Emails (WIP)", href: "/templates/auth-emails", roles: ["admin"] },
-    ],
+    children: [{ label: "Users", href: "/users", claim: "users.view" }],
     roles: ["admin"],
   },
 ];
