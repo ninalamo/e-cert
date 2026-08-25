@@ -37,11 +37,7 @@ export default function Home() {
   const text =
     status === "anonymous"
       ? "Redirecting to sign in…"
-      : status === "session"
-        ? "Loading…"
-        : hasSSOPayload()
-          ? "Signing you in…"
-          : "Loading…";
+      : "Loading…";
 
   return <FullPageLoader text={text} />;
 }
