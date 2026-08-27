@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateEventAction } from "@/features/events/server/event.actions";
+import { eventsApi } from "@/lib/api/events";
 import type { Event } from "@/types/event";
 
 function sanitizePrefix(raw: string): string {
@@ -63,7 +63,7 @@ export default function EventFieldsCard({
 
   async function handleSave() {
     setSaving(true);
-    const result = await updateEventAction(event.id, {
+    const { data: result } = await eventsApi.update(event.id, {
       event_date: values.event_date || undefined,
       description: values.description || undefined,
       organizer: values.organizer || undefined,
@@ -72,8 +72,8 @@ export default function EventFieldsCard({
       certificate_number_pattern: trimPatternTrailingDash(values.certificate_number_pattern) || undefined,
       valid_until: values.valid_until || undefined,
     });
-    if (!result?.error && result?.event) {
-      onUpdated(result.event);
+    if (result) {
+      onUpdated(result);
     }
     setSaving(false);
     setEditing(false);

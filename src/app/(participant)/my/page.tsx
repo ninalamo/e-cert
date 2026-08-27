@@ -1,16 +1,18 @@
+"use client";
+
 import Link from "next/link";
-import { requireSession } from "@/lib/permissions";
+import { getCurrentSession } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default async function MyDashboardPage() {
-  const session = await requireSession();
+export default function MyDashboardPage() {
+  const session = getCurrentSession();
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-brand-700">My Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome back, {session.name ?? session.email}
+          Welcome back, {session?.name ?? session?.email ?? ""}
         </p>
       </div>
 

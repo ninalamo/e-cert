@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useTransition } from "react";
-import { logout } from "@/features/auth/server/auth.actions";
+import { clearAccessToken } from "@/lib/auth";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -82,7 +82,8 @@ export default function UserMenu({
             e.preventDefault();
             e.stopPropagation();
             startTransition(async () => {
-              await logout();
+              clearAccessToken();
+              window.location.href = "/";
             });
           }}
         >

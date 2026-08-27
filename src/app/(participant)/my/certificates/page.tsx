@@ -1,9 +1,29 @@
-import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { getMyCertificatesAction } from "@/features/certificates/server/certificate.actions";
+"use client";
 
-export default async function MyCertificatesPage() {
-  const certificates = await getMyCertificatesAction();
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { certificatesApi } from "@/lib/api/certificates";
+import type { CertificateWithEvent } from "@/lib/api/certificates";
+
+export default function MyCertificatesPage() {
+  const [certificates, setCertificates] = useState<CertificateWithEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    certificatesApi
+      .getMy()
+      .then((result) => {
+        if (!active) return;
+        setCertificates(result.data ?? []);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -14,7 +34,13 @@ export default async function MyCertificatesPage() {
         </p>
       </div>
 
-      {certificates.length === 0 ? (
+      {loading ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-sm text-tertiary">Loading...</p>
+          </CardContent>
+        </Card>
+      ) : certificates.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-sm text-tertiary">

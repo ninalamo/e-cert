@@ -2,7 +2,7 @@
 ## Product Assembly Component Specification
 
 **Version:** 2.0
-**Status:** Draft
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) — Testing Module
 **Audience:** Engineers, AI Development Agents
 
@@ -40,11 +40,11 @@ It answers:
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
 | E2e framework | **Playwright** | Best Next.js support, multi-browser, built-in assertions |
-| Mocking | **MSW (Mock Service Worker)** | Intercepts all API calls at browser level; 100% coverage for CSR |
+| Mocking | **JSON Server** | Lightweight mock API server; same mock for dev and e2e (see `specs/local-dev/`) |
 | Language | TypeScript | Matches the app codebase |
 | Fixtures | Playwright custom fixtures | Reusable auth state, test user helpers |
 
-**Single test layer.** No Vitest needed for the CSR approach — MSW covers everything.
+**Single test layer.** No Vitest needed for the CSR approach — JSON Server covers everything.
 
 ---
 
@@ -56,15 +56,6 @@ e2e/
 ├── fixtures/
 │   ├── auth.ts                       # Auth fixtures (login as admin/staff/participant)
 │   └── base.ts                       # Base fixture extending Playwright's
-├── mocks/
-│   ├── handlers/
-│   │   ├── events.ts                 # Mock event endpoints
-│   │   ├── certificates.ts           # Mock certificate endpoints
-│   │   ├── templates.ts              # Mock template endpoints
-│   │   ├── dashboard.ts              # Mock dashboard endpoints
-│   │   ├── audit.ts                  # Mock audit endpoints
-│   │   └── auth.ts                   # Mock auth endpoints (callback, refresh, logout)
-│   └── browser.ts                    # MSW browser setup
 ├── tests/
 │   ├── auth/
 │   │   ├── sso-flow.spec.ts          # SSO fragment handling, callback, session
@@ -77,7 +68,7 @@ e2e/
 │   │   └── participant-gating.spec.ts # Participant own-data only
 │   ├── events/
 │   │   ├── event-crud.spec.ts        # Create, list, update, delete
-│   │   ├── attendee-import.spec.ts   # CSV upload (multipart)
+│   │   ├── attendee-import.spec.ts   # CSV parse → JSON import
 │   │   └── certificate-issue.spec.ts # Issue, bulk issue
 │   ├── certificates/
 │   │   ├── certificate-list.spec.ts  # List, search
@@ -92,7 +83,7 @@ e2e/
 │   └── dashboard/
 │       ├── stats.spec.ts             # Dashboard stats render
 │       └── audit.spec.ts            # Audit trail (admin only)
-└── global-setup.ts                   # MSW server start
+└── global-setup.ts                   # JSON Server start
 ```
 
 ---
@@ -117,11 +108,18 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: "npx tsx mock/server.ts",
+      port: 3001,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: "npm run dev",
+      port: 3000,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
@@ -149,7 +147,7 @@ function createTestJWT(email: string, permissions: string[]): string {
     name: "Test User",
     groups: ["loa-cert-test"],
     permissions,
-    tenant: { id: "test-tenant", slug: "loa" },
+    tenant: { id: "test-tenant", slug: "loa-e-cert" },
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 3600,
     type: "access",
@@ -186,33 +184,14 @@ export const test = base.extend<AuthFixtures>({
 });
 ```
 
-## 5.4 MSW Mock Handlers
+## 5.4 Mock Data (JSON Server)
 
-```typescript
-// e2e/mocks/handlers/events.ts
-import { http, HttpResponse } from "msw";
+The mock API runs on `localhost:3001` with seed data from `mock/db.json`. See `specs/local-dev/README.md` for:
+- Seed data structure (events, certificates, templates, audit logs)
+- Custom route handlers (auth callback, event stats, etc.)
+- How to extend the mock for new endpoints
 
-export const eventHandlers = [
-  http.get("*/api/v1/events", () => {
-    return HttpResponse.json({
-      data: [
-        { id: "1", name: "Test Event", status: "active", event_date: "2026-09-01" },
-      ],
-      meta: { limit: 25, offset: 0, total: 1, has_more: false },
-    });
-  }),
-  http.post("*/api/v1/auth/refresh", () => {
-    return HttpResponse.json({
-      access_token: "new-test-token",
-      expires_in: 3600,
-    });
-  }),
-  http.post("*/api/v1/auth/logout", () => {
-    return HttpResponse.json({ status: "ok" });
-  }),
-  // ... more handlers
-];
-```
+Tests hit the same mock server used for local development.
 
 ---
 
@@ -247,7 +226,7 @@ export const eventHandlers = [
 | Test | Scenario | Expected |
 |------|----------|----------|
 | `event-crud.spec.ts` | Create event → list shows it | API mock called, UI updates |
-| `attendee-import.spec.ts` | Upload CSV → attendees created | Multipart upload, success toast |
+| `attendee-import.spec.ts` | Parse CSV client-side → `POST` JSON import → attendees created | JSON payload to `/attendees/import`, success toast |
 | `certificate-issue.spec.ts` | Issue cert → cert appears | API mock called, list refresh |
 | `certificate-pdf.spec.ts` | Click download → PDF blob | API mock returns blob, download triggered |
 | `template-crud.spec.ts` | Edit template → save | TipTap content saved via PATCH mock |
@@ -285,7 +264,7 @@ npx playwright show-report             # HTML report
 | Anti-Pattern | Why It Violates |
 |--------------|-----------------|
 | Testing against production | Never hit prod with e2e tests |
-| Mocking server-side code | CSR approach means everything is client-side; MSW covers all |
+| Mocking server-side code | CSR approach means everything is client-side; JSON Server covers all |
 | Hardcoded URLs | Use `baseURL` from config |
 | Shared test state | Each test gets fresh fixtures |
 | Skipping auth tests | Auth is the foundation |
@@ -294,4 +273,4 @@ npx playwright show-report             # HTML report
 
 # 10. Guiding Principle
 
-> **Single layer, full coverage.** Playwright + MSW tests the entire user journey in the browser. No separate server-side test layer needed for the CSR approach.
+> **Single layer, full coverage.** Playwright + JSON Server tests the entire user journey in the browser. No separate server-side test layer needed for the CSR approach.

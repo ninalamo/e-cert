@@ -2,7 +2,7 @@
 ## Product Assembly Component Specification
 
 **Version:** 2.0
-**Status:** Draft
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) — Auth Module
 **Audience:** Engineers, AI Development Agents
 
@@ -45,14 +45,14 @@ This is **not** security enforcement. The Cert API enforces authorization server
   "sub": "<user-uuid>",
   "email": "user@example.com",
   "name": "Juan Dela Cruz",
-  "groups": ["loa-cert-staff"],
+  "groups": ["cert-staff"],
   "permissions": [
     "cert.certificates.issue",
     "read:/api/v1/events",
     "write:/api/v1/certificates"
   ],
   "scopes": [],
-  "tenant": { "id": "<tenant-uuid>", "slug": "loa" },
+  "tenant": { "id": "<tenant-uuid>", "slug": "loa-e-cert" },
   "iat": 1754000000,
   "exp": 1754000900,
   "type": "access"

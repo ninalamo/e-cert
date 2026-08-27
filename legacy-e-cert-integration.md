@@ -1,12 +1,12 @@
 # LOA Cert Platform — Legacy `e-cert` Integration & Refactor
 ## Product Assembly Component Specification
 
-**Version:** 1.0
-**Status:** Draft
+**Version:** 2.3
+**Status:** Final
 **Layer:** Product Assembly (`loa-cert-platform`)
 **Audience:** Architects, Engineers, AI Development Agents
 
-> **Purpose.** This spec designs the refactor of the legacy `e-cert` application (Next.js 16 / TypeScript, self-hosted auth + Supabase Postgres) into a **pure consumer** of the LOA Auth Platform (`loa-auth-platform`; identity, SSO, JWT, user-groups + grants) and the LOA Cert Platform (`loa-cert-platform`; domain API v1.2, PDF/QR/email). It is the "later pass" referenced by `api-endpoints.md` §9.9 that replaces the `cert.*`-key permission table in `web-ui.md` §5 with the level-based model, and it adapts the SSO token-lifecycle spec to a server-rendered Next.js app.
+> **Purpose.** This spec designs the refactor of the legacy `e-cert` application (Next.js 16 / TypeScript, self-hosted auth + Supabase Postgres) into a **pure consumer** of the LOA Auth Platform (`loa-auth-platform`; identity, SSO, JWT, user-groups + grants) and the LOA Cert Platform (`loa-cert-platform`; domain API v1.2, PDF/QR/email). It is the "later pass" referenced by `api-endpoints.md` §9.9 that replaces the `cert.*`-key permission table in `web-ui.md` §5 with the level-based model, and it refactors the SSO token-lifecycle spec into a **client-side SPA** (CSR) that consumes both platforms over HTTP.
 >
 > Spec-first: **no implementation code** is written against this document until it (and its governing specs) are **Final** (AI-RULES.md Rule 0).
 
@@ -58,9 +58,9 @@ It covers: (a) removing the self-hosted auth stack and adopting the Auth Platfor
 | Auth swap | Remove custom auth (jose-signing, bcrypt, `users`/`refresh_tokens`/`password_resets`/`email_confirmations`/`user_memberships`), adopt Auth Platform SSO + JWT validation |
 | Role model | Legacy `admin`/`staff`/`participant` → Auth Platform user-groups granted **level-based** endpoint levels; frontend role resolution from the JWT `permissions` claim |
 | Data access | Every Supabase/PostgREST read/write replaced by Cert Platform API v1.2 calls |
-| Feature mapping | Legacy server actions + API routes mapped to Cert endpoints; removed features enumerated |
-| Frontend | Auth guard, session/token handling for an SSR app, pages to keep/remove, editor persistence |
-| Env / deploy | New env contract for `e-cert`, origins/topology (`e-cert.vercel.app` UI + `cert-api.lyceumalabang.edu.ph` API), shared secrets |
+| Feature mapping | Legacy server actions + API routes mapped to Cert endpoints (server actions are **deleted**; the client calls the API directly); removed features enumerated |
+| Frontend | Client-side auth guard, in-memory token session handling, pages to keep/remove, editor persistence |
+| Env / deploy | New env contract for `e-cert`, origins/topology (`e-cert.vercel.app` UI + `cert-api.lyceumalabang.edu.ph` API), Vercel rewrites |
 | Decommission | Legacy Supabase DB **archive then drop** after verified cutover |
 
 ## 2.2 Out of Scope (owned elsewhere or deferred)
@@ -85,30 +85,31 @@ It covers: (a) removing the self-hosted auth stack and adopting the Auth Platfor
 
 ```
                     ┌─────────────────────────────────────────────┐
-   Browser          │  e-cert.vercel.app  (Next.js 16, e-cert UI) │
+   Browser          │  e-cert.vercel.app  (Next.js 16, SPA)       │
                     │  - SSO fragment handling (#payload=)         │
-                    │  - SSR auth guard (local JWT verify)         │
+                    │  - client-side auth guard + in-memory token │
                     │  - TipTap editors, pages, components         │
                     │  - HTTP client → Cert API v1.2               │
                     └───────┬──────────────────────┬───────────────┘
-                            │ SSO redirect         │ HTTPS JSON/multipart/binary
-                            ▼                      ▼
-             ┌─────────────────────────────┐  ┌──────────────────────────────┐
-             │  auth.lyceumalabang.edu.ph  │  │  cert-api.lyceumalabang.edu.ph │
-             │  (Laravel, loa_auth)        │  │  (Laravel, loa_cert)          │
-             │  login / SSO / JWT          │  │  jwt.auth + jwt.endpoint      │
-             │  user-groups + grants       │  │  domain endpoints (§8)        │
-             │  GET /api/v1/auth/access    │  │  PDF / QR / email / audit     │
-             └─────────────────────────────┘  └──────────────────────────────┘
+                            │ SSO redirect         │ same-origin /api/v1/*
+                            ▼                      │ Vercel rewrite
+             ┌─────────────────────────────┐       ▼
+             │  auth.lyceumalabang.edu.ph  │  ┌──────────────────────────────┐
+             │  (Laravel, loa_auth)        │  │  cert-api.lyceumalabang.edu.ph │
+             │  login / SSO / JWT          │  │  (Laravel, loa_cert)          │
+             │  user-groups + grants       │  │  jwt.auth + jwt.endpoint      │
+             │  GET /api/v1/auth/access    │  │  domain endpoints (§8)        │
+             └─────────────────────────────┘  │  PDF / QR / email / audit     │
+                                             └──────────────────────────────┘
 ```
 
 Key properties:
 
 1. **No DB access from the frontend.** `e-cert` removes every Supabase/PostgREST import. All domain reads/writes go through the Cert API; identity comes only from the JWT.
-2. **No local identity.** `e-cert` no longer signs tokens, stores password hashes, or reads a users table. Identity is the Auth Platform's access token (claims: `sub`, `email`, `name`, `tenant`, `groups`, `permissions`).
-3. **Shared secrets.** `JWT_SECRET` (HS256) is shared by Auth, Cert, and `e-cert` for *local verification*. `ENCRYPTION_KEY` / `ENCRYPTION_KEY_PREVIOUS` are shared by Auth (encrypt) and Cert (decrypt). `e-cert` never encrypts/decrypts the SSO payload — it forwards it to the Cert callback (`api-endpoints.md` §9.2–9.3).
-4. **Split origin.** The e-cert UI runs on Vercel (`e-cert.vercel.app`); the Laravel Cert API is a dedicated API host at `cert-api.lyceumalabang.edu.ph`. The Next.js app proxies `/api/v1/*` to the Cert API via Vercel rewrites (§10.7), keeping the browser same-origin so the httpOnly refresh cookie keeps working; direct cross-origin with CORS is the fallback. (Q-1 resolved, §13.)
-5. **Level-based authorization.** The Cert platform enforces `<level>:<path>` grants (`api-endpoints.md` §4, §9.5). The frontend derives a coarse UI role from the same `permissions` claim for nav/gating (§7.4).
+2. **No local identity, no server-side auth.** `e-cert` no longer signs tokens, stores password hashes, or reads a users table. There is no httpOnly access-token cookie, no proxy auth injection, and no server actions — identity is the Auth Platform's access token (claims: `sub`, `email`, `name`, `tenant`, `groups`, `permissions`) held **in memory** only.
+3. **Shared secrets (server-side only).** `JWT_SECRET` (HS256) is shared by Auth and Cert for local verification; `ENCRYPTION_KEY` / `ENCRYPTION_KEY_PREVIOUS` are shared by Auth (encrypt) and Cert (decrypt). `e-cert` holds **no secrets** — it never encrypts/decrypts the SSO payload (forwards it to the Cert callback, `api-endpoints.md` §9.2–9.3) and never verifies signatures (CSR decision, D8 superseded).
+4. **Split origin.** The e-cert UI runs on Vercel (`e-cert.vercel.app`); the Laravel Cert API is a dedicated API host at `cert-api.lyceumalabang.edu.ph`. The Next.js app proxies `/api/v1/*` to the Cert API via Vercel rewrites (§10.7), keeping the browser same-origin so the httpOnly `loa_cert_refresh` cookie keeps working; direct cross-origin with CORS is the fallback. (Q-1 resolved, §13.)
+5. **Level-based authorization.** The Cert platform enforces `<level>:<path>` grants (`api-endpoints.md` §4, §9.5). The frontend derives a coarse UI role from the same `permissions` claim for nav/gating (§7.4) — display only, never a security boundary.
 
 ---
 
@@ -170,9 +171,11 @@ Locked with the user on 2026-08-05. These are normative for this spec.
 | D5 | **Roles via Auth Platform user-groups + group permissions** | Legacy `admin`/`staff`/`participant` map to **user-groups** in `loa_auth`; each group is granted **endpoint levels** on the Cert catalog (`api-endpoints.md` §4.4). The `e-cert` UI resolves its role from the JWT `permissions` claim (level-based). |
 | D6 | **PDF/QR/email owned by Cert Platform** | `e-cert` drops `puppeteer`, `qrcode`, `nodemailer`. PDFs/QRs/email are produced by Cert endpoints (DOMPDF per `PROJECT.md`). Frontend keeps TipTap for template **editing**; templates persist via the API. |
 | D7 | **Spec location** | Authoritative copy in this repo (`assemblies/loa-cert-platform/legacy-e-cert-integration.md`); a synced working copy lives in the `e-cert` repo for the separate refactor. |
-| D8 | **SSR access-token cookie** | Because `e-cert` is server-rendered (RSC + Server Actions), the access token is additionally mirrored into an httpOnly cookie (`session`, TTL = token `exp`) for SSR verification, alongside the in-memory copy used for `Authorization: Bearer` on API calls. This **refines** `web-ui.md` §6.1 (in-memory-only) for the SSR case; refresh stays in the Cert-proxied httpOnly cookie. Never `localStorage`/`sessionStorage`. (Open question Q-2.) |
+| ~~D8~~ | ~~SSR access-token cookie~~ | **Superseded 2026-08-06 (CSR decision).** The refactored `e-cert` is a **client-side SPA**: the access token lives **in memory only** (never an httpOnly cookie, never `localStorage`/`sessionStorage`), there are no server actions and no server-side JWT verification. The Cert API enforces a JWT model with app-level checks and does not adapt to front-end expectations; the front-end complies. This returns to `web-ui.md` §6.1 (in-memory-only); refresh stays in the Cert-proxied httpOnly `loa_cert_refresh` cookie. (Q-2 resolved 2026-08-06.) |
 
-> D8 rationale: `web-ui.md` §6.1 stores the access token in memory only, which is fine for a client-rendered SPA. Next.js server components and server actions cannot read an in-memory token. The httpOnly access cookie is short-lived (15 min), server-verifiable with the shared `JWT_SECRET`, and never readable by JS — the refresh token remains in its own httpOnly cookie handled entirely by Cert's proxied endpoints.
+> D8 (superseded) rationale: the earlier SSR model mirrored the access token into an httpOnly `session` cookie because server components/server actions cannot read an in-memory token. The CSR decision removes the server-rendered layer entirely — no server components consume the token, so the mirror cookie is unnecessary complexity. All `~75` server actions are deleted and replaced by a client-side HTTP client; route protection is a client-side guard (UI only), not a security boundary.
+
+| D9 | ~~**Cert API authentication deferred (2026-08-06)**~~ **Resolved 2026-08-11 — C-Auth complete.** `jwt.auth` + `jwt.endpoint` middleware enforced; SSO `callback`/`refresh`/`logout` live; 126 tests green. Phase D (e-cert auth swap) is unblocked. | |
 
 ---
 
@@ -183,12 +186,14 @@ Locked with the user on 2026-08-05. These are normative for this spec.
 | Legacy artifact | Action |
 |-----------------|--------|
 | `src/lib/auth/password.ts`, `src/lib/auth/tokens.ts` | Delete (bcrypt, reset/confirm tokens no longer used) |
-| `src/lib/auth/jwt.ts` | Rewrite to **verify-only** Auth Platform tokens (§6.4); remove `signToken` |
-| `src/lib/auth/session.ts` | Keep shape; `session` cookie now holds the Auth **access token**; `refresh` cookie usage removed (Cert handles refresh) |
-| `src/lib/auth/config.ts` | Reduce to cookie name/options; remove local signing secret |
+| `src/lib/auth/jwt.ts` | Rewrite to **parse-only** client-side claim extraction (§6.4); remove `signToken` **and** verification |
+| `src/lib/auth/session.ts` | Rewrite to **in-memory token store** (§6.3); no `session` cookie, no `refresh` cookie (Cert handles refresh) |
+| `src/lib/auth/config.ts` | Delete or reduce to the SSO callback path only |
 | `src/app/(auth)/login`, `register`, `forgot-password`, `update-password` | Delete (Auth Platform owns these flows) |
 | `src/app/auth/confirm/route.ts`, `src/app/auth/callback/route.ts` | Delete (replaced by SSO fragment flow §6.2) |
 | Auth server actions (`loginAction`, `register`, `forgotPassword`, `resetPassword`, `updatePassword`, `updateEmail`, `confirmEmail`, `requestPasswordChange`) | Delete |
+| **All server actions** (`features/*/server/*.actions.ts`, ~75) | **Delete** — replaced by client-side API calls (`src/lib/api/*`, §8) |
+| `src/proxy.ts` | **Delete** — no server-side auth injection, no server components to feed (CSR decision, D8 superseded) |
 | `src/lib/supabase/*`, `src/lib/storage/*`, `src/lib/seed/*` | Delete (data access moves to Cert API; storage/seed are legacy-only) |
 | `src/lib/permissions.ts` DB lookups | Rewrite to JWT-claims-only (keep capability functions) |
 | `supabase/` (migrations, config, schema.sql) | Not used by the app; archived with D3 |
@@ -204,9 +209,9 @@ Locked with the user on 2026-08-05. These are normative for this spec.
      https://e-cert.vercel.app#payload=<base64url_encrypted>
 5. e-cert client-side code detects the fragment (only the client can read #),
    clears it via history.replaceState, and POSTs to the Cert callback
-6. Cert `POST /api/v1/auth/callback` decrypts + validates (exp, tenant.slug=loa),
+6. Cert `POST /api/v1/auth/callback` decrypts + validates (exp, tenant.slug=loa-e-cert),
    sets httpOnly cookie `loa_cert_refresh` (Path=/api/v1/auth), returns the access token
-7. e-cert sets its own httpOnly `session` cookie = access token (§6.3) and
+7. e-cert stores the access token **in memory** (§6.3) and
    redirects to the intended destination
 ```
 
@@ -235,29 +240,29 @@ function hasSSOPayload(): boolean {
 // then POST { payload } to /api/v1/auth/callback (same-origin → Laravel Cert).
 ```
 
-## 6.3 SSR Session Handling (Decision D8)
+## 6.3 Session Handling (CSR, in-memory — supersedes D8)
 
 | Concern | Design |
 |---------|--------|
-| `session` cookie | `HttpOnly; Secure; SameSite=Lax; Path=/`; value = Auth access token; `maxAge` = token `expires_in` (15 min) |
-| SSR reads | Server components / server actions verify the cookie locally with the shared `JWT_SECRET` (§6.4) |
+| Access token | **In-memory only** (JS module singleton). Never an httpOnly cookie, never `localStorage`/`sessionStorage` |
 | Client API calls | In-memory access token attached as `Authorization: Bearer <access>` |
-| Refresh | Client sees 401 → `POST /api/v1/auth/refresh` (same-origin, cookie-driven; `api-endpoints.md` §9.7) → new access token → update in-memory + rewrite `session` cookie via a tiny Next.js route handler (server-only, httpOnly) |
-| Logout | `POST /api/v1/auth/logout` (clears `loa_cert_refresh`; `api-endpoints.md` §9.8) + clear `session` cookie + drop in-memory token |
-| Silent restore | On app load with a `session` cookie but no in-memory token, the client performs a silent refresh to re-acquire an access token before the first API call |
+| Refresh | Client sees 401 → `POST /api/v1/auth/refresh` (same-origin via Vercel rewrite, `loa_cert_refresh` cookie sent automatically; `api-endpoints.md` §9.7) → new access token → update in-memory |
+| Logout | `POST /api/v1/auth/logout` (clears `loa_cert_refresh`; `api-endpoints.md` §9.8) + drop in-memory token |
+| Silent restore | On app load with a `loa_cert_refresh` cookie but no in-memory token (page refresh, new tab), the client performs a silent refresh to re-acquire an access token before the first API call |
+| Route protection | Client-side auth guard (React layout wrapper) — redirect to SSO when no valid token; UI concern only, not a security boundary (§6.5) |
 
-> This replaces the legacy dual-cookie (`session` + `refresh`) mechanism. The `refresh` cookie in `src/lib/auth/session.ts` is removed; refresh becomes Cert-proxied.
+> The only persistent auth state is the Cert-proxied httpOnly `loa_cert_refresh` cookie (`Path=/api/v1/auth`, `SameSite=Lax`, 7 days), which JS cannot read and only Cert touches. This replaces the legacy dual-cookie (`session` + `refresh`) mechanism; the `session` cookie is **not** used.
 
-## 6.4 Local JWT Verification Contract (`e-cert` server side)
+## 6.4 Client-Side JWT Parsing Contract (`e-cert` browser)
 
-Mirror of `api-endpoints.md` §9.4, minus the catalog enforcement (that is Cert's job). `e-cert` needs identity + coarse role only.
+**Parse, don't verify.** The Cert API verifies signatures and enforces authorization server-side. `e-cert` needs identity + coarse role only, for UI rendering.
 
-1. Extract the `session` cookie → else unauthenticated.
-2. `jose.jwtVerify(token, sharedJWTSecret, { algorithms: ["HS256"] })` → signature + `exp` → else invalid.
+1. Read the in-memory access token → else unauthenticated.
+2. Base64url-decode the JWT payload (`atob(token.split(".")[1])`) — **no signature verification**.
 3. Require `payload.type === "access"` → else invalid.
-4. Require `payload.tenant.slug === "loa"` (matches `CERT_TENANT_SLUG`) → else tenant mismatch.
+4. Require `payload.tenant.slug === "loa-e-cert"` (matches `NEXT_PUBLIC_CERT_TENANT_SLUG`) → else tenant mismatch.
 5. Read claims: `sub`, `email`, `name`, `groups`, `permissions` (array of `<level>:<path>`).
-6. Derive the coarse UI role (§7.4) and expose a `SessionUser` (`id`, `email`, `name`, `role`) identical to today's `src/lib/permissions.ts` shape — so pages/actions keep compiling.
+6. Derive the coarse UI role (§7.4) and expose a `SessionUser` (`id`, `email`, `name`, `role`) identical to today's `src/lib/permissions.ts` shape — so pages/components keep compiling.
 
 **Access-token claim shape** (verified against Auth `app/Services/IdentityService.php` → `generateTokenPair` + `app/Services/JWTService.php`):
 
@@ -266,14 +271,14 @@ Mirror of `api-endpoints.md` §9.4, minus the catalog enforcement (that is Cert'
   "sub": "<user-uuid>",
   "email": "user@example.com",
   "name": "Juan Dela Cruz",
-  "groups": ["loa-cert-staff"],
+  "groups": ["cert-staff"],
   "permissions": [
     "cert.certificates.issue",
     "read:/api/v1/events",
     "write:/api/v1/certificates"
   ],
   "scopes": [],
-  "tenant": { "id": "<tenant-uuid>", "slug": "loa" },
+  "tenant": { "id": "<tenant-uuid>", "slug": "loa-e-cert" },
   "iat": 1754000000,
   "exp": 1754000900,
   "type": "access"
@@ -281,35 +286,35 @@ Mirror of `api-endpoints.md` §9.4, minus the catalog enforcement (that is Cert'
 ```
 
 - `permissions` mixes claim-policy keys (`cert.*`) with `<level>:<path>` endpoint grants; only the `<level>:<path>` entries drive role resolution (§7.4).
-- `sub` is the Auth user UUID — the opaque identity to send as `created_by` on event/template create (`api-endpoints.md` §7.2).
+- `sub` is the Auth user UUID — the opaque identity that the **Cert API** stores as `created_by` on event/template create (`api-endpoints.md` §7.2); the client does not send it explicitly.
+- The client never checks `exp` as a security control; it is used only to gate UI state until the next refresh.
 
-**Verify-only implementation** (replaces the sign+verify pair in `src/lib/auth/jwt.ts`; `JWT_SECRET` comes from env, never committed):
+**Parse-only implementation** (replaces the sign+verify pair in `src/lib/auth/jwt.ts`; `NEXT_PUBLIC_CERT_TENANT_SLUG` is the only env it needs):
 
 ```typescript
-import { jwtVerify } from "jose";
-
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-
-export async function verifyAccessToken(token: string) {
+export function parseAccessToken(token: string) {
   try {
-    const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
+    const payload = JSON.parse(atob(token.split(".")[1]));
     if (payload.type !== "access") return null;
-    if (payload.tenant?.slug !== process.env.CERT_TENANT_SLUG) return null;
-    return payload; // sub, email, name, groups, permissions, tenant
+    if (payload.exp * 1000 < Date.now()) return null; // expired (UI-state gate)
+    if (payload.tenant?.slug !== process.env.NEXT_PUBLIC_CERT_TENANT_SLUG) return null;
+    return payload; // sub, email, name, groups, permissions, tenant, exp
   } catch {
     return null;
   }
 }
 ```
 
-Claims are valid for token lifetime; group/grant changes take effect at next issuance (`api-endpoints.md` §9.4 revocation caveat). No DB lookup anywhere.
+Claims are valid for token lifetime; group/grant changes take effect at next issuance (`api-endpoints.md` §9.4 revocation caveat). No DB lookup and no signature verification anywhere on the client.
 
 ## 6.5 Auth Guard & Proxy (`src/proxy.ts`)
 
-- Keep: CSRF origin check, IP rate limiting, public-path handling.
-- Change: replace the `user_memberships` DB lookup with local JWT verification of the `session` cookie (§6.4). Set `x-user-id`, `x-user-email`, `x-user-name`, `x-user-role` headers from claims + derived role (keeps `src/lib/permissions.ts` fast-path working unchanged).
-- Change: redirect rule — unauthenticated users on protected routes go to `https://auth.lyceumalabang.edu.ph/sso/login?redirect=<current-origin>` (auth `web-ui.md` §4.1: `/login` is admin-only).
-- `getCurrentSession` fallback path (server actions) also verifies the cookie locally; the Supabase membership query is removed.
+- **Delete `src/proxy.ts`.** No server-side auth injection, no `x-user-*` headers, no server components to feed (CSR decision, D8 superseded).
+- **Client-side auth guard** (React layout wrapper, e.g. `src/lib/auth/auth-guard.tsx`):
+  - On mount, read the in-memory token; if absent/expired (UI-level), redirect to `https://auth.lyceumalabang.edu.ph/sso/login?redirect=<current-origin>` (auth `web-ui.md` §4.1: `/login` is admin-only).
+  - Wrap protected route groups (`/(dashboard)`, `/(participant)`) in the layout.
+- CSRF and rate-limiting: the `Authorization: Bearer` header is not sent cross-origin by browsers, and `loa_cert_refresh` is `SameSite=Lax`; the **Cert API** owns rate limiting (`api-endpoints.md` §9.10). CSRF can be added at Vercel edge middleware if ever needed.
+- `src/lib/permissions.ts` `getCurrentSession` reads claims from the in-memory token; the Supabase membership query is removed.
 
 ---
 
@@ -323,16 +328,19 @@ Legacy roles are **not** a Cert-local concept and **not** a per-app enum. They a
 - Cert enforces levels at runtime (`jwt.endpoint`, `api-endpoints.md` §9.5); the **frontend** derives a coarse role from the same claim for UI gating.
 - `cert.*` permission keys remain *defined* in `group-permission-management.md` but are **not** consulted by Cert or `e-cert` for enforcement (`api-endpoints.md` §4.5). This section supersedes the `cert.*` key table in `web-ui.md` §5.1.
 
-## 7.2 Seed Groups (proposed, `loa` tenant)
+## 7.2 Cert Groups (expected on the `loa` tenant)
 
-| Seed group | Maps from legacy role | Grant pattern (`api-endpoints.md` §4.4) |
+These are the user-groups the Cert Platform **expects** on the `loa` tenant. **Creating them in Auth is a side-note** — provisioned manually by an Auth operator per the Auth runbook `assemblies/loa-auth-platform/cert-readiness.md` (§6–§7). Per the 2026-08-06 decision they are **not** seeded: no `DatabaseSeeder.php` entry, nothing in `database/seeders/database.sql`.
+
+| Group | Maps from legacy role | Grant pattern (`api-endpoints.md` §4.4) |
 |------------|----------------------|----------------------------------------|
-| `loa-cert-admin` | `admin` | `admin` on every cataloged Cert path (Appendix A). Bypasses owner rule. |
-| `loa-cert-staff` | `staff` | `write` on management paths (events, attendees, templates, certificates issue/email), `read` on read paths, `read`/`write` on author-scoped item paths + `read` on `/me/events`, `/me/templates`. No grants on `admin` paths. |
-| `loa-cert-participant` | `participant` | `read` on `/me/certificates`, `/me/certificates/{id}`, `/certificates/{id}`, `/{id}/pdf`, `/{id}/download`, `/events/{id}`, `/certificates/qr` (owner rule applies). |
+| `cert-admin` | `admin` | `admin` on every cataloged Cert path (Appendix A). Bypasses owner rule. |
+| `cert-staff` | `staff` | `write` on management paths (events, attendees, templates, certificates issue/email), `read` on read paths, `read`/`write` on author-scoped item paths + `read` on `/me/events`, `/me/templates`. No grants on `admin` paths. |
+| `cert-user` | `participant` | `read` on `/me/certificates`, `/me/certificates/{id}`, `/certificates/{id}`, `/{id}/pdf`, `/{id}/download`, `/events/{id}`, `/certificates/qr` (owner rule applies). |
 
-- Names are proposed; actual group names are an Auth-side seeding concern (open question Q-4).
-- Because D2 (fresh start), there is **no bulk role migration** — users register and are assigned to groups by an Auth admin. A public registration user lands in `loa-cert-participant` (or unassigned) by default; the Auth admin promotes staff/admin.
+- Group names confirmed (Q-4 resolved 2026-08-06): `cert-admin`, `cert-staff`, `cert-user`; existing LOA groups (Faculty, Students) are **not** reused.
+- **Dashboard ownership (confirmed 2026-08-06):** `GET /api/v1/dashboard/stats` and `/api/v1/dashboard/activity` are **org-wide unscoped aggregates** (`api-endpoints.md` §5.7). Their `read` grants belong to `cert-admin` and `cert-staff` only; `cert-user` is **not** granted these paths (participants see only their own `/me/certificates`). The dashboard nav item renders for admin/staff roles only.
+- Because D2 (fresh start), there is **no bulk role migration** — users register and are assigned to groups by an Auth admin. A public registration user lands in `cert-user` (or unassigned) by default; the Auth admin promotes staff/admin.
 
 ## 7.3 Who Decides Access
 
@@ -378,27 +386,32 @@ const { user, groups, permissions, tenant } = await res.json(); // permissions =
 
 ## 8.1 Data-Access Layer Replacement
 
+All legacy data access (Supabase, repositories, server actions) is replaced by **client-side typed API modules** in `src/lib/api/`. There are no server actions, no server-side data fetching, no repositories.
+
 | Legacy | Replacement |
 |--------|-------------|
-| `src/lib/supabase/*` (PostgREST clients, RLS reliance) | HTTP client for the Cert API (`https://cert-api.lyceumalabang.edu.ph/api/v1`, reached same-origin via the `/api` rewrite from the UI; §10.6), typed response envelope (§3.4), error normalization, multipart + binary support |
-| `src/lib/repository/base.repository.ts` + `index.ts` | One typed module per resource (events, attendees, templates, certificates, dashboard, audit, verify/view), mirroring the current repository call sites so server actions change minimally |
+| `src/lib/supabase/*` (PostgREST clients, RLS reliance) | `src/lib/api/client.ts` — base HTTP client for the Cert API (same-origin `/api/v1/*` via the Vercel rewrite; §10.6): `Authorization: Bearer <in-memory>`, response envelope (§3.4), error normalization, 401→refresh→retry, multipart + binary support |
+| `src/lib/repository/base.repository.ts` + `index.ts` | One typed module per resource in `src/lib/api/` (events, attendees, templates, certificates, dashboard, audit, verify/view), each wrapping `client.ts` with typed functions |
+| **All server actions** (`features/*/server/*.actions.ts`, ~75) | **Delete.** Components call the typed API modules directly from the browser |
 | JSONB `rendered_pdf` / `file_data` base64 payloads | Superseded by server-side storage in Cert (PDFs on disk/object store; `api-endpoints.md` §7) |
 | RLS + `current_user_id()` | Server-side enforcement in Cert (level + scope rules); `e-cert` sends only the Bearer token |
 
-Conventions to honor (from `api-endpoints.md` §3): response envelope `{ data | data+meta | status/error }`, `limit`/`offset` pagination, RFC 3339 timestamps, PDF binary streams, multipart uploads, synchronous bulk results `{ success, failed, errors }`.
+Conventions to honor (from `api-endpoints.md` §3): response envelope `{ data | data+meta | status/error }`, `limit`/`offset` pagination, RFC 3339 timestamps, PDF binary streams, multipart certificate-file uploads, JSON bulk attendee import, synchronous bulk results `{ success, failed, errors }`.
 
 ## 8.2 Feature → Endpoint Mapping
 
 Legend: `read`/`write`/`admin` = `required_level`; **REMOVE** = feature deleted; **AUTH** = owned by Auth Platform; **GAP** = not in Cert v1.2 (see §13).
 
-### Server Actions — Auth
+> **CSR note:** every mapped server action below is **deleted** (not rewritten). The "New" column shows the Cert endpoint the UI now calls **directly from the browser** via `src/lib/api/` for that feature.
+
+### Features — Auth (server actions deleted)
 
 | Legacy action | New |
 |---------------|-----|
 | `loginAction`, `register`, `forgotPassword`, `requestPasswordChange`, `updatePassword`, `updateEmail`, `confirmEmail`, `resetPassword`, `getCurrentUser` | **AUTH** — delete; identity from JWT claims (§6.4) |
 | `getSessionRoleAction` | Derived locally from `permissions` claim (§7.4) |
 
-### Server Actions — Users / Organizations / Demo
+### Features — Users / Organizations / Demo (server actions deleted)
 
 | Legacy action | New |
 |---------------|-----|
@@ -406,7 +419,7 @@ Legend: `read`/`write`/`admin` = `required_level`; **REMOVE** = feature deleted;
 | `createOrganizationAction`, `getMyOrganizationsAction`, `getOrganizationMembersAction`, `addMemberAction`, `removeMemberAction` | **REMOVE** — single org resolved from tenant claim (`api-endpoints.md` §3.3) |
 | `setImpersonateUser`, `getImpersonateUserId`, `isDemoMode` | **REMOVE** — demo/impersonation excluded |
 
-### Server Actions — Events
+### Features — Events (server actions deleted)
 
 | Legacy action | New Cert endpoint | Level |
 |---------------|-------------------|-------|
@@ -421,13 +434,13 @@ Legend: `read`/`write`/`admin` = `required_level`; **REMOVE** = feature deleted;
 | `issueEventCertificateAction` | `POST /api/v1/certificates` (with `event_id`) | write |
 | `bulkIssueEventCertificatesAction` | `POST /api/v1/certificates/bulk` | write |
 
-### Server Actions — Attendees
+### Features — Attendees (server actions deleted)
 
 | Legacy action | New Cert endpoint | Level |
 |---------------|-------------------|-------|
 | `getAttendeesAction` | `GET /api/v1/events/{id}/attendees` | read |
 | `addAttendeeAction` | `POST /api/v1/events/{id}/attendees` | write |
-| `bulkAddAttendeesAction` | `POST /api/v1/events/{id}/attendees/import` (**CSV multipart** — legacy sent a JSON array; upload flow changes) | write |
+| `bulkAddAttendeesAction` | `POST /api/v1/events/{id}/attendees/import` (**JSON payload** — same array shape the legacy client already sent; CSV parsing is a front-end concern) | write |
 | `updateAttendeeAction` | `PATCH /api/v1/attendees/{id}` | write |
 | `removeAttendeeAction` | `DELETE /api/v1/attendees/{id}` | write |
 | `removeAttendeeWithCertAction` | `DELETE /api/v1/attendees/{id}/with-cert` | admin |
@@ -437,7 +450,7 @@ Legend: `read`/`write`/`admin` = `required_level`; **REMOVE** = feature deleted;
 | `revokeExpiredForEventAction` | `POST /api/v1/events/{id}/revoke-expired` (count = `GET` variant) | admin |
 | `reissueCertificatesForSelectedAction` | `POST /api/v1/events/{id}/reissue` | admin |
 
-### Server Actions — Certificates
+### Features — Certificates (server actions deleted)
 
 | Legacy action | New Cert endpoint | Level |
 |---------------|-------------------|-------|
@@ -454,7 +467,7 @@ Legend: `read`/`write`/`admin` = `required_level`; **REMOVE** = feature deleted;
 | `getMyCertificateAction` | `GET /api/v1/me/certificates/{id}` | read + owner |
 | `getCertificateQrCodeAction` | `GET /api/v1/certificates/qr` | read |
 
-### Server Actions — Templates
+### Features — Templates (server actions deleted)
 
 | Legacy action | New Cert endpoint | Level |
 |---------------|-------------------|-------|
@@ -469,7 +482,7 @@ Legend: `read`/`write`/`admin` = `required_level`; **REMOVE** = feature deleted;
 | `updateTemplateAction` | `PATCH /api/v1/templates/{id}` (409 when referenced/locked) | write |
 | `deleteTemplateAction` | `DELETE /api/v1/templates/{id}` (409 when referenced/locked) | write |
 
-### Server Actions — Dashboard & Audit
+### Features — Dashboard & Audit (server actions deleted)
 
 | Legacy action | New Cert endpoint | Level |
 |---------------|-------------------|-------|
@@ -479,7 +492,7 @@ Legend: `read`/`write`/`admin` = `required_level`; **REMOVE** = feature deleted;
 | `getAuditLogsForExportAction` | `GET /api/v1/admin/audit-logs/export` | admin |
 | `getEntityAuditLogsAction`, `getUserAuditLogsAction`, `getAuditLogsByIdsAction`, `deleteAuditLogsAction`, `deleteAllAuditLogsAction` | **GAP** — not in Cert v1.2 (drop UI or defer) |
 
-### API Routes (`src/app/api/*`)
+### API Routes (`src/app/api/*` — all deleted)
 
 | Legacy route | New |
 |--------------|-----|
@@ -520,7 +533,7 @@ All client fetches carry `Authorization: Bearer <in-memory access>`; on `401` th
 | `/` landing | public |
 | `/verify` + `/view/[id]` | public; call `/api/v1/verify/{number}` and `/api/v1/view/{id}` |
 | `/(dashboard)/dashboard` | stats + activity |
-| `/(dashboard)/events*` (list, new, `[id]`, upload, issue) | attendance CSV import becomes multipart |
+| `/(dashboard)/events*` (list, new, `[id]`, upload, issue) | attendance bulk import is a JSON payload; CSV parsing stays client-side |
 | `/(dashboard)/certificates*` (list, issue, `[id]`) | PDF/QR/email via API |
 | `/(dashboard)/templates/certificates*` | TipTap persists via `POST/PATCH /api/v1/templates` |
 | `/(dashboard)/templates/emails*` | same, `type=email` |
@@ -534,14 +547,14 @@ All client fetches carry `Authorization: Bearer <in-memory access>`; on `401` th
 | `/(auth)/login`, `register`, `forgot-password`, `update-password` | Auth Platform owns auth UI |
 | `/(dashboard)/users` | Auth Platform owns user management |
 | `/(dashboard)/templates/auth-emails*` | Auth email templates belong to Auth Platform |
-| `/(participant)/my/profile` (email update) | Email/identity managed by Auth Platform (see Q-5) |
+| `/(participant)/my/profile` (email update) | Email/identity managed by Auth Platform (Q-5 resolved 2026-08-06: out of scope — noted as a refinement task, likely front-end) |
 
 ## 9.3 Components / Modules
 
 - **Keep:** TipTap editors (certificate/email), base UI components, verify/view renderers (re-sourced from API responses), dashboard/event/certificate components.
-- **Adapt:** PDF preview/download buttons → Cert PDF endpoints; QR display → `/api/v1/certificates/qr`; CSV upload → multipart; event/certificate detail → envelope-shaped responses.
+- **Adapt:** PDF preview/download buttons → Cert PDF endpoints; QR display → `/api/v1/certificates/qr`; CSV upload → parse client-side then `POST` JSON to `/attendees/import`; event/certificate detail → envelope-shaped responses.
 - **Remove:** `src/lib/pdf/`, `src/lib/email/`, `src/lib/qr/`, `src/lib/supabase/`, `src/lib/storage/`, `src/lib/seed/`, `src/features/auth/` (UI), `src/features/users/`, `src/features/organizations/`, `src/features/demo/`.
-- **Add:** typed Cert API client modules (§8.1), SSO fragment handler, token store (in-memory + httpOnly cookie sync, §6.3).
+- **Add:** typed Cert API client modules (§8.1), SSO fragment handler, in-memory token store + silent-refresh wiring (§6.3), client-side auth guard (§6.5).
 
 ## 9.4 Feature Semantics Changes
 
@@ -551,7 +564,7 @@ All client fetches carry `Authorization: Bearer <in-memory access>`; on `401` th
 | Client-side PDF render + `save-pdf` (puppeteer, base64 cache) | PDF generated/streamed by Cert (DOMPDF); frontend only fetches/downloads |
 | Auth email templates & SMTP in the app | Email templates + sending live in Cert; `e-cert` no longer holds SMTP creds |
 | `organization_id` in every action | Omitted; org resolved from JWT `tenant.slug` |
-| Local `user_memberships` role lookup (proxy + fallback) | JWT `permissions` claim → role (§7.4) |
+| Local `user_memberships` role lookup (proxy + fallback) | JWT `permissions` claim parsed client-side → role (§7.4); no proxy, no DB lookup |
 | Login-gated download (`admin/staff OR recipient email`) | Cert owner rule + level (`read` + recipient scope, §9.6) |
 
 ---
@@ -563,23 +576,24 @@ All client fetches carry `Authorization: Bearer <in-memory access>`; on `401` th
 | Variable | Status | Purpose |
 |----------|--------|---------|
 | `NEXT_PUBLIC_BASE_URL` | keep | `https://e-cert.vercel.app` (Vercel deployment origin; canonical UI origin) |
-| `AUTH_BASE_URL` | add | `https://auth.lyceumalabang.edu.ph` (SSO login redirect, `/api/v1/auth/access`) |
-| `CERT_API_BASE_URL` | add | `https://cert-api.lyceumalabang.edu.ph` (Cert API origin; browser calls go through the same-origin `/api` rewrite, §10.7) |
-| `JWT_SECRET` | add | shared HS256 secret — verify-only, never sign, never commit |
-| `CERT_TENANT_SLUG` | add | `loa` (validated against token `tenant.slug`) |
-| `CERT_ACCESS_COOKIE` | add | cookie name (default `session`, per existing code) |
+| `AUTH_BASE_URL` | add | `https://auth.lyceumalabang.edu.ph` (SSO login redirect) |
+| `NEXT_PUBLIC_CERT_TENANT_SLUG` | add | `loa-e-cert` (validated against token `tenant.slug` in §6.4; also used by `e-cert/specs` env docs) |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | remove | no DB access |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | remove | email owned by Cert |
-| Legacy `authConfig.jwtSecret` (local signing secret) | remove | replaced by shared `JWT_SECRET` (verify-only) |
+| Legacy `authConfig.jwtSecret` (local signing secret) | remove | tokens are parsed client-side, never verified/signed (§6.4) |
 
-> `e-cert` does **not** need `ENCRYPTION_KEY`/`ENCRYPTION_KEY_PREVIOUS` — SSO payload decryption happens in Cert (`api-endpoints.md` §9.3).
+> `e-cert` does **not** need `ENCRYPTION_KEY`/`ENCRYPTION_KEY_PREVIOUS` — SSO payload decryption happens in Cert (`api-endpoints.md` §9.3). There is **no `JWT_SECRET` anywhere in e-cert** — no shared secret, no `CERT_ACCESS_COOKIE`, no `CERT_API_BASE_URL` (the browser only ever calls the same-origin `/api/v1` rewrite, §10.7).
 
 ## 10.2 Auth Platform Configuration (prereq)
 
-- `AUTH_ALLOWED_REDIRECTS` must include `https://e-cert.vercel.app` (and tenant `redirect_origins`).
-- Seed the `loa` tenant Cert catalog (Appendix A of `api-endpoints.md` via `POST /api/v1/admin/tenants/{tenant}/endpoints/bulk`).
-- Seed `loa-cert-admin` / `loa-cert-staff` / `loa-cert-participant` groups with level grants (§7.2).
-- `JWT_SECRET` identical across Auth, Cert, `e-cert` (`assemblies/loa-auth-platform/environment.md`).
+> **Side-note — how Auth is provisioned:** the Auth-side work (creating the `loa` tenant, importing the Cert catalog, creating the Cert groups, applying the grants, setting allowlists) is **owned by Auth** and is an operator-run procedure — see the Auth runbook **`assemblies/loa-auth-platform/cert-readiness.md`** (§4–§7 production, §8 local Docker). It is **not** baked into Auth seeders (2026-08-06 decision). This spec only records what the Cert Platform **depends on**:
+
+- The `loa` tenant exists (active) with `redirect_origins` = `https://e-cert.vercel.app` (SSO redirect target).
+- The Cert endpoint catalog (Appendix A of `api-endpoints.md`) is present on that tenant.
+- `cert-admin` / `cert-staff` / `cert-user` groups exist with the §7.2 grants.
+- `JWT_SECRET` identical across Auth and Cert only (`assemblies/loa-auth-platform/environment.md`); **not** present in `e-cert`.
+
+> These dependencies matter once the **C-Auth** phase (D9) implements the Cert-side consumers; Phase C's domain CRUD runs without them.
 
 ## 10.3 Topology (Q-1 — resolved: split origin)
 
@@ -590,43 +604,41 @@ The e-cert UI is deployed to Vercel (`e-cert.vercel.app`); the Laravel Cert API 
 
 ## 10.4 Auth Platform Wiring (concrete)
 
-| Item | Where | Value / Command |
-|------|-------|-----------------|
-| Shared `JWT_SECRET` | Auth `.env` `JWT_SECRET` — must equal Cert + e-cert | random 32+ chars, e.g. `openssl rand -base64 48`; never commit (auth `environment.md`) |
+The concrete provisioning steps (tenant creation, catalog import, group creation, grants, `.env` allowlists) are the **Auth runbook's** job — `assemblies/loa-auth-platform/cert-readiness.md` §4–§7 (production) and §8 (local Docker) — performed manually by an Auth operator, **not** this spec. Only the **e-cert-facing contracts** are recorded here:
+
+| Item | Where | Value / Contract |
+|------|-------|------------------|
+| Shared `JWT_SECRET` | Auth `.env` `JWT_SECRET` — must equal Cert; **not** needed by e-cert | random 32+ chars, e.g. `openssl rand -base64 48`; never commit (auth `environment.md`) |
 | `ENCRYPTION_KEY` | Auth `.env` (shared with Cert **only**, not e-cert) | 32 bytes hex-encoded (auth `web-ui.md` §4.1) |
-| Redirect allowlist | Auth `.env` `AUTH_ALLOWED_REDIRECTS` + `loa` tenant `redirect_origins` | must include `https://e-cert.vercel.app` (`.env.example` now lists it) |
-| `AUTH_REDIRECT_URL` | Auth `.env` | default `https://aces-api.lyceumalabang.edu.ph`; tenant SSO resolves from `?redirect=`, not this fallback |
-| CORS | Auth `.env` `CORS_ALLOWED_ORIGINS` | include `https://e-cert.vercel.app` (needed for the cross-origin `GET /api/v1/auth/access` call) |
-| Cert endpoint catalog | Auth `POST /api/v1/admin/tenants/{tenant}/endpoints/bulk` | body = `api-endpoints.md` Appendix A |
-| Group grants | Auth `POST /api/v1/admin/tenants/{tenant}/groups/{group}/endpoints` | one call per group per cataloged path, level per §7.2 |
+| Redirect allowlist | must include `https://e-cert.vercel.app` | applied in Auth (`.env` `AUTH_ALLOWED_REDIRECTS` + `loa` tenant `redirect_origins`); no implicit fallback |
 
-> These admin calls require a `users.manage`-granted Auth admin JWT (`routes/api.php` lines 69–86). The catalog/grant setup can also be driven through `access-config-import-export.md` (template → export → import) instead of one-by-one calls.
+> The Cert-side consumers of this wiring (SSO `callback`/`refresh`/`logout` + `jwt.auth`/`jwt.endpoint` middleware) are deferred to the **C-Auth** phase (D9, 2026-08-06).
 
-## 10.5 `JWT_SECRET` & Claim Contract
+## 10.5 Access-Token Claim Contract (e-cert parse-only)
 
 | Aspect | Contract |
 |--------|----------|
-| Shared | One `JWT_SECRET` value across Auth, Cert, e-cert (HS256; auth `environment.md`) |
-| Direction | e-cert is **verify-only** — it never calls `signToken` / never issues tokens |
-| Algorithms | HS256 only (`jose.jwtVerify` with `{ algorithms: ["HS256"] }`) |
-| Must-check claims | `type=access`, `exp`, `tenant.slug=loa` (§6.4) |
+| Shared | No shared secret with e-cert. Auth and Cert share `JWT_SECRET` (HS256) for issue + verify; e-cert never sees it (§6.4) |
+| Direction | e-cert is **parse-only** — decodes the base64url payload to read identity/role claims; never verifies, never signs, never issues tokens |
+| Algorithms | HS256 (Auth/Cert side only) |
+| Must-check claims | `type=access`, `tenant.slug=loa-e-cert` (§6.4); `exp` used only for UI state |
 | TTLs | access 15 min (`JWT_ACCESS_TTL=15`), refresh 7 days (`JWT_REFRESH_TTL=10080`) |
 | `permissions` claim | array mixing `cert.*` keys + `<level>:<path>` entries; only levels are used for gating (§7.4) |
-| `tenant` claim | `{ id, slug }`; slug must equal `CERT_TENANT_SLUG` |
+| `tenant` claim | `{ id, slug }`; slug must equal `NEXT_PUBLIC_CERT_TENANT_SLUG` |
 
 ## 10.6 Consuming the Cert API (concrete)
 
-- Browser base URL (same-origin): `https://e-cert.vercel.app/api/v1` — i.e. `NEXT_PUBLIC_BASE_URL + "/api/v1"`, rewritten server-side to `https://cert-api.lyceumalabang.edu.ph/api/v1` (§10.7). Server-to-server calls from server actions may target `cert-api.lyceumalabang.edu.ph` directly.
+- Browser base URL (same-origin): `https://e-cert.vercel.app/api/v1` — i.e. `NEXT_PUBLIC_BASE_URL + "/api/v1"`, rewritten server-side to `https://cert-api.lyceumalabang.edu.ph/api/v1` (§10.7). All calls originate from the browser; there are no server-side calls.
 - Auth header on every non-public call: `Authorization: Bearer <access>`.
 - Success envelope: `{ "data": ... }` or `{ "data": [...], "meta": { limit, offset, total, has_more } }`; errors: `{ "status": "error", "message": ..., "errors": {...} }` (`api-endpoints.md` §3.4).
 - `401` → silent refresh (§6.3) → retry once. `403` → genuine lack of permission — do **not** refresh/retry.
-- PDFs are binary streams (`Content-Type: application/pdf`); never base64 in JSON. Uploads are `multipart/form-data`.
+- PDFs are binary streams (`Content-Type: application/pdf`); never base64 in JSON. Certificate file uploads are `multipart/form-data`; bulk attendee import is a JSON payload (§8.2).
 - Bulk results are synchronous: `{ "success": n, "failed": n, "errors": [...] }` (§3.8).
 
 ```typescript
-// Example: list events (repository/server action)
-const res = await fetch(`${CERT_API}/events?limit=25&offset=0`, {
-  headers: { Authorization: `Bearer ${accessToken}` },
+// Example: list events (client API module)
+const res = await fetch(`${BASE}/events?limit=25&offset=0`, {
+  headers: { Authorization: `Bearer ${getAccessToken()}` },
 });
 if (res.status === 401) { const ok = await silentRefresh(); if (!ok) return null; return retry(); }
 if (!res.ok) throw await res.json();
@@ -648,8 +660,8 @@ async rewrites() {
 ```
 
 - The rewrite is server-side: the browser only ever talks to `https://e-cert.vercel.app`. Set-Cookie from the Cert API (the `loa_cert_refresh` cookie, `Path=/api/v1/auth`, HttpOnly) is relayed to the browser, so the cookie model in §6.3 is unchanged.
-- The e-cert `session` cookie is set by Next.js itself (same origin, `Path=/`).
-- Multipart uploads (attendee CSV import) and PDF binary streams pass through the rewrite; if a Vercel time/streaming limit is hit for a route, fall back to a direct cross-origin call to `cert-api.lyceumalabang.edu.ph` for that route (then the Cert API must apply `services/cors`).
+- The access token is held **in memory only** — no `session` cookie is set by the UI or by Next.js.
+- PDF binary streams and multipart certificate-file uploads pass through the rewrite; if a Vercel time/streaming limit is hit for a route, fall back to a direct cross-origin call to `cert-api.lyceumalabang.edu.ph` for that route (then the Cert API must apply `services/cors`).
 
 **Cert API host (Laravel)** — served by its own web server (cPanel/Apache distro in `loa-apache-server-apps`):
 
@@ -670,25 +682,25 @@ async rewrites() {
 
 | Path | Change |
 |------|--------|
-| `src/lib/env.ts` | New schema per §10.1 (add `AUTH_BASE_URL`, `CERT_API_BASE_URL`, `JWT_SECRET`, `CERT_TENANT_SLUG`; drop Supabase/SMTP vars) |
-| `src/lib/auth/jwt.ts` | Verify-only (§6.4); delete `signToken` |
-| `src/lib/auth/session.ts` | `session` cookie = Auth access token (httpOnly, TTL = exp); drop `refresh` cookie; add cookie-refresh helper |
+| `src/lib/env.ts` | New schema per §10.1 (add `AUTH_BASE_URL`, `NEXT_PUBLIC_CERT_TENANT_SLUG`; drop Supabase/SMTP vars) |
+| `src/lib/auth/jwt.ts` | Parse-only (§6.4); delete `signToken` and verification |
+| `src/lib/auth/session.ts` | In-memory token store (§6.3); delete cookies |
 | `src/lib/auth/password.ts`, `tokens.ts` | Delete |
-| `src/lib/auth/config.ts` | Cookie name/options only; remove local signing secret |
-| `src/proxy.ts` | JWT-verify instead of Supabase membership lookup; `x-user-*` from claims (§6.5); redirect to `/sso/login` |
+| `src/lib/auth/config.ts` | Delete (SSO callback path inlined in the fragment handler) |
+| `src/proxy.ts` | **Delete** (D8 superseded — CSR decision 2026-08-06; no server-side auth injection) |
 | `src/lib/permissions.ts` | JWT-claims-only role (§7.4); keep capability helpers |
 | `src/lib/supabase/*`, `src/lib/storage/*`, `src/lib/seed/*` | Delete |
-| `src/lib/repository/*` | Replace with HTTP client modules per resource (§8.1, §10.6) |
+| `src/lib/repository/*` | Replace with client API modules per resource (§8.1, §10.6) |
 | `src/lib/pdf/*`, `src/lib/email/*`, `src/lib/qr/*` | Delete (Cert owns PDF/QR/email) |
 | `src/features/auth`, `users`, `organizations`, `demo` | Delete |
 | `src/app/(auth)/*` | Delete |
 | `src/app/auth/confirm`, `auth/callback` | Delete; add SSO fragment handler (§6.2) |
-| Server actions | Rewire per §8.2 to the Cert API client |
+| Server actions (`features/*/server/*.actions.ts`) | **Delete all**; components call `src/lib/api/*` directly (§8.2) |
 | `src/app/(dashboard)/users` | Delete |
 | `src/app/(dashboard)/templates/auth-emails*` | Delete |
-| `src/app/(participant)/my/profile` | Delete/simplify (Q-5) |
+| `src/app/(participant)/my/profile` | Delete (Q-5 resolved 2026-08-06: out of scope; refinement task, likely front-end) |
 | `.env*` | Replace per §10.1 |
-| `package.json` | Remove `@supabase/*`, `puppeteer-core`, `@sparticuz/chromium`, `nodemailer`, `bcryptjs`, `qrcode` |
+| `package.json` | Remove `@supabase/*`, `puppeteer-core`, `@sparticuz/chromium`, `nodemailer`, `bcryptjs`, `qrcode`, `jose` |
 
 ---
 
@@ -712,16 +724,17 @@ Spec-gated (AI-RULES.md Rule 0). Each phase requires the governing spec to be Fi
 
 | Phase | Work | Gate |
 |-------|------|------|
-| **A** | Review + promote `api-endpoints.md` v1.2 → Final; review + promote this spec → Final | user review |
-| **B** | Auth readiness: redirect allowlist, cert catalog import, seed groups + grants (§10.2) | Auth `tenant-group-endpoint-grants.md` / catalog Final |
-| **C** | Cert scaffold: `jwt.auth`/`jwt.endpoint`, callback/refresh/logout, core slice (events/attendees/templates/certificates) + tests | `api-endpoints.md` Final |
-| **D** | `e-cert` auth swap: env, `src/lib/auth` (verify-only), `proxy.ts`, SSO fragment handler, session cookie, role resolution, remove auth pages/actions | this spec Final |
-| **E** | `e-cert` data swap: typed Cert API client, rewire repositories/server actions per §8, PDF/QR/email/upload via API, remove legacy modules | this spec Final |
+| **A** | ✅ **Complete 2026-08-06** — `api-endpoints.md` v1.3 and this spec v2.0 promoted to **Final** | user review |
+| **B** | Auth readiness — provisioned **manually at deploy-time** per the Auth runbook `cert-readiness.md` (§10.2 side-note) | Auth runbook `cert-readiness.md` Final |
+| **C** | ✅ **Complete 2026-08-10** — Cert scaffold: domain CRUD slice — events / attendees / templates / certificates + tests | `api-endpoints.md` Final |
+| **C-Auth** | ✅ **Complete 2026-08-11** — `jwt.auth` + `jwt.endpoint` middleware and SSO `callback` / `refresh` / `logout` (§9). 126 tests, 386 assertions, all green. | prerequisite of Phase D |
+| **D** | ✅ **Complete 2026-08-12** — `e-cert` auth swap (CSR): env (4 NEXT_PUBLIC_* vars), SSO fragment handler + silent restore, in-memory token store, parse-only JWT, client auth guard, role resolution from JWT claims. Deleted: auth pages, legacy auth lib, proxy.ts, supabase/storage/email/pdf/qr/seed/rate-limit. Stubs for build. | this spec Final + **C-Auth** done ✅ |
+| **E** | `e-cert` data swap: typed client API modules (§8.1), delete all server actions, components call endpoints directly (§8.2), PDF/QR/email/upload via API, remove legacy modules | this spec Final |
 | **F** | UI cleanup + verification: removed pages/components, silent refresh, parity checks (login, event, issue, download, verify, view, audit) | — |
 | **G** | Decommission legacy DB + deps (§11) | cutover verified |
 | **H** | Phase 4 integration: cross-app JWT validation tests, OpenAPI, audit consistency (`PROJECT.md` Phase 4) | — |
 
-Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`): SSO/session + events + attendees + templates + certificates against the Cert API; PDF/QR/email/audit/dashboard afterwards.
+Suggested first implementation slice (core-first): events + attendees + templates + certificates against the Cert API (**unauthenticated** — D9); SSO/session and the auth middleware follow in the **C-Auth** phase; PDF/QR/email/audit/dashboard afterwards.
 
 ---
 
@@ -730,15 +743,16 @@ Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`):
 | ID | Question / Risk | Impact |
 |----|-----------------|--------|
 | Q-1 | ~~Confirm single-origin topology~~ **Resolved 2026-08-05**: UI on Vercel (`e-cert.vercel.app`), Cert API on `cert-api.lyceumalabang.edu.ph`. Decide rewrite-vs-CORS for `/api/v1` (rewrite recommended, §10.7) | Cookie scope + CORS + env vars |
-| Q-2 | Confirm D8: access token mirrored into an httpOnly `session` cookie for SSR (refines `web-ui.md` §6.1 in-memory-only) | Security posture vs. SSR capability |
-| Q-3 | Audit-log **delete** + entity/user/by-ids queries + global email logs are not in Cert v1.2 — drop these UI features, or extend the Cert API? | Scope of Cert API v1.2 |
-| Q-4 | Confirm seed group names (`loa-cert-admin/staff/participant`) and whether to reuse existing LOA groups (Faculty, Students) instead | Auth seeding |
-| Q-5 | `/my/profile` (update email) removed — identity/email managed by Auth Platform. Confirm participant profile is out of `e-cert` scope | UI scope |
-| Q-6 | Certificate-number default pattern `LOA-YYYY-####` (was `EPOCH` in legacy) | Data defaults (inherited from `api-endpoints.md` open item) |
-| Q-7 | CSV import replaces the legacy JSON bulk-add for attendees (`/attendees/import` is multipart CSV) — confirm the upload UX rework | Attendee import UX |
+| Q-2 | ~~Confirm D8: access token mirrored into an httpOnly `session` cookie for SSR~~ **Resolved 2026-08-06 (CSR)**: D8 superseded — `e-cert` is a **client-side SPA**; the Cert API enforces its JWT model with app-level checks and does not adapt to front-end expectations. No shared secret, no server actions, no `session` cookie, no proxy; token held in memory, refresh via `loa_cert_refresh`, route guard is client-side only (§6, §5) | Security posture vs. SSR capability |
+| Q-3 | ~~Audit-log delete + entity/user/by-ids queries + global email logs not in Cert v1.2 — drop UI or extend API?~~ **Resolved 2026-08-06**: deferred — drop the affected UI features from the retrofit; a dedicated SMTP API endpoint will come later (check reuse of Auth's temporary email tool); not blocking v1.2 | Scope of Cert API v1.2 |
+| Q-4 | ~~Confirm seed group names (`loa-cert-admin/staff/participant`) vs. reuse of LOA groups~~ **Resolved 2026-08-06**: `cert-admin` / `cert-staff` / `cert-user`; no reuse of existing LOA groups | Auth seeding |
+| Q-5 | ~~`/my/profile` (email update) removed — confirm participant profile out of `e-cert` scope~~ **Resolved 2026-08-06**: out of scope; noted as a refinement task (likely front-end) | UI scope |
+| Q-6 | ~~Certificate-number default pattern `LOA-YYYY-####`~~ **Resolved 2026-08-06**: `certificate_number_pattern` is user-configurable per event and required, must contain `####` to produce an incremental id (e.g. `CERT-####`, `TEMP-001-####`, `CERT-####-2026`); no fixed default (synced to `api-endpoints.md` §5.1/§7.4) | Data defaults |
+| Q-7 | ~~CSV import replaces legacy JSON bulk-add for attendees~~ **Resolved 2026-08-06**: `/attendees/import` accepts a **JSON payload**; CSV parsing / upload wizard is a front-end concern (synced to `api-endpoints.md` §5.2) | Attendee import UX |
 | R-1 | Stale `permissions` for token lifetime — users see old UI role until next login/refresh (mitigated by token TTL 15 min) | Role freshness |
-| R-2 | Two httpOnly cookies (`session` + `loa_cert_refresh`) must stay in sync (silent refresh rewrites `session`) | Session reliability |
+| R-2 | In-memory token lost on full page load / new tab — mitigated by silent refresh on app load (re-acquires an access token from the `loa_cert_refresh` cookie before the first API call, §6.3) | Session reliability |
 | R-3 | CORS avoided by the Vercel `/api` rewrite; if direct cross-origin calls are ever used, `services/cors` must be applied on the Cert API (and Auth, for `/access`) | Topology |
+| R-4 | XSS at the SPA can read the in-memory token (no HttpOnly protection) — mitigated by no-token-in-storage, short TTL (15 min), and Cert-side enforcement as the real boundary | Security posture |
 
 ---
 
@@ -746,8 +760,8 @@ Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`):
 
 | Spec / doc | Role |
 |------------|------|
-| `assemblies/loa-cert-platform/api-endpoints.md` (v1.2) | Cert API source of truth; §4 levels, §6 routes, §7 data model, §9 SSO/JWT/permissions, Appendix A catalog |
-| `assemblies/loa-cert-platform/web-ui.md` (v1.0) | Frontend spec; §4 SSO fragment, §5 permission mapping (superseded for roles by this spec §7), §6 token lifecycle (refined by D8) |
+| `assemblies/loa-cert-platform/api-endpoints.md` (Final v1.5) | Cert API source of truth; §4 levels, §6 routes, §7 data model, §9 SSO/JWT/permissions, Appendix A catalog |
+| `assemblies/loa-cert-platform/authenticated-endpoints-spec.md` (v1.1) | Endpoint reference card with required levels |
 | `assemblies/loa-cert-platform/README.md` (v1.2) | Assembly scope, §11 SSO contract, §10 REST conventions |
 | `assemblies/loa-auth-platform/tenant-group-endpoint-grants.md` (Final v1.1) | Level-based grants model (authority for levels) |
 | `assemblies/loa-auth-platform/group-permission-management.md` (Final v2.0) | User-groups + permission definitions (`cert.*` defined, not enforced) |
@@ -762,6 +776,6 @@ Suggested first implementation slice (core-first, matching `SESSION-PROMPT.md`):
 
 ## Document Control
 
-- **Status:** Draft v1.0 — created for user review; not to be implemented against until Final.
+- **Status:** Final v2.3 — 2026-08-12: **Phase D complete** (auth swap: SSO fragment, in-memory token, JWT parse, auth guard, env cleanup, legacy deleted, stubs for build). v2.2 (2026-08-11): C-Auth complete. v2.1 (2026-08-06): D9 — Cert API authentication deferred. v2.0 (2026-08-06): CSR rewrite, D8 superseded; Q-2..Q-7 resolved; Q-17 proxy + dashboard ownership confirmed.
 - **Authoritative source:** `loa-apache-server-apps/assemblies/loa-cert-platform/legacy-e-cert-integration.md`.
-- **Synced working copy:** `D:\repos\hobby\e-cert\legacy-e-cert-integration.md` (same content; refactor drives from the `e-cert` copy).
+- **Synced working copy:** `D:\loa\e-cert\legacy-e-cert-integration.md` (same content; refactor drives from the `e-cert` copy).

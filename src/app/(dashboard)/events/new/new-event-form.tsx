@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { ORG_ID } from "@/lib/org";
-import { createEventAction, cloneTemplateForEventAction } from "@/features/events/server/event.actions";
+import { eventsApi } from "@/lib/api/events";
 import type { CertificateTemplate } from "@/types/template";
 import Link from "next/link";
 import { buildCertificateSrcDoc } from "@/lib/certificate-renderer";
@@ -30,15 +30,14 @@ function buildPattern(prefix: string): string {
 
 export default function NewEventForm({
   templates,
-  emailTemplates = [],
 }: {
   templates: CertificateTemplate[];
   emailTemplates?: CertificateTemplate[];
 }) {
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<string>("");
   const [cloneTemplate, setCloneTemplate] = useState(true);
-  const [cloneEmailTemplate, setCloneEmailTemplate] = useState(true);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [eventDate, setEventDate] = useState("");
@@ -91,39 +90,40 @@ export default function NewEventForm({
 
     setLoading(true);
 
-    const result = await createEventAction({
-      organization_id: ORG_ID,
-      name,
-      description: description || undefined,
-      event_date: eventDate || undefined,
-      location: location || undefined,
-      organizer: organizer || undefined,
-      certificate_title: certTitle || undefined,
-      certificate_number_pattern: certPattern,
-      valid_until: validUntil || undefined,
-      email_template_id: selectedEmailTemplate || undefined,
-    });
+    try {
+      const { data: result } = await eventsApi.create({
+        organization_id: ORG_ID,
+        name,
+        description: description || undefined,
+        event_date: eventDate || undefined,
+        location: location || undefined,
+        organizer: organizer || undefined,
+        certificate_title: certTitle || undefined,
+        certificate_number_pattern: certPattern,
+        valid_until: validUntil || undefined,
+        email_template_id: selectedEmailTemplate || undefined,
+      });
 
-    if (result?.error) {
-      setError(result.error);
-      setLoading(false);
-      return;
-    }
-
-    if (result?.event && selectedTemplate && cloneTemplate) {
-      const cloneResult = await cloneTemplateForEventAction(
-        selectedTemplate,
-        result.event.id,
-        name
-      );
-      if (cloneResult?.error) {
-        setError(`Event created but template clone failed: ${cloneResult.error}`);
+      if (!result) {
+        setError("Failed to create event");
         setLoading(false);
         return;
       }
-    } else if (result?.event && selectedTemplate && !cloneTemplate) {
-      const { updateEventAction } = await import("@/features/events/server/event.actions");
-      await updateEventAction(result.event.id, { template_id: selectedTemplate });
+
+      if (selectedTemplate && cloneTemplate) {
+        const { data: cloned } = await eventsApi.cloneTemplate(selectedTemplate);
+        if (!cloned?.template) {
+          setError("Event created but template clone failed");
+          setLoading(false);
+          return;
+        }
+      } else if (selectedTemplate && !cloneTemplate) {
+        await eventsApi.update(result.id, { template_id: selectedTemplate });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create event");
+      setLoading(false);
+      return;
     }
 
     window.location.href = "/events";

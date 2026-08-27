@@ -1,36 +1,59 @@
-import { Suspense } from "react";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import EventsList from "@/features/events/components/events-list";
-import { getCurrentSession, canDelete } from "@/lib/permissions";
-import { getEventsPaginated } from "@/features/events/server/event.service";
-import { ORG_ID } from "@/lib/org";
+import { parseAccessToken, getAccessToken } from "@/lib/auth";
+import { canDelete } from "@/lib/permissions";
+import { eventsApi } from "@/lib/api/events";
+import type { Event } from "@/types/event";
+import { useSearchParams } from "next/navigation";
 
 const VALID_STATUSES = new Set(["draft", "active", "archive"]);
 const PAGE_SIZE = 20;
 
-export default async function EventsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string; q?: string; status?: string }>;
-}) {
-  const { page: pageStr, q: search, status: statusParam } = await searchParams;
+export default function EventsPage() {
+  const searchParams = useSearchParams();
+  const pageStr = searchParams.get("page");
+  const search = searchParams.get("q") ?? "";
+  const statusParam = searchParams.get("status") ?? "";
 
   const page = Math.max(0, parseInt(pageStr ?? "1", 10) - 1 || 0);
-  const statuses = statusParam
+  const statuses = useMemo(() => statusParam
     ? statusParam.split(",").filter((s) => VALID_STATUSES.has(s))
-    : undefined;
+    : undefined
+  , [statusParam]);
 
-  const [session, { events, total }] = await Promise.all([
-    getCurrentSession(),
-    getEventsPaginated(ORG_ID, {
-      search: search || undefined,
-      statuses,
-      limit: PAGE_SIZE,
-      offset: page * PAGE_SIZE,
-      columns: "id, name, event_date, location, status",
-    }),
-  ]);
+  const token = getAccessToken();
+  const parsed = token ? parseAccessToken(token) : null;
+  const permissions = parsed?.permissions ?? [];
+  const hasAdmin = permissions.some((p: string) => p.startsWith("admin:"));
+  const canUserDelete = canDelete(hasAdmin ? "admin" : "participant");
 
-  const canUserDelete = canDelete(session?.role ?? "participant");
+  const [events, setEvents] = useState<Event[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    eventsApi
+      .list({
+        search: search || undefined,
+        statuses,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+      })
+      .then((result) => {
+        if (!active) return;
+        setEvents(result.data ?? []);
+        setTotal(result.meta?.total ?? 0);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [page, search, statusParam, statuses]);
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
@@ -43,7 +66,11 @@ export default async function EventsPage({
           Manage your events and issue certificates
         </p>
       </div>
-      <Suspense fallback={<div className="app-card p-12 text-center"><p className="text-sm text-tertiary">Loading events...</p></div>}>
+      {loading ? (
+        <div className="app-card p-12 text-center">
+          <p className="text-sm text-tertiary">Loading events...</p>
+        </div>
+      ) : (
         <EventsList
           canDelete={canUserDelete}
           events={events}
@@ -51,10 +78,10 @@ export default async function EventsPage({
           page={page}
           totalPages={totalPages}
           pageSize={PAGE_SIZE}
-          search={search ?? ""}
-          statusFilter={statusParam ?? ""}
+          search={search}
+          statusFilter={statusParam}
         />
-      </Suspense>
+      )}
     </div>
   );
 }

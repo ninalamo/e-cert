@@ -1,0 +1,1896 @@
+openapi: 3.0.3
+info:
+  title: LOA VERICERT — Cert Platform API
+  description: |
+    Client-side SPA API for LOA VERICERT certificate management.
+    All operations are client-side via `/api/v1/*` Vercel rewrite.
+    Bearer token auth via in-memory access token (JWT).
+  version: "2.0"
+  contact:
+    name: Lyceum Alabang Vericert
+servers:
+  - url: https://api.certplatform.vercel.app/v1
+    description: Production Cert API
+  - url: http://localhost:3001/api/v1
+    description: Mock Cert API (local dev)
+security:
+  - BearerAuth: []
+paths:
+  /auth/tokens:
+    post:
+      summary: Direct token issuance (bypass SSO, for testing)
+      operationId: getAuthToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthTokenRequest"
+      responses:
+        "200":
+          description: Tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokenResponse"
+  /auth/refresh:
+    post:
+      summary: Refresh access token using httpOnly cookie
+      operationId: refreshToken
+      security: []
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /auth/logout:
+    post:
+      summary: Logout and clear refresh cookie
+      operationId: logout
+      responses:
+        "204":
+          description: Logged out
+  /events:
+    get:
+      summary: List events with pagination and filters
+      operationId: listEvents
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: statuses
+          in: query
+          schema:
+            type: string
+            description: Comma-separated status filter
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 25
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Paginated event list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      tags:
+        - events
+    post:
+      summary: Create a new event
+      operationId: createEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventInput"
+      responses:
+        "201":
+          description: Created event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      tags:
+        - events
+  /events/{id}:
+    get:
+      summary: Get event by ID
+      operationId: getEvent
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - events
+    patch:
+      summary: Update event
+      operationId: updateEvent
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialEvent"
+      responses:
+        "200":
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - events
+    delete:
+      summary: Delete event
+      operationId: deleteEvent
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "204":
+          description: Event deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - events
+  /events/{id}/stats:
+    get:
+      summary: Get event statistics
+      operationId: getEventStats
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Event stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventStatsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - events
+  /events/{id}/clone-template:
+    post:
+      summary: Clone event certificate template
+      operationId: cloneTemplate
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      requestBody: {}
+      responses:
+        "201":
+          description: Cloned template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - events
+  /events/{id}/clone-email-template:
+    post:
+      summary: Clone event email template
+      operationId: cloneEmailTemplate
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      requestBody: {}
+      responses:
+        "201":
+          description: Cloned email template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - events
+  /events/{id}/attendees:
+    get:
+      summary: List event attendees
+      operationId: listAttendees
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 25
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Paginated attendee list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendeeList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - attendees
+    post:
+      summary: Add attendee to event
+      operationId: addAttendee
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddAttendeeInput"
+      responses:
+        "201":
+          description: Attendee added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendeeResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - attendees
+  /events/{id}/attendees/import:
+    post:
+      summary: Bulk import attendees
+      operationId: bulkImportAttendees
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendeeImport"
+      responses:
+        "201":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - attendees
+  /events/{id}/attendees/issue-completed:
+    post:
+      summary: Issue certificates for completed attendees
+      operationId: issueCompleted
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                send_email:
+                  type: boolean
+                  default: false
+                attendee_ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Issue result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueCompletedResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - attendees
+  /attendees/{id}/delete-preview:
+    get:
+      summary: Preview attendee deletion impact
+      operationId: getDeletePreview
+      parameters:
+        - $ref: "#/components/parameters/AttendeeId"
+      responses:
+        "200":
+          description: Delete preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendeeDeletePreview"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - attendees
+  /attendees/{id}/file-data:
+    get:
+      summary: Get attendee file data
+      operationId: getFileData
+      parameters:
+        - $ref: "#/components/parameters/AttendeeId"
+      responses:
+        "200":
+          description: File data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file_data:
+                    type: string
+                  file_name:
+                    type: string
+                  file_type:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - attendees
+  /attendees/{id}/with-cert:
+    delete:
+      summary: Delete attendee and revoke certificate
+      operationId: removeAttendeeWithCert
+      parameters:
+        - $ref: "#/components/parameters/AttendeeId"
+      responses:
+        "204":
+          description: Attendee and certificate deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - attendees
+  /certificates:
+    get:
+      summary: List certificates
+      operationId: listCertificates
+      parameters:
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+        - name: with_event
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Certificate list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - certificates
+    post:
+      summary: Issue a certificate
+      operationId: issueCertificate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueCertificateInput"
+      responses:
+        "201":
+          description: Certificate issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - certificates
+  /certificates/{id}:
+    get:
+      summary: Get certificate by ID
+      operationId: getCertificate
+      parameters:
+        - $ref: "#/components/parameters/CertificateId"
+      responses:
+        "200":
+          description: Certificate details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - certificates
+    delete:
+      summary: Delete certificate
+      operationId: deleteCertificate
+      parameters:
+        - $ref: "#/components/parameters/CertificateId"
+      responses:
+        "204":
+          description: Certificate deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - certificates
+  /certificates/{id}/revoke:
+    patch:
+      summary: Revoke a certificate
+      operationId: revokeCertificate
+      parameters:
+        - $ref: "#/components/parameters/CertificateId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Certificate revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - certificates
+  /certificates/{id}/pdf:
+    get:
+      summary: Download certificate PDF
+      operationId: downloadCertificatePdf
+      parameters:
+        - $ref: "#/components/parameters/CertificateId"
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - certificates
+  /certificates/{id}/email:
+    post:
+      summary: Send certificate email
+      operationId: sendCertificateEmail
+      parameters:
+        - $ref: "#/components/parameters/CertificateId"
+      responses:
+        "200":
+          description: Email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent:
+                    type: boolean
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - certificates
+  /certificates/{id}/email-logs:
+    get:
+      summary: Get certificate email logs
+      operationId: getCertificateEmailLogs
+      parameters:
+        - $ref: "#/components/parameters/CertificateId"
+      responses:
+        "200":
+          description: Email logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailLogList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - certificates
+  /certificates/{certificateNumber}/qr:
+    get:
+      summary: Get certificate QR code
+      operationId: getCertificateQr
+      parameters:
+        - name: certificateNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: QR code data URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data_url:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - certificates
+  /certificates/bulk:
+    post:
+      summary: Bulk issue certificates
+      operationId: bulkIssueCertificates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkIssueInput"
+      responses:
+        "200":
+          description: Bulk issue results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkIssueResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - certificates
+  /certificates/upload:
+    post:
+      summary: Upload certificate file
+      operationId: uploadCertificate
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - organization_id
+                - certificate_number
+              properties:
+                file:
+                  type: string
+                  format: binary
+                organization_id:
+                  type: string
+                certificate_number:
+                  type: string
+      responses:
+        "200":
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  file_path:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - certificates
+  /certificates/mine:
+    get:
+      summary: Get current user's certificates
+      operationId: getMyCertificates
+      responses:
+        "200":
+          description: User's certificates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - certificates
+  /templates:
+    get:
+      summary: List templates
+      operationId: listTemplates
+      parameters:
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - certificate
+              - email
+              - auth
+        - name: with_lock
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Template list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - templates
+    post:
+      summary: Create a template
+      operationId: createTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTemplateInput"
+      responses:
+        "201":
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - templates
+  /templates/{id}:
+    get:
+      summary: Get template by ID
+      operationId: getTemplate
+      parameters:
+        - $ref: "#/components/parameters/TemplateId"
+      responses:
+        "200":
+          description: Template details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - templates
+    patch:
+      summary: Update template
+      operationId: updateTemplate
+      parameters:
+        - $ref: "#/components/parameters/TemplateId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialTemplate"
+      responses:
+        "200":
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - templates
+    delete:
+      summary: Delete template
+      operationId: deleteTemplate
+      parameters:
+        - $ref: "#/components/parameters/TemplateId"
+      responses:
+        "204":
+          description: Template deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      tags:
+        - templates
+  /templates/{id}/lock-state:
+    get:
+      summary: Check template lock state
+      operationId: getTemplateLockState
+      parameters:
+        - $ref: "#/components/parameters/TemplateId"
+      responses:
+        "200":
+          description: Lock state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  is_locked:
+                    type: boolean
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - templates
+  /dashboard/stats:
+    get:
+      summary: Get dashboard statistics
+      operationId: getDashboardStats
+      parameters:
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - dashboard
+  /dashboard/activity:
+    get:
+      summary: Get recent activity
+      operationId: getRecentActivity
+      parameters:
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      tags:
+        - dashboard
+  /admin/audit-logs:
+    get:
+      summary: List audit logs with filters
+      operationId: listAuditLogs
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum:
+              - ui
+              - api
+              - workflow
+              - system
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: export
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Audit log list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      tags:
+        - audit
+  /admin/audit-logs/export:
+    get:
+      summary: Export audit logs as CSV
+      operationId: exportAuditLogs
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      tags:
+        - audit
+  /admin/audit-logs/by-ids:
+    post:
+      summary: Get audit logs by IDs
+      operationId: getAuditLogsByIds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ids
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      tags:
+        - audit
+  /admin/audit-logs/delete:
+    post:
+      summary: Delete audit logs by IDs
+      operationId: deleteAuditLogsByIds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ids
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deletedCount:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      tags:
+        - audit
+  /verify/{certificate_number}:
+    get:
+      summary: Public certificate verification
+      operationId: verifyCertificate
+      security: []
+      parameters:
+        - name: certificate_number
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyResult"
+        "404":
+          description: Certificate not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+      tags:
+        - verify
+  /view/{id}:
+    get:
+      summary: Public certificate view
+      operationId: viewCertificate
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Certificate view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewResult"
+        "404":
+          description: Certificate not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+      tags:
+        - verify
+components:
+  parameters:
+    EventId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    AttendeeId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    CertificateId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    TemplateId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthorized:
+      description: Unauthorized - missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+  schemas:
+    Event:
+      type: object
+      required:
+        - id
+        - name
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        event_date:
+          type: string
+          format: date-time
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        organizer:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - draft
+            - active
+            - archive
+        certificate_title:
+          type: string
+          nullable: true
+        certificate_number_pattern:
+          type: string
+          nullable: true
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+        template_id:
+          type: string
+          nullable: true
+        email_template_id:
+          type: string
+          nullable: true
+        organization_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    EventStats:
+      type: object
+      properties:
+        total_attendees:
+          type: integer
+        completed_attendees:
+          type: integer
+        certificates_issued:
+          type: integer
+        certificates_revoked:
+          type: integer
+    PaginationMeta:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+    CreateEventInput:
+      type: object
+      required:
+        - name
+        - organization_id
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        event_date:
+          type: string
+          format: date-time
+        location:
+          type: string
+        organizer:
+          type: string
+        certificate_title:
+          type: string
+        certificate_number_pattern:
+          type: string
+        valid_until:
+          type: string
+          format: date-time
+        template_id:
+          type: string
+        email_template_id:
+          type: string
+        organization_id:
+          type: string
+    PartialEvent:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        event_date:
+          type: string
+          format: date-time
+        location:
+          type: string
+        organizer:
+          type: string
+        certificate_title:
+          type: string
+        certificate_number_pattern:
+          type: string
+        valid_until:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - draft
+            - active
+            - archive
+        template_id:
+          type: string
+        email_template_id:
+          type: string
+    EventList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    EventResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Event"
+    EventStatsResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/EventStats"
+    Attendee:
+      type: object
+      properties:
+        id:
+          type: string
+        event_id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - issued
+            - revoked
+        certificate_number:
+          type: string
+          nullable: true
+        certificate_id:
+          type: string
+          nullable: true
+        attended:
+          type: boolean
+        completed:
+          type: boolean
+        metadata:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    AttendeeList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attendee"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+    AttendeeResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Attendee"
+    AddAttendeeInput:
+      type: object
+      required:
+        - organization_id
+        - name
+        - email
+      properties:
+        organization_id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        metadata:
+          type: object
+    AttendeeImport:
+      type: object
+      required:
+        - organization_id
+        - attendees
+      properties:
+        organization_id:
+          type: string
+        attendees:
+          type: array
+          items:
+            $ref: "#/components/schemas/AddAttendeeInput"
+    ImportResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attendee"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                type: string
+        meta:
+          type: object
+          properties:
+            imported:
+              type: integer
+            failed:
+              type: integer
+    AttendeeDeletePreview:
+      type: object
+      properties:
+        attendee:
+          $ref: "#/components/schemas/Attendee"
+        has_certificate:
+          type: boolean
+        certificate_number:
+          type: string
+          nullable: true
+    IssueCompletedResult:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            success:
+              type: boolean
+            issued:
+              type: integer
+            failed:
+              type: integer
+            errors:
+              type: array
+              items:
+                type: string
+    Certificate:
+      type: object
+      properties:
+        id:
+          type: string
+        certificate_number:
+          type: string
+        recipient_name:
+          type: string
+        recipient_email:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - revoked
+            - expired
+        event_id:
+          type: string
+          nullable: true
+        template_id:
+          type: string
+          nullable: true
+        organization_id:
+          type: string
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoke_reason:
+          type: string
+          nullable: true
+        file_path:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CertificateWithEvent:
+      allOf:
+        - $ref: "#/components/schemas/Certificate"
+        - type: object
+          properties:
+            events:
+              type: object
+              nullable: true
+              properties:
+                name:
+                  type: string
+    CertificateList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CertificateWithEvent"
+    CertificateResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Certificate"
+    IssueCertificateInput:
+      type: object
+      required:
+        - organization_id
+        - recipient_name
+        - recipient_email
+      properties:
+        organization_id:
+          type: string
+        template_id:
+          type: string
+        recipient_name:
+          type: string
+        recipient_email:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        file_path:
+          type: string
+        metadata:
+          type: object
+        send_email:
+          type: boolean
+          default: false
+    BulkIssueInput:
+      type: object
+      required:
+        - event_id
+        - organization_id
+        - recipients
+      properties:
+        event_id:
+          type: string
+        organization_id:
+          type: string
+        recipients:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              email:
+                type: string
+        send_email:
+          type: boolean
+          default: false
+    BulkIssueResult:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              email:
+                type: string
+              success:
+                type: boolean
+              certNumber:
+                type: string
+              error:
+                type: string
+    EmailLog:
+      type: object
+      properties:
+        id:
+          type: string
+        certificate_id:
+          type: string
+        recipient_email:
+          type: string
+        sent_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - sent
+            - failed
+        error:
+          type: string
+          nullable: true
+    EmailLogList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailLog"
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum:
+            - certificate
+            - email
+            - auth
+        html_content:
+          type: string
+        css_content:
+          type: string
+          nullable: true
+        is_default:
+          type: boolean
+        is_locked:
+          type: boolean
+        auth_process:
+          type: string
+          nullable: true
+        organization_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TemplateWithLock:
+      allOf:
+        - $ref: "#/components/schemas/Template"
+        - type: object
+          properties:
+            is_locked:
+              type: boolean
+    TemplateList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Template"
+    TemplateResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Template"
+    CreateTemplateInput:
+      type: object
+      required:
+        - organization_id
+        - name
+        - html_content
+      properties:
+        organization_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        html_content:
+          type: string
+        css_content:
+          type: string
+        type:
+          type: string
+          enum:
+            - certificate
+            - email
+            - auth
+        auth_process:
+          type: string
+    PartialTemplate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        html_content:
+          type: string
+        css_content:
+          type: string
+        type:
+          type: string
+          enum:
+            - certificate
+            - email
+            - auth
+        auth_process:
+          type: string
+          nullable: true
+    DashboardStats:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            total_events:
+              type: integer
+            active_events:
+              type: integer
+            total_certificates:
+              type: integer
+            certificates_issued_this_month:
+              type: integer
+            total_attendees:
+              type: integer
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+        details:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        user_email:
+          type: string
+          nullable: true
+    ActivityList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+        organization_id:
+          type: string
+        user_id:
+          type: string
+          nullable: true
+        user_email:
+          type: string
+          nullable: true
+        action:
+          type: string
+        source:
+          type: string
+          enum:
+            - ui
+            - api
+            - workflow
+            - system
+        entity_type:
+          type: string
+          nullable: true
+        entity_id:
+          type: string
+          nullable: true
+        details:
+          type: object
+          nullable: true
+        ip_address:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    AuditLogList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        total:
+          type: integer
+    VerifyResult:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            valid:
+              type: boolean
+            certificate:
+              $ref: "#/components/schemas/Certificate"
+              nullable: true
+            event:
+              type: object
+              nullable: true
+              properties:
+                name:
+                  type: string
+                event_date:
+                  type: string
+                  format: date-time
+                  nullable: true
+                location:
+                  type: string
+                  nullable: true
+            attendee:
+              $ref: "#/components/schemas/Attendee"
+              nullable: true
+            error:
+              type: string
+              nullable: true
+    ViewResult:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            certificate:
+              $ref: "#/components/schemas/Certificate"
+            event:
+              type: object
+              nullable: true
+              properties:
+                name:
+                  type: string
+                event_date:
+                  type: string
+                  format: date-time
+                  nullable: true
+                location:
+                  type: string
+                  nullable: true
+            qr_data_url:
+              type: string
+              nullable: true
+    AuthTokenRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthTokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+    ApiError:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          enum:
+            - error
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    ValidationError:
+      type: object
+      required:
+        - status
+        - message
+        - errors
+      properties:
+        status:
+          type: string
+          enum:
+            - error
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+  - name: events
+    description: Event management operations
+  - name: attendees
+    description: Attendee management operations
+  - name: certificates
+    description: Certificate issue/verify operations
+  - name: templates
+    description: Template management operations
+  - name: dashboard
+    description: Dashboard stats and activity
+  - name: audit
+    description: Audit logs and export
+  - name: verify
+    description: Public certificate verification

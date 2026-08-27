@@ -1,8 +1,51 @@
 # LOA VERICERT
 
-Digital certificate management system for organizations. Built with Next.js (App Router) and Supabase.
+Digital certificate management SPA for organizations. Built with Next.js (App Router) as a client-side rendered (CSR) application that delegates all data operations and authentication to the Cert Platform.
+
+## Architecture
+
+This is a **pure client-side application**. There is no local identity, no server-side auth, no server actions, and no database access from the frontend.
+
+| Concern | Where |
+|---------|-------|
+| Auth flow | SSO redirect via `/sso/login` → httpOnly refresh token → in-memory access token |
+| Role resolution | Derived from JWT `permissions` claim |
+| Data access | Typed Cert API client (`src/lib/api/`) — all operations client-side via Vercel rewrite |
+| Organization | Resolved from JWT `tenant.slug` |
+| Token storage | JS memory only (never `localStorage`/`sessionStorage`) |
+
+### Cert API Client
+
+All data operations go through the typed API client in `src/lib/api/`:
+
+| Module | Responsibility |
+|--------|---------------|
+| `client.ts` | Base HTTP client (fetch wrapper, auth injection, 401 refresh retry, PDF blob handling) |
+| `events.ts` | Event CRUD + stats + template clone |
+| `attendees.ts` | Attendee CRUD + JSON import + file data |
+| `templates.ts` | Template CRUD (certificate + email types) |
+| `certificates.ts` | Issue + bulk + upload + PDF + revoke + email + view |
+| `dashboard.ts` | Stats + recent activity |
+| `audit.ts` | Audit logs query + export |
+| `verify.ts` | Public verify + view (no auth) |
+| `types.ts` | Shared response types, pagination, error envelope |
+
+Browser calls `/api/v1/*` → Vercel rewrites to Cert Platform API.
+
+### Env Contract (4 vars only)
+
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_BASE_URL` | UI origin |
+| `NEXT_PUBLIC_AUTH_BASE_URL` | SSO login redirect |
+| `NEXT_PUBLIC_CERT_TENANT_SLUG` | JWT tenant validation |
+| `NEXT_PUBLIC_CERT_API_TARGET` | `mock` or `live` (rewriting target) |
+
+---
 
 ## User Roles
+
+Roles are derived from the JWT `permissions` claim — never from a database lookup.
 
 | Role | Description |
 |------|-------------|
@@ -48,25 +91,21 @@ Digital certificate management system for organizations. Built with Next.js (App
 
 | ID | As a... | I want to... | So that... |
 |----|---------|-------------|------------|
-| A-1 | Guest | Register a new account | I can create a participant account |
-| A-2 | Guest | Log in with my email and password | I can access my dashboard |
-| A-3 | Guest | Request a password reset | I can recover access if I forget my password |
-| A-4 | Authenticated user | Log out | I can end my session securely |
+| A-1 | Guest | Log in via SSO | I can access my dashboard |
+| A-2 | Authenticated user | Log out | I can end my session securely |
 
 ---
 
-## Public Pages (No Authentication Required)
+## Routes
+
+### Public Pages (No Authentication Required)
 
 | Route | Description |
 |-------|-------------|
-| `/login` | Sign in to an existing account |
-| `/register` | Create a new participant account |
-| `/forgot-password` | Request a password reset email |
+| `/sso/login` | SSO login redirect entry point |
 | `/verify` | Verify a certificate by number |
 
----
-
-## Protected Pages (Authentication Required)
+### Protected Pages (Authentication Required)
 
 All authenticated users (any role) can access:
 
@@ -85,110 +124,28 @@ All authenticated users (any role) can access:
 
 ---
 
-## Seeded Users
-
-| Email | Password | Role |
-|-------|----------|------|
-| admin@lyceumalabang.edu.ph | Password123! | admin |
-| staff@lyceumalabang.edu.ph | Password123! | staff |
-| participant@lyceumalabang.edu.ph | Password123! | participant |
-
-Reseed via `PUT http://localhost:3000/api/health` (see [Health API](#health-api) below).
-
----
-
-## Admin Master Reset
-
-The `/api/health` endpoint provides an admin password reset interface.
-
-### Usage
-
-Navigate to `/api/health` in the browser. Enter the admin password to view seed user details.
-
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `DEFAULT_ADMIN_PASSWORD` | Password required to access the admin reset page (must be set and app redeployed before use) |
-| `DEFAULT_ADMIN_EMAIL` | Email address that receives the forgot-password reminder |
-
-### Actions
-
-| Action | Description |
-|--------|-------------|
-| Login | Enter password to view seed user details |
-| Forgot password | Emails the current `DEFAULT_ADMIN_PASSWORD` to `DEFAULT_ADMIN_EMAIL` |
-
----
-
-## Architecture
-
-### Proxy (Next.js 16)
-
-This project uses Next.js 16's `proxy.ts` — **not** the legacy `middleware.ts` pattern. All request-level concerns (CSRF validation, rate limiting, session resolution) are handled in `src/proxy.ts`.
-
-The proxy runs on every non-static request and:
-
-1. Validates CSRF tokens on POST requests.
-2. Enforces rate limits on sensitive API routes.
-3. Authenticates the user via Supabase and resolves their role from `user_memberships`.
-4. Sets `x-user-id`, `x-user-email`, `x-user-name`, and `x-user-role` headers so server components read session data from headers with zero additional DB calls.
-
-`getCurrentSession()` in `src/lib/permissions.ts` reads these headers directly. The fallback path (no proxy headers) exists only for edge cases outside the normal request lifecycle.
-
----
-
-## Known Issues & Fixes
-
-### Template Editor: CSS/HTML Changes Lost on Mode Switch (Fixed)
-
-**Symptom:** Editing CSS/HTML in Design mode (via the canvas) and switching to Advanced mode caused changes to disappear when switching back.
-
-**Root cause:** The canvas sync (`elementsToHtml → onChange`) ran inside a `useEffect`. When the user switches to Advanced mode, React unmounts the canvas component. If the `useEffect` hadn't fired yet (due to batched state updates), the parent's `htmlContent` state never received the latest canvas output. When switching back to Design mode, the canvas re-parsed stale `htmlContent`, discarding the edits.
-
-**Fix:** Moved the sync from a `useEffect` to a **during-render** block at `template-canvas.tsx:481–490`. The HTML is computed synchronously during render and written to a ref (`lastCanvasHtml`). A `queueMicrotask` defers the `onChange` call to after the current commit but before the browser paints — ensuring the parent receives the update even if the canvas unmounts in the same render cycle.
-
-**Key files:**
-- `src/features/templates/components/template-canvas.tsx` — canvas component, render-time sync block
-- `src/features/templates/components/template-form.tsx` — template form, source panel UI
-- `src/components/ui/code-editor.tsx` — `readOnly` prop for interactive source editors
-
----
-
-## Troubleshooting
-
-### `permission denied for table users` (SQL 42501)
-
-**Symptom:** Supabase logs show `permission denied for table users` when querying `certificates`. The RLS policy references `auth.users` but the `authenticator` role lacks SELECT on it.
-
-**Cause:** The `auth.users` table is missing grants for `authenticated`/`anon`/`service_role`. This can happen on projects set up outside the dashboard (CLI, self-hosted, or imported schemas).
-
-**Verify:**
-
-```sql
-SELECT grantee, privilege_type
-FROM information_schema.role_table_grants
-WHERE table_schema = 'auth' AND table_name = 'users';
-```
-
-If `authenticated`, `anon`, or `service_role` are missing `SELECT`:
-
-**Fix:**
-
-```sql
-GRANT SELECT ON auth.users TO authenticated;
-GRANT SELECT ON auth.users TO service_role;
-GRANT SELECT ON auth.users TO anon;
-```
-
-> **Note:** These grants are managed by the Supabase platform, not app migrations. Do not add them to `schema.sql` — they are redundant on healthy projects.
-
----
-
-## Getting Started
+## Development
 
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+### Linting
+
+```bash
+npm run lint
+```
+
+---
+
+## Anti-Patterns
+
+See `AI-RULES.md` for the full list. Key violations:
+
+- **Direct Supabase/PostgREST calls** — all data access goes through the Cert API client
+- **Server actions** — all mutations are client-side API calls
+- **Local identity** — no signing tokens, no password hashes, no users table
+- **localStorage/sessionStorage** — tokens live in JS memory only
+- **Proxy middleware** — no `src/proxy.ts`, no server-side session resolution

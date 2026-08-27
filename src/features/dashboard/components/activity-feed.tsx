@@ -1,10 +1,16 @@
-import type { RecentActivity } from "../server/dashboard.service";
+import type { ActivityItem } from "@/lib/api/dashboard";
+import { SkeletonList } from "@/components/ui/skeleton";
 
 interface ActivityFeedProps {
-  initialActivities: RecentActivity[];
+  initialActivities: ActivityItem[];
+  isLoading?: boolean;
 }
 
-export default function ActivityFeed({ initialActivities }: ActivityFeedProps) {
+export default function ActivityFeed({ initialActivities, isLoading = false }: ActivityFeedProps) {
+  if (isLoading) {
+    return <SkeletonList rows={4} />;
+  }
+
   if (initialActivities.length === 0) {
     return (
       <div className="text-center py-8">
@@ -15,30 +21,26 @@ export default function ActivityFeed({ initialActivities }: ActivityFeedProps) {
 
   return (
     <div className="space-y-3">
-      {initialActivities.map((activity, i) => (
-        <div key={i} className="flex items-start gap-3">
+      {initialActivities.map((activity) => (
+        <div key={activity.id} className="flex items-start gap-3">
           <div
             className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
-              activity.type === "certificate_issued"
+              activity.entity_type === "certificate"
                 ? "bg-green-500"
                 : "bg-blue-500"
             }`}
           />
           <div className="min-w-0 flex-1">
             <p className="text-sm">
-              {activity.type === "certificate_issued" ? (
-                <>
-                  Certificate <span className="font-mono text-xs">{activity.certificate_number}</span> issued to{" "}
-                  <span className="font-medium">{activity.recipient_name}</span>
-                </>
-              ) : (
-                <>
-                  Email sent to <span className="font-medium">{activity.recipient_name}</span>
-                </>
+              <span className="font-medium">{activity.action}</span>
+              {" on "}
+              <span className="font-mono text-xs">{activity.entity_type}</span>
+              {activity.user_email && (
+                <> by <span className="font-medium">{activity.user_email}</span></>
               )}
             </p>
             <p className="text-xs text-muted-foreground">
-              {new Date(activity.timestamp).toLocaleString()}
+              {new Date(activity.created_at).toLocaleString()}
             </p>
           </div>
         </div>

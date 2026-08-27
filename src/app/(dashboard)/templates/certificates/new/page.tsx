@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { createTemplateAction, updateTemplateAction } from "@/features/templates/server/template.actions";
+import { templatesApi } from "@/lib/api/templates";
 import { ORG_ID } from "@/lib/org";
 import {
   Breadcrumb,
@@ -51,18 +51,23 @@ export default function NewTemplatePage() {
         templateType="certificate"
         submitLabel="Save Changes"
         onSubmit={async (data) => {
-          if (createdId) {
-            const result = await updateTemplateAction(createdId, data);
-            return result;
+          try {
+            if (createdId) {
+              await templatesApi.update(createdId, data);
+              return {};
+            }
+            const { data: created } = await templatesApi.create({
+              organization_id: ORG_ID,
+              ...data,
+            });
+            if (created) {
+              setCreatedId(created.id);
+            }
+            return {};
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Failed to save template";
+            return { error: msg };
           }
-          const result = await createTemplateAction({
-            organization_id: ORG_ID,
-            ...data,
-          });
-          if (result.template) {
-            setCreatedId(result.template.id);
-          }
-          return result;
         }}
       />
     </div>

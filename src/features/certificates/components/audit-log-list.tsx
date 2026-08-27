@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { getAllEmailLogsAction } from "../server/certificate.actions";
+import { certificatesApi } from "@/lib/api/certificates";
 import type { CertificateEmailLog } from "@/types/certificate-email";
 import { usePagination } from "@/components/ui/paginator";
 import { SearchIcon, RefreshCwIcon } from "lucide-react";
@@ -19,8 +19,8 @@ export default function AuditLogList({ initialLogs }: AuditLogListProps) {
 
   async function handleRefresh() {
     setLoading(true);
-    const data = await getAllEmailLogsAction(200);
-    setLogs(data);
+    const result = await certificatesApi.getAllEmailLogs(200);
+    setLogs(result.data ?? []);
     setLoading(false);
   }
 

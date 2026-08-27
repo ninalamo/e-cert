@@ -1,8 +1,8 @@
 # LOA e-cert — Data Flow & Security Boundaries
 ## Product Assembly Component Specification
 
-**Version:** 1.0
-**Status:** Draft
+**Version:** 2.0
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) — Architecture Module
 **Audience:** Engineers, AI Development Agents
 
@@ -205,7 +205,7 @@ Browser                    Auth Platform              Cert API
 |--------|---------|
 | User modifies certificate data | Cert API validates all inputs; owner rules prevent cross-user edits |
 | User deletes audit logs | Delete endpoints not exposed in Cert API v1.2 |
-| User bypasses CSV validation | Cert API validates CSV format server-side |
+| User bypasses CSV validation | CSV is parsed client-side; Cert API validates the resulting JSON payload server-side |
 
 ---
 
@@ -218,7 +218,7 @@ Browser                    Auth Platform              Cert API
 │  • In-memory token (not persistent)                             │
 │  • JWT parsing (UI only, not security)                          │
 │  • Route guard (redirect only, not enforcement)                 │
-│  • MSW intercepts all API calls in tests                        │
+│  • JSON Server mocks all API calls in dev/test                  │
 │                                                                  │
 │  SECURITY BOUNDARY: Cert API (not browser)                      │
 └──────────────────────────┬──────────────────────────────────────┘

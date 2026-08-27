@@ -1,27 +1,52 @@
-import { notFound } from "next/navigation";
-import { getMyCertificate } from "@/features/certificates/server/certificate.service";
-import { getEvent } from "@/features/events/server/event.service";
-import { generateQrCodeDataUrl } from "@/lib/qr";
-import { env } from "@/lib/env";
-import { requireSession } from "@/lib/permissions";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { certificatesApi } from "@/lib/api/certificates";
+import { eventsApi } from "@/lib/api/events";
 import CertificateDetail from "@/features/certificates/components/certificate-detail";
+import { SkeletonDetail } from "@/components/ui/skeleton";
+import { NotFoundState } from "@/components/not-found-state";
+import type { Certificate } from "@/types/certificate";
+import type { Event } from "@/types/event";
 
-export default async function MyCertificateDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const session = await requireSession();
+export default function MyCertificateDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
 
-  const certificate = await getMyCertificate(id, session.email!);
-  if (!certificate) notFound();
+  const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [qrDataUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const event = certificate.event_id ? await getEvent(certificate.event_id) : null;
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data: cert } = await certificatesApi.getMyById(id);
+        if (!cert) return;
+        setCertificate(cert);
 
-  const baseUrl = env.client.NEXT_PUBLIC_BASE_URL;
-  const verifyUrl = `${baseUrl}/verify?number=${encodeURIComponent(certificate.certificate_number)}`;
-  const qrDataUrl = await generateQrCodeDataUrl(verifyUrl, { width: 200, margin: 2 });
+        if (cert.event_id) {
+          const { data: ev } = await eventsApi.get(cert.event_id);
+          setEvent(ev);
+        }
+      } catch {
+        // ignore
+      }
+      setLoading(false);
+    }
+    load();
+  }, [id]);
+
+  if (loading) return <SkeletonDetail />;
+  if (!certificate)
+    return (
+      <NotFoundState
+        title="Certificate not found"
+        backHref="/my/certificates"
+        backLabel="Back to My Certificates"
+      />
+    );
 
   return (
     <CertificateDetail

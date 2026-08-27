@@ -1,14 +1,26 @@
-import DashboardShell from "@/components/dashboard-shell";
-import { getCurrentSession } from "@/lib/permissions";
+"use client";
 
-export default async function FaqLayout({
+import { useSyncExternalStore } from "react";
+
+import DashboardShell from "@/components/dashboard-shell";
+import { parseAccessToken, getAccessToken } from "@/lib/auth";
+
+const emptySubscribe = () => () => {};
+
+export default function FaqLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getCurrentSession();
-  if (session) {
-    return <DashboardShell session={session}>{children}</DashboardShell>;
-  }
-  return <>{children}</>;
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+
+  const token = mounted ? getAccessToken() : null;
+  const hasToken = !!(token && parseAccessToken(token));
+
+  if (!hasToken) return <>{children}</>;
+  return <DashboardShell>{children}</DashboardShell>;
 }

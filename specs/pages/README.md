@@ -2,7 +2,7 @@
 ## Product Assembly Component Specification
 
 **Version:** 2.0
-**Status:** Draft
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) — UI Module
 **Audience:** Engineers, AI Development Agents
 
@@ -25,7 +25,7 @@ It answers:
 | `/` landing | public |
 | `/verify` + `/view/[id]` | public; client calls `/api/v1/verify/{number}` and `/api/v1/view/{id}` |
 | `/(dashboard)/dashboard` | stats + activity via client API |
-| `/(dashboard)/events*` | list, new, `[id]`, upload, issue; CSV upload via client |
+| `/(dashboard)/events*` | list, new, `[id]`, upload, issue; attendance import = parse CSV client-side → `POST` JSON to `/attendees/import` |
 | `/(dashboard)/certificates*` | list, issue, `[id]`; PDF/QR/email via client API |
 | `/(dashboard)/templates/certificates*` | TipTap persists via client `PATCH /api/v1/templates` |
 | `/(dashboard)/templates/emails*` | same, `type=email` |

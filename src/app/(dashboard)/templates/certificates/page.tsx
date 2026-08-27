@@ -1,17 +1,48 @@
+"use client";
+
 import Link from "next/link";
-import { Suspense } from "react";
+import { useEffect, useState } from "react";
 import TemplatesTable from "@/features/templates/components/templates-table";
-import { getCertificateTemplatesWithLockStateAction } from "@/features/templates/server/template.actions";
+import { templatesApi } from "@/lib/api/templates";
 import { ORG_ID } from "@/lib/org";
 import { PlusIcon } from "lucide-react";
 import { SkeletonTable } from "@/components/ui/skeleton";
+import type { CertificateTemplate } from "@/types/template";
 
-async function CertificateTemplatesContent() {
-  const templates = await getCertificateTemplatesWithLockStateAction(ORG_ID);
-  return <TemplatesTable initialTemplates={templates} />;
-}
+type TemplateWithLock = CertificateTemplate & { locked: boolean };
 
 export default function CertificateTemplatesPage() {
+  const [templates, setTemplates] = useState<TemplateWithLock[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    templatesApi
+      .listCertificateWithLock(ORG_ID)
+      .then((result) => {
+        if (!active) return;
+        const raw = result.data ?? [];
+        setTemplates(raw.map((t) => ({
+          id: t.id,
+          organization_id: t.organization_id,
+          name: t.name,
+          description: t.description,
+          type: t.type,
+          auth_process: t.auth_process,
+          html_content: t.html_content,
+          css_content: t.css_content,
+          created_at: t.created_at,
+          updated_at: t.updated_at,
+          locked: t.is_locked,
+        })));
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -28,9 +59,7 @@ export default function CertificateTemplatesPage() {
           New Certificate
         </Link>
       </div>
-      <Suspense fallback={<SkeletonTable />}>
-        <CertificateTemplatesContent />
-      </Suspense>
+      {loading ? <SkeletonTable /> : <TemplatesTable initialTemplates={templates} />}
     </div>
   );
 }

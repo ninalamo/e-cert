@@ -3,15 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import {
-  getTemplateAction,
-  updateTemplateAction,
-  isTemplateLockedAction,
-} from "@/features/templates/server/template.actions";
+import { templatesApi } from "@/lib/api/templates";
 
 const TemplateForm = dynamic(() => import("@/features/templates/components/template-form"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
+import { NotFoundState } from "@/components/not-found-state";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -29,13 +26,16 @@ export default function EditTemplateForm({ id }: { id: string }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const data = await getTemplateAction(id);
-      if (!active) return;
-      setTemplate(data);
-      const isLocked = await isTemplateLockedAction(id);
-      if (!active) return;
-      setLocked(isLocked);
-      setLoading(false);
+      try {
+        const { data: templateData } = await templatesApi.get(id);
+        if (!active) return;
+        setTemplate(templateData);
+        setLocked(templateData?.is_locked ?? false);
+      } catch {
+        if (active) setTemplate(null);
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
     return () => { active = false; };
   }, [id]);
@@ -45,7 +45,14 @@ export default function EditTemplateForm({ id }: { id: string }) {
   }
 
   if (!template) {
-    return <p className="text-red-600">Template not found.</p>;
+    return (
+      <NotFoundState
+        title="Template not found"
+        description="It may have been deleted."
+        backHref="/templates/certificates"
+        backLabel="Back to Templates"
+      />
+    );
   }
 
   if (template.type === 'auth') {
@@ -104,10 +111,16 @@ export default function EditTemplateForm({ id }: { id: string }) {
          submitLabel="Save Changes"
          fullscreen={fullscreen}
          onFullscreenChange={setFullscreen}
-         onSubmit={async (data) => {
-           if (locked) return { template: null, error: "Template is locked." };
-           return await updateTemplateAction(id, data);
-         }}
+          onSubmit={async (data) => {
+            if (locked) return { template: null, error: "Template is locked." };
+            try {
+              await templatesApi.update(id, data);
+              return {};
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : "Failed to update template";
+              return { error: msg };
+            }
+          }}
        />
     </div>
   );

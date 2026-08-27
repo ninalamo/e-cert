@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { deleteEventAction } from "@/features/events/server/event.actions";
+import { eventsApi } from "@/lib/api/events";
 import {
   Dialog,
   DialogContent,
@@ -30,13 +30,13 @@ export default function DeleteDialog({
   async function handleDelete() {
     setDeleting(true);
     setError(null);
-    const result = await deleteEventAction(event.id);
-    setDeleting(false);
-    if (result?.error) {
-      setError(result.error);
-      return;
+    try {
+      await eventsApi.delete(event.id);
+      router.push("/events");
+    } catch (err) {
+      setDeleting(false);
+      setError(err instanceof Error ? err.message : "Failed to delete event");
     }
-    router.push("/events");
   }
 
   return (

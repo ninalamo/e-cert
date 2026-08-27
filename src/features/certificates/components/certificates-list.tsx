@@ -4,10 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
 import { countExpired } from "@/lib/certificate-utils";
-import {
-  getCertificatesWithEventAction,
-  deleteCertificateAction,
-} from "../server/certificate.actions";
+import { certificatesApi } from "@/lib/api/certificates";
 import type { Certificate } from "@/types/certificate";
 import {
   Dialog,
@@ -18,13 +15,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { usePagination } from "@/components/ui/paginator";
+import { usePagination, Paginator } from "@/components/ui/paginator";
 import {
   SearchIcon,
-  FilterIcon,
-  ChevronRightIcon,
   Trash2Icon,
-  EyeIcon,
   ShieldIcon,
 } from "lucide-react";
 
@@ -38,6 +32,11 @@ interface CertificatesListProps {
   isAdmin?: boolean;
 }
 
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "revoked", label: "Revoked" },
+];
+
 export default function CertificatesList({
   initialCertificates,
   initialQuery = "",
@@ -45,8 +44,7 @@ export default function CertificatesList({
 }: CertificatesListProps) {
   const [certificates, setCertificates] = useState<CertificateWithEvent[]>(initialCertificates);
   const [search, setSearch] = useState(initialQuery);
-  const [eventFilter, setEventFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CertificateWithEvent | null>(null);
@@ -58,8 +56,8 @@ export default function CertificatesList({
 
   async function loadCertificates() {
     try {
-      const result = await getCertificatesWithEventAction(ORG_ID);
-      return result.data;
+      const result = await certificatesApi.listWithEvent(ORG_ID);
+      return result.data ?? [];
     } catch {
       setLoadError("Failed to load certificates.");
       return [];
@@ -70,17 +68,19 @@ export default function CertificatesList({
     if (!deleteTarget) return;
     setDeleting(true);
     setDeleteError(null);
-    const result = await deleteCertificateAction(deleteTarget.id);
-    setDeleting(false);
-    if (result?.error) {
-      setDeleteError(result.error);
-      return;
-    }
-    setDeleteDialogOpen(false);
-    setDeleteTarget(null);
-    const updated = await loadCertificates();
-    if (updated.length > 0) {
-      setCertificates(updated);
+    try {
+      await certificatesApi.delete(deleteTarget.id);
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+      const updated = await loadCertificates();
+      if (updated.length > 0) {
+        setCertificates(updated);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to delete certificate";
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -141,80 +141,86 @@ export default function CertificatesList({
         c.recipient_email.toLowerCase().includes(search.toLowerCase()) ||
         c.certificate_number.toLowerCase().includes(search.toLowerCase());
 
-      const matchesEvent =
-        !eventFilter || c.events?.name === eventFilter;
-
       const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && !c.revoked_at) ||
-        (statusFilter === "revoked" && !!c.revoked_at);
+        statusFilter.length === 0 ||
+        statusFilter.some((s) =>
+          s === "revoked" ? !!c.revoked_at : !c.revoked_at
+        );
 
-      return matchesSearch && matchesEvent && matchesStatus;
+      return matchesSearch && matchesStatus;
     });
-  }, [certificates, search, eventFilter, statusFilter]);
+  }, [certificates, search, statusFilter]);
 
   const expiredCount = useMemo(() => countExpired(certificates), [certificates]);
-
-  const events = useMemo(() => {
-    const eventSet = new Set<string>();
-    for (const c of certificates) {
-      if (c.events) {
-        eventSet.add(c.events.name);
-      }
-    }
-    return Array.from(eventSet).sort();
-  }, [certificates]);
 
   const { page, totalPages, pageSize, paginatedItems, setPage, setPageSize } =
     usePagination(filtered, 10);
 
-  const grouped = useMemo(
-    () => groupByEvent(paginatedItems),
-    [paginatedItems]
-  );
+  function toggleStatus(value: string) {
+    setStatusFilter((prev) =>
+      prev.includes(value)
+        ? prev.filter((s) => s !== value)
+        : [...prev, value]
+    );
+    setPage(0);
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div className="relative flex-1 w-full sm:w-auto">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-tertiary" />
+      <div className="flex items-center justify-end">
+        {isAdmin && expiredCount > 0 && (
+          <button
+            type="button"
+            onClick={openRevokeDialog}
+            className="btn bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40"
+          >
+            <ShieldIcon className="size-4" />
+            Revoke Expired ({expiredCount})
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-xs">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-tertiary" />
           <input
             type="text"
-            placeholder="Search by name, email, or number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-96 rounded-md border pl-9 pr-3 py-2 text-sm"
+            placeholder="Search by recipient, email, or number..."
+            className="input pl-8 py-1.5 text-xs"
           />
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <FilterIcon className="size-4 text-tertiary shrink-0" />
-          <select
-            value={eventFilter}
-            onChange={(e) => {
-              setEventFilter(e.target.value);
-              setPage(0);
-            }}
-            className="input text-sm w-full sm:w-auto"
-          >
-            <option value="">All Events</option>
-            {events.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-            className="input text-sm w-full sm:w-auto"
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="revoked">Revoked</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-2">
+          {STATUS_OPTIONS.map((opt) => {
+            const active = statusFilter.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleStatus(opt.value)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                  active
+                    ? "border-[var(--color-brand-600)] bg-[var(--color-brand-600)] text-white"
+                    : "border-[var(--color-border-strong)] bg-[var(--color-surface)] text-tertiary hover:border-[var(--color-brand-300)]"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+          {statusFilter.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter([]);
+                setPage(0);
+              }}
+              className="text-xs text-tertiary hover:text-secondary cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -224,144 +230,79 @@ export default function CertificatesList({
         </div>
       )}
 
-      {isAdmin && expiredCount > 0 && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={openRevokeDialog}
-            className="btn bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40"
-          >
-            <ShieldIcon className="size-4" />
-            Revoke Expired ({expiredCount})
-          </button>
-        </div>
-      )}
-
       {filtered.length === 0 && (
-        <div className="border rounded-md p-8 text-center">
-          <p className="text-muted-foreground">No certificates found.</p>
+        <div className="app-card p-12 text-center">
+          <p className="text-sm text-tertiary">
+            {search || statusFilter.length > 0
+              ? "No certificates match your filters."
+              : "No certificates found."}
+          </p>
         </div>
       )}
 
       {filtered.length > 0 && (
-        <div className="space-y-6">
-          {grouped.map(({ eventName, certificates: groupCerts }) => (
-            <div key={eventName ?? "(no event)"} className="space-y-2">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text)]">
-                {eventName ?? "No Event"}
-                <ChevronRightIcon className="size-4 text-tertiary" />
-                <span className="text-xs font-normal text-tertiary">
-                  {groupCerts.length} certificate{groupCerts.length !== 1 ? "s" : ""}
-                </span>
-              </h3>
-              <div className="tbl-container">
-                <table className="tbl">
-                  <thead>
-                    <tr>
-                      <th className="text-left">Number</th>
-                      <th className="text-left">Recipient</th>
-                      <th className="text-left">Email</th>
-                      <th className="text-left">Issued</th>
-                      <th className="text-left">Expiry Date</th>
-                      <th className="text-left">Status</th>
-                      <th className="text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupCerts.map((cert) => (
-                      <tr key={cert.id}>
-                        <td className="font-mono text-xs">
-                          {cert.certificate_number}
-                        </td>
-                        <td>{cert.recipient_name}</td>
-                        <td className="text-tertiary">{cert.recipient_email}</td>
-                        <td className="text-tertiary">
-                          {new Date(cert.issued_at).toLocaleDateString()}
-                        </td>
-                        <td className="text-tertiary">
-                          {cert.expires_at
-                            ? new Date(cert.expires_at).toLocaleDateString()
-                            : "—"}
-                        </td>
-                        <td>
-                          {cert.revoked_at ? (
-                            <span className="status-pill status-revoked">
-                              Revoked
-                            </span>
-                          ) : (
-                            <span className="status-pill status-active">
-                              Active
-                            </span>
-                          )}
-                        </td>
-                        <td className="text-right">
-                          <Link
-                            href={`/certificates/${cert.id}`}
-                            className="text-xs text-info hover:underline mr-3"
-                          >
-                            <EyeIcon className="size-3 inline mr-1" />
-                            View
-                          </Link>
-                          {cert.revoked_at && (
-                            <button
-                              onClick={() => openDeleteDialog(cert)}
-                              className="text-xs text-danger hover:underline"
-                            >
-                              <Trash2Icon className="size-3 inline mr-1" />
-                              Delete
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        <div className="app-card divide-y divide-border overflow-hidden">
+          {paginatedItems.map((cert) => (
+            <div
+              key={cert.id}
+              className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
+            >
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={`/certificates/${cert.id}`}
+                  className="font-medium text-[var(--color-text)] hover:underline"
+                >
+                  {cert.recipient_name}
+                </Link>
+                <p className="mt-0.5 truncate text-xs text-tertiary">
+                  <span className="font-mono">{cert.certificate_number}</span>
+                  {cert.events?.name ? ` · ${cert.events.name}` : ""}
+                  {" · "}
+                  Issued {new Date(cert.issued_at).toLocaleDateString()}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                {cert.revoked_at ? (
+                  <span className="status-pill status-revoked">Revoked</span>
+                ) : (
+                  <span className="status-pill status-active">Active</span>
+                )}
+                <Link href={`/certificates/${cert.id}`} className="btn-disclosure">
+                  View
+                </Link>
+                {cert.revoked_at ? (
+                  <button
+                    onClick={() => openDeleteDialog(cert)}
+                    className="btn-icon btn-icon-danger"
+                    title="Delete certificate"
+                  >
+                    <Trash2Icon className="size-4" />
+                  </button>
+                ) : (
+                  <span
+                    title="Only revoked certificates can be deleted"
+                    className="btn-icon opacity-50 cursor-not-allowed"
+                    aria-disabled="true"
+                  >
+                    <Trash2Icon className="size-4" />
+                  </span>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {filtered.length > 0 && (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-tertiary">
-            Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, filtered.length)} of{" "}
-            {filtered.length}
-          </span>
-          <div className="flex items-center gap-2">
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPage(0);
-              }}
-              className="input text-xs w-auto py-1"
-            >
-              <option value={10}>10 / page</option>
-              <option value={25}>25 / page</option>
-              <option value={50}>50 / page</option>
-              <option value={100}>100 / page</option>
-            </select>
-            <button
-              onClick={() => setPage(Math.max(0, page - 1))}
-              disabled={page === 0}
-              className="p-1.5 rounded border border-default bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed text-xs"
-            >
-              Prev
-            </button>
-            <span className="text-xs text-tertiary">
-              {page + 1} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-              disabled={page >= totalPages - 1}
-              className="p-1.5 rounded border border-default bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed text-xs"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+      <Paginator
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={filtered.length}
+        setPage={setPage}
+        setPageSize={(s) => {
+          setPageSize(s);
+        }}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={closeDeleteDialog}>
@@ -443,23 +384,4 @@ export default function CertificatesList({
       </Dialog>
     </div>
   );
-}
-
-function groupByEvent(
-  items: CertificateWithEvent[]
-): Array<{ eventName: string | null; certificates: CertificateWithEvent[] }> {
-  const groups = new Map<string | null, CertificateWithEvent[]>();
-  for (const item of items) {
-    const key = item.events?.name ?? null;
-    const existing = groups.get(key);
-    if (existing) {
-      existing.push(item);
-    } else {
-      groups.set(key, [item]);
-    }
-  }
-  return Array.from(groups.entries()).map(([eventName, certs]) => ({
-    eventName,
-    certificates: certs,
-  }));
 }

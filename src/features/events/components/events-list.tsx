@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { deleteEventAction } from "@/features/events/server/event.actions";
+import { eventsApi } from "@/lib/api/events";
 import type { Event } from "@/types/event";
 import { PlusIcon, Trash2Icon, SearchIcon, InfoIcon } from "lucide-react";
 import {
@@ -95,14 +95,14 @@ export default function EventsList({
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    const result = await deleteEventAction(deleteTarget.id);
-    setDeleting(false);
-    if (result?.error) {
-      alert(result.error);
-    } else {
+    try {
+      await eventsApi.delete(deleteTarget.id);
       setDeleteTarget(null);
       handleRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete event");
     }
+    setDeleting(false);
   }
 
   return (

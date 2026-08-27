@@ -2,7 +2,7 @@
 ## Product Assembly Component Specification
 
 **Version:** 2.0
-**Status:** Draft
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`)
 **Audience:** Engineers, AI Development Agents
 
@@ -82,7 +82,8 @@ The refactored `e-cert` app is a **client-side SPA**:
 | `components/` | Components to keep / remove / adapt |
 | `environment/` | Env contract, Vercel rewrites |
 | `deployment/` | Deployment topology |
-| `testing/` | E2e test strategy (Playwright + MSW, single layer) |
+| `testing/` | E2e test strategy (Playwright + JSON Server, single layer) |
+| `local-dev/` | Local dev workflow, JSON Server mock |
 | `data-flow.md` | Data flow, service dependencies, security boundaries, tampering prevention |
 
 > Note: `auth/proxy.md` is removed. The proxy middleware is no longer needed for auth injection. CSRF and rate-limiting may still be handled at the edge, but identity is purely client-side.

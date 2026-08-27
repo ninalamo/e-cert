@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
-import { getTemplatesAction, deleteTemplateAction } from "@/features/templates/server/template.actions";
+import { templatesApi } from "@/lib/api/templates";
 import type { CertificateTemplate } from "@/types/template";
 import { AUTH_PROCESS_LABELS } from "./email-placeholder-field";
 import { extractCanvasDimensions, buildCertificateSrcDoc } from "@/lib/certificate-renderer";
@@ -38,8 +38,8 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
   const [deleting, setDeleting] = useState(false);
 
   const loadTemplates = useCallback(async () => {
-    const data = await getTemplatesAction(ORG_ID);
-    setTemplates(data);
+    const { data } = await templatesApi.list(ORG_ID);
+    setTemplates(data.map(t => ({ ...t, locked: t.is_locked })));
   }, []);
 
   const filtered = useMemo(() => {
@@ -80,14 +80,16 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    const result = await deleteTemplateAction(deleteTarget.id);
-    setDeleting(false);
-    if (result?.error) {
-      alert(result.error);
-    } else {
+    try {
+      await templatesApi.delete(deleteTarget.id);
       loadTemplates();
       setPage(0);
       setDeleteTarget(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete template";
+      alert(msg);
+    } finally {
+      setDeleting(false);
     }
   }
 

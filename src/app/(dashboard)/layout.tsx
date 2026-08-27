@@ -1,11 +1,16 @@
-import DashboardShell from "@/components/dashboard-shell";
-import { requireRole } from "@/lib/permissions";
+"use client";
 
-export default async function DashboardLayout({
+import { AuthGuard } from "@/lib/auth";
+import DashboardShell from "@/components/dashboard-shell";
+
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireRole(["admin", "staff"], "/my");
-  return <DashboardShell session={session}>{children}</DashboardShell>;
+  return (
+    <AuthGuard>
+      <DashboardShell>{children}</DashboardShell>
+    </AuthGuard>
+  );
 }

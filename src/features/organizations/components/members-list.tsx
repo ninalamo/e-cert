@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { getOrganizationMembersAction, removeMemberAction } from "../server/organization.actions";
-import { getCurrentUser } from "@/features/auth/server/auth.actions";
+import { organizationsApi } from "@/lib/api/organizations";
+import { parseAccessToken, getAccessToken } from "@/lib/auth";
 import { ORG_ID } from "@/lib/org";
 import { SkeletonTable } from "@/components/ui/skeleton";
 
@@ -22,23 +22,24 @@ export default function MembersList() {
 
   const loadMembers = useCallback(async () => {
     setLoading(true);
-    const [membersData, user] = await Promise.all([
-      getOrganizationMembersAction(ORG_ID),
-      getCurrentUser(),
+    const [membersResult] = await Promise.all([
+      organizationsApi.getMembers(ORG_ID),
     ]);
-    setMembers(membersData as Member[]);
-    setCurrentUserId(user?.id ?? null);
+    setMembers((membersResult.data ?? []) as Member[]);
+    const user = parseAccessToken(getAccessToken() ?? "");
+    setCurrentUserId(user?.sub ?? null);
     setLoaded(true);
     setLoading(false);
   }, []);
 
   async function handleRemove(memberId: string) {
     if (!confirm("Remove this member?")) return;
-    const result = await removeMemberAction(ORG_ID, memberId);
-    if (result?.error) {
-      alert(result.error);
-    } else {
+    try {
+      await organizationsApi.removeMember(ORG_ID, memberId);
       loadMembers();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to remove member";
+      alert(msg);
     }
   }
 

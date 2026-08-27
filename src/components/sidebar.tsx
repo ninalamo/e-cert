@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { hasAuthClaim } from "@/lib/permissions";
 import type { UserRole } from "@/types/organization";
 
-type NavChild = { label: string; href: string; roles?: UserRole[] };
+type NavChild = { label: string; href: string; roles?: UserRole[]; claim?: string };
 type NavItem = {
   label: string;
   href: string;
@@ -43,26 +44,12 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <DashboardIcon /> },
   { label: "Events", href: "/events", icon: <EventsIcon />, roles: ["admin", "staff"] },
   { label: "Certificates", href: "/certificates", icon: <CertIcon />, roles: ["admin", "staff"] },
-  {
-    label: "Templates",
-    href: "/templates",
-    icon: <TemplatesIcon />,
-    children: [
-      { label: "Certificates", href: "/templates/certificates" },
-      // HIDDEN: Email template management — system uses default email template
-      // { label: "Emails", href: "/templates/emails" },
-    ],
-    roles: ["admin", "staff"],
-  },
+  { label: "Templates", href: "/templates/certificates", icon: <TemplatesIcon />, roles: ["admin", "staff"] },
   {
     label: "Settings",
     href: "/settings",
     icon: <SettingsIcon />,
-    children: [
-      { label: "Users", href: "/users" },
-      { label: "Audit Log", href: "/audit", roles: ["admin"] },
-      { label: "Auth Emails (WIP)", href: "/templates/auth-emails", roles: ["admin"] },
-    ],
+    children: [{ label: "Users", href: "/users", claim: "users.view" }],
     roles: ["admin"],
   },
 ];
@@ -136,7 +123,14 @@ export default function Sidebar({ role }: { role: UserRole }) {
             );
           }
 
-          const children = item.children ?? [];
+          const children = (item.children ?? []).filter(
+            (c) =>
+              (!c.roles || c.roles.includes(role)) &&
+              (!c.claim || hasAuthClaim(c.claim))
+          );
+          if (item.label === "Settings" && children.length === 0) {
+            return null;
+          }
           const childActive = children.some((c) =>
             isActivePath(pathname, c.href)
           );
@@ -191,7 +185,6 @@ export default function Sidebar({ role }: { role: UserRole }) {
               {!collapsed && (item.label === "Settings" ? settingsOpen : certOpen) && (
                 <div className="mt-1 space-y-1 pl-3">
                   {children
-                    .filter((child) => !child.roles || child.roles.includes(role))
                     .map((child) => {
                     const active = isActivePath(pathname, child.href);
                     return (

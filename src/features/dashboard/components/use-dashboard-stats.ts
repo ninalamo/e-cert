@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ORG_ID } from "@/lib/org";
-import { getDashboardStatsAction } from "../server/dashboard.actions";
+import { dashboardApi } from "@/lib/api/dashboard";
 
 export interface DashboardStats {
   totalCertificates: number;
@@ -22,8 +22,15 @@ async function loadStats(): Promise<DashboardStats> {
   const now = Date.now();
   if (cachedStats && now - cacheTime < CACHE_TTL_MS) return cachedStats;
   if (!inflight) {
-    inflight = getDashboardStatsAction(ORG_ID)
-      .then((data) => {
+    inflight = dashboardApi.getStats(ORG_ID)
+      .then((res) => {
+        const raw = res?.data ?? res;
+        const data: DashboardStats = {
+          totalCertificates: (raw as { total_certificates?: number })?.total_certificates ?? 0,
+          activeCertificates: 0,
+          revokedCertificates: 0,
+          totalEmails: 0,
+        };
         cachedStats = data;
         cacheTime = Date.now();
         inflight = null;

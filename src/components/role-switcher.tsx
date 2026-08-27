@@ -1,7 +1,11 @@
 "use client";
 
-import { setImpersonateUser } from "@/features/demo/server/demo.actions";
-import type { ManagedUser } from "@/features/users/server/user.service";
+interface ManagedUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+}
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -19,8 +23,8 @@ export default function RoleSwitcher({
 }) {
   const current = participants.find((p) => p.id === currentUser?.id) ?? null;
 
-  async function switchUser(userId: string | null) {
-    await setImpersonateUser(userId);
+  async function switchUser() {
+    // Demo mode stub — impersonation not available
     window.location.reload();
   }
 
@@ -48,7 +52,7 @@ export default function RoleSwitcher({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              switchUser(user.id);
+              switchUser();
             }}
           >
             <span className="flex flex-col">
@@ -67,7 +71,7 @@ export default function RoleSwitcher({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                switchUser(null);
+                switchUser();
               }}
             >
               <span className="text-sm text-tertiary">Clear impersonation</span>

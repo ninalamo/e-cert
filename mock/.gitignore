@@ -1,0 +1,4 @@
+# Ignore runtime mutations to seed data
+!db.json
+# Ignore auth session store (runtime-only)
+mock-auth-sessions.json

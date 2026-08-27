@@ -2,7 +2,7 @@
 ## Product Assembly Component Specification
 
 **Version:** 2.0
-**Status:** Draft
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) — Data Module
 **Audience:** Engineers, AI Development Agents
 
@@ -29,7 +29,7 @@ This is the **primary data layer**. Every data operation goes through these modu
 - Response envelope handling (`{ data | data+meta | status/error }`)
 - Error normalization (401 → refresh, 403 → error, 4xx/5xx → toast)
 - Auth header injection (`Authorization: Bearer <in-memory token>`)
-- Multipart upload support (attendee CSV import)
+- Multipart upload support (certificate file uploads)
 - Binary stream handling (PDF download)
 - Pagination (`limit`/`offset`, `meta.has_more`)
 
@@ -47,7 +47,7 @@ This is the **primary data layer**. Every data operation goes through these modu
 src/lib/api/
 ├── client.ts              # Base HTTP client (fetch wrapper, auth, error handling, refresh)
 ├── events.ts              # Event CRUD + stats + template clone
-├── attendees.ts           # Attendee CRUD + CSV import + file data
+├── attendees.ts           # Attendee CRUD + JSON import + file data
 ├── templates.ts           # Template CRUD (certificate + email types)
 ├── certificates.ts        # Certificate issue + bulk + upload + PDF + revoke + email
 ├── dashboard.ts           # Stats + recent activity
@@ -177,7 +177,8 @@ export const eventsApi = {
 | 401 handling | Silent refresh → retry once; then throw for auth guard |
 | 403 handling | Genuine lack of permission; show error, do not retry |
 | PDF streams | Binary `application/pdf`; returned as Blob |
-| Uploads | `multipart/form-data` (not JSON array) |
+| Certificate file uploads | `multipart/form-data` |
+| Attendee bulk import | JSON payload `{ attendees: [...] }` to `POST /api/v1/events/{id}/attendees/import` (CSV parsing is a front-end concern) |
 | Bulk results | Synchronous `{ success, failed, errors }` |
 
 ---

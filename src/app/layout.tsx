@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { SessionInitializer } from "@/components/session-initializer";
 import "./globals.css";
 
 const inter = Inter({
@@ -54,6 +55,7 @@ export default function RootLayout({
             __html: `(function(){try{var p=location.pathname;if(p==="/login"||p==="/register"||p.startsWith("/change-password"))return;var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`
           }}
         />
+        <SessionInitializer />
         {children}
         <Toaster />
       </body>

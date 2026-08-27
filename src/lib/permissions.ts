@@ -1,9 +1,5 @@
-import "server-only";
-import { headers, cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import { ORG_ID } from "@/lib/org";
-import { getSession } from "@/lib/auth/session";
+import { parseAccessToken } from "@/lib/auth/jwt";
+import { getAccessToken } from "@/lib/auth/token-store";
 import type { UserRole } from "@/types/organization";
 
 export type { UserRole };
@@ -15,103 +11,61 @@ export interface SessionUser {
   role: UserRole;
 }
 
-/**
- * Default role assigned to newly registered users in the single-org model.
- */
 export const DEFAULT_ROLE: UserRole = "participant";
 
-/**
- * Resolve the current authenticated user and their role.
- *
- * 1. Fast path – proxy-injected headers (set by src/proxy.ts).
- * 2. Fallback – read JWT cookie directly and look up role from DB.
- *
- * Returns null if not authenticated.
- */
-export async function getCurrentSession(): Promise<SessionUser | null> {
-  const hdrs = await headers();
-  const proxyUserId = hdrs.get("x-user-id");
-  const proxyUserEmail = hdrs.get("x-user-email");
-  const proxyUserName = hdrs.get("x-user-name");
-  const proxyUserRole = hdrs.get("x-user-role");
+type Level = "read" | "write" | "admin";
 
-  if (proxyUserId) {
-    return applyDemoImpersonation({
-      id: proxyUserId,
-      email: proxyUserEmail || null,
-      name: proxyUserName || null,
-      role: (proxyUserRole as UserRole) ?? DEFAULT_ROLE,
-    });
-  }
-
-  // Fallback: read the session cookie directly (for server actions where
-  // proxy headers may not be forwarded).
-  const jwt = await getSession();
-  if (!jwt) return null;
-
-  const db = supabaseAdmin;
-  if (!db) return null;
-
-  const { data: membership } = await db
-    .from("user_memberships")
-    .select("role")
-    .eq("user_id", jwt.sub)
-    .eq("organization_id", ORG_ID)
-    .single();
-
-  return applyDemoImpersonation({
-    id: jwt.sub,
-    email: jwt.email || null,
-    name: jwt.name,
-    role: (membership?.role as UserRole) ?? DEFAULT_ROLE,
-  });
+function hasLevel(permissions: string[], level: Level): boolean {
+  return permissions.some((p) => p.startsWith(`${level}:`));
 }
 
-/**
- * Demo mode user impersonation. When DEMO=true, checks for an
- * impersonate_user cookie and replaces the session with the
- * impersonated user's identity and role.
- */
-async function applyDemoImpersonation(session: SessionUser): Promise<SessionUser> {
-  if (process.env.DEMO !== "true") return session;
+export function resolveRoleFromPermissions(permissions: string[]): UserRole {
+  if (hasLevel(permissions, "admin")) return "admin";
+  if (hasLevel(permissions, "write")) return "staff";
+  if (hasLevel(permissions, "read")) return "participant";
+  return "participant";
+}
 
-  const store = await cookies();
-  const userId = store.get("impersonate_user")?.value;
-  if (!userId) return session;
-
-  const db = supabaseAdmin;
-  if (!db) return session;
-
-  const { data: user } = await db
-    .from("users")
-    .select("id, email, name")
-    .eq("id", userId)
-    .single();
-
-  if (!user) return session;
-
-  const { data: membership } = await db
-    .from("user_memberships")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("organization_id", ORG_ID)
-    .single();
-
+export function getCurrentSession(): SessionUser | null {
+  const token = getAccessToken();
+  if (!token) return null;
+  const payload = parseAccessToken(token);
+  if (!payload) return null;
   return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: (membership?.role as UserRole) ?? DEFAULT_ROLE,
+    id: payload.sub,
+    email: payload.email || null,
+    name: payload.name,
+    role: resolveRoleFromPermissions(payload.permissions),
   };
 }
 
-/**
- * Capability checks derived from the 4-role model:
- * - admin:   full access, including audit trail and delete
- * - staff:   all except audit trail and delete
- * - participant: own profile + own certificates only
- * - guest:   unauthenticated; verify/search landing page only
- */
+export function getCurrentTenantId(): string | null {
+  const token = getAccessToken();
+  if (!token) return null;
+  const payload = parseAccessToken(token);
+  return payload?.tenant?.id ?? null;
+}
+
+export function getCurrentGroups(): string[] {
+  const token = getAccessToken();
+  if (!token) return [];
+  return parseAccessToken(token)?.groups ?? [];
+}
+
+export function hasAuthClaim(key: string): boolean {
+  const token = getAccessToken();
+  if (!token) return false;
+  return parseAccessToken(token)?.permissions?.includes(key) ?? false;
+}
+
+export function canViewUsers(): boolean {
+  return hasAuthClaim("users.view");
+}
+
+export function canManageUserStatus(): boolean {
+  return hasAuthClaim("users.manage");
+}
+
 export function canManageCertificates(role: UserRole): boolean {
   return role === "admin" || role === "staff";
 }
@@ -140,41 +94,10 @@ export function canManageUsers(role: UserRole): boolean {
   return role === "admin";
 }
 
-/**
- * A participant may only see certificates issued to their own email.
- */
 export function canViewAllCertificates(role: UserRole): boolean {
   return role === "admin" || role === "staff";
 }
 
-/**
- * Guard for server actions / pages. Redirects guests to /login.
- * Returns the session (user + role) for callers that need it.
- */
-export async function requireSession(): Promise<SessionUser> {
-  const session = await getCurrentSession();
-  if (!session) redirect("/login");
-  return session;
-}
-
-/**
- * Guard that requires at least one of the given roles, otherwise redirects
- * to /dashboard (or /login if unauthenticated).
- */
-export async function requireRole(
-  roles: UserRole[],
-  redirectTo = "/dashboard"
-): Promise<SessionUser> {
-  const session = await requireSession();
-  if (!roles.includes(session.role)) redirect(redirectTo);
-  return session;
-}
-
-/**
- * Returns the home path for the given role.
- * - participant → /my
- * - admin/staff → /dashboard
- */
 export function getHomePathForRole(role: UserRole): string {
   return role === "participant" ? "/my" : "/dashboard";
 }

@@ -2,7 +2,7 @@
 ## Product Assembly Component Specification
 
 **Version:** 2.0
-**Status:** Draft
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) — Auth Module
 **Audience:** Engineers, AI Development Agents
 
@@ -46,7 +46,7 @@ It answers:
    a. Extract the payload string
    b. Clear the fragment via history.replaceState (prevent re-processing)
    c. POST { payload } to /api/v1/auth/callback (same-origin → Cert API via Vercel rewrite)
-   d. Cert decrypts + validates (exp, tenant.slug=loa)
+   d. Cert decrypts + validates (exp, tenant.slug=loa-e-cert)
    e. Cert sets loa_cert_refresh cookie, returns { access_token, expires_in }
    f. e-cert stores access token in memory (no cookie)
    g. Redirect to intended destination (or /dashboard)

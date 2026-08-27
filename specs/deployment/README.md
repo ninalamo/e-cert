@@ -2,7 +2,7 @@
 ## Product Assembly Component Specification
 
 **Version:** 2.0
-**Status:** Draft
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) — Infrastructure Module
 **Audience:** Engineers, AI Development Agents
 
@@ -65,7 +65,7 @@ No `session` cookie. No httpOnly access token cookie. In-memory only.
 | `NEXT_PUBLIC_BASE_URL` | `https://e-cert.vercel.app` |
 | `NEXT_PUBLIC_CERT_API_BASE_URL` | Used for server-to-server if needed; browser uses rewrite |
 | `NEXT_PUBLIC_AUTH_BASE_URL` | `https://auth.lyceumalabang.edu.ph` (SSO redirect) |
-| `NEXT_PUBLIC_CERT_TENANT_SLUG` | `loa` (for client-side JWT tenant check) |
+| `NEXT_PUBLIC_CERT_TENANT_SLUG` | `loa-e-cert` (for client-side JWT tenant check) |
 
 No `JWT_SECRET` needed (client doesn't verify signatures). No Supabase vars. No SMTP vars.
 

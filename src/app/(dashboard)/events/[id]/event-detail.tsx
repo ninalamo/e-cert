@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  getEventWithStatsAction,
-} from "@/features/events/server/event.actions";
-import { getTemplatesAction, getEmailTemplatesWithLockStateAction } from "@/features/templates/server/template.actions";
+import { eventsApi } from "@/lib/api/events";
+import { templatesApi } from "@/lib/api/templates";
+import { ORG_ID } from "@/lib/org";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonEventDetail } from "@/components/ui/skeleton";
@@ -19,6 +18,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { statusConfig } from "./components/status-change-dialog";
+import { NotFoundState } from "@/components/not-found-state";
 import StatusChangeDialog from "./components/status-change-dialog";
 import DeleteDialog from "./components/delete-dialog";
 import EventFieldsCard from "./components/event-fields-card";
@@ -71,36 +71,58 @@ export default function EventDetail({
   useEffect(() => {
     if (initialData) return;
     let active = true;
-    getEventWithStatsAction(eventId).then((result) => {
-      if (active) {
-        setData(result);
+    Promise.all([
+      eventsApi.get(eventId),
+      eventsApi.getStats(eventId).catch(() => null),
+    ])
+      .then(([result, statsResult]) => {
+        if (!active) return;
+        const event = result.data ?? null;
+        if (!event) {
+          setData(null);
+        } else {
+          setData({
+            event,
+            template: null,
+            emailTemplate: null,
+            stats: statsResult?.data
+              ? {
+                  total: statsResult.data.certificates.issued,
+                  active: statsResult.data.certificates.active,
+                  revoked: statsResult.data.certificates.revoked,
+                }
+              : undefined,
+          });
+        }
         setLoading(false);
-      }
-    });
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
     return () => { active = false; };
   }, [eventId, initialData]);
 
   useEffect(() => {
     if (initialTemplates.length > 0) return;
-    const orgId = data?.event.organization_id;
+    const orgId = data?.event?.organization_id ?? ORG_ID;
     if (!orgId) return;
     let active = true;
-    getTemplatesAction(orgId)
-      .then((t) => { if (active) setTemplates(t); })
+    templatesApi.list(orgId)
+      .then((t) => { if (active) setTemplates(t.data ?? []); })
       .catch(console.error);
     return () => { active = false; };
-  }, [data?.event.organization_id, initialTemplates.length]);
+  }, [data?.event?.organization_id, initialTemplates.length]);
 
   useEffect(() => {
     if (initialEmailTemplates.length > 0) return;
-    const orgId = data?.event.organization_id;
+    const orgId = data?.event?.organization_id ?? ORG_ID;
     if (!orgId) return;
     let active = true;
-    getEmailTemplatesWithLockStateAction(orgId)
-      .then((t) => { if (active) setEmailTemplates(t); })
+    templatesApi.listEmailWithLock(orgId)
+      .then((t) => { if (active) setEmailTemplates(t.data ?? []); })
       .catch(console.error);
     return () => { active = false; };
-  }, [data?.event.organization_id, initialEmailTemplates.length]);
+  }, [data?.event?.organization_id, initialEmailTemplates.length]);
 
   function switchTab(tab: "details" | "attendees") {
     setActiveTab(tab);
@@ -113,19 +135,32 @@ export default function EventDetail({
   async function handleNameSave() {
     if (!data || !nameValue.trim()) return;
     setNameSaving(true);
-    const { updateEventAction } = await import("@/features/events/server/event.actions");
-    const result = await updateEventAction(eventId, { name: nameValue.trim() });
-    if (!result?.error && result?.event) {
-      setData((prev) => prev ? { ...prev, event: result.event! } : prev);
+    const { data: result } = await eventsApi.update(eventId, { name: nameValue.trim() });
+    if (result) {
+      setData((prev) => prev ? { ...prev, event: result } : prev);
     }
     setNameSaving(false);
     setEditName(false);
   }
 
   if (loading) return <SkeletonEventDetail activeTab={initialTab} />;
-  if (!data) return <p className="text-red-600 text-sm">Event not found</p>;
+  if (!data)
+    return (
+      <NotFoundState
+        title="Event not found"
+        description="It may have been deleted."
+        backHref="/events"
+        backLabel="Back to Events"
+      />
+    );
 
-  const { event, template, emailTemplate } = data;
+  const { event } = data;
+  const template = data.template
+    ?? templates.find((t) => t.id === event.template_id)
+    ?? null;
+  const emailTemplate = data.emailTemplate
+    ?? emailTemplates.find((t) => t.id === event.email_template_id)
+    ?? null;
   const config = statusConfig[event.status] ?? { label: event.status, badgeClass: "status-badge status-badge--draft", description: "" };
   const showArchiveTip = event.status === "active" && isExpired(event.valid_until);
   const canManageAttendees = event.status === "draft" || event.status === "active";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cloneTemplateForEventAction, updateEventAction } from "@/features/events/server/event.actions";
+import { eventsApi } from "@/lib/api/events";
 import type { Event } from "@/types/event";
 import { InfoIcon } from "lucide-react";
 import {
@@ -152,29 +152,27 @@ export default function StatusChangeDialog({
     setError(null);
     try {
       if (target.target === "active" && templateMode === "copy" && event.template_id) {
-        const cloned = await cloneTemplateForEventAction(
-          event.template_id,
-          event.id,
-          event.name
-        );
-        if (cloned.error || !cloned.templateId) {
-          setError(cloned.error ?? "Failed to clone template");
+        const { data: cloned } = await eventsApi.cloneTemplate(event.template_id);
+        if (!cloned?.template) {
+          setError("Failed to clone template");
           return;
         }
-        const assign = await updateEventAction(event.id, { template_id: cloned.templateId });
-        if (assign.error || !assign.event) {
-          setError(assign.error ?? "Failed to assign cloned template");
+        const { data: assign } = await eventsApi.update(event.id, { template_id: cloned.template.id });
+        if (!assign) {
+          setError("Failed to assign cloned template");
           return;
         }
       }
 
-      const result = await updateEventAction(event.id, { status: target.target });
-      if (result?.error || !result?.event) {
-        setError(result?.error ?? "Failed to update event status");
+      const { data: result } = await eventsApi.update(event.id, { status: target.target });
+      if (!result) {
+        setError("Failed to update event status");
         return;
       }
-      onStatusChanged(result.event);
+      onStatusChanged(result);
       handleOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update event status");
     } finally {
       setBusy(false);
     }

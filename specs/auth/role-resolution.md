@@ -2,7 +2,7 @@
 ## Product Assembly Component Specification
 
 **Version:** 2.0
-**Status:** Draft
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) — Auth Module
 **Audience:** Engineers, AI Development Agents
 
@@ -82,9 +82,9 @@ Matches the existing `UserRole` type in `src/types/organization.ts`.
 
 | Seed group | Grants | Resolved role |
 |------------|--------|---------------|
-| `loa-cert-admin` | `admin` on every Cert path | `admin` |
-| `loa-cert-staff` | `write` on management paths, `read` on read paths | `staff` |
-| `loa-cert-participant` | `read` on `/me/certificates*` only | `participant` |
+| `cert-admin` | `admin` on every Cert path | `admin` |
+| `cert-staff` | `write` on management paths, `read` on read paths | `staff` |
+| `cert-user` | `read` on `/me/certificates*` only | `participant` |
 | (unassigned) | No `<level>:<path>` entries | `guest` |
 
 ---

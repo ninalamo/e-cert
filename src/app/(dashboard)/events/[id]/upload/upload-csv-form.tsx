@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
-import { bulkAddAttendeesAction } from "@/features/events/server/attendee.actions";
+import { attendeesApi } from "@/lib/api/attendees";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import type { AttendeeMetadata } from "@/types/event-attendee";
@@ -208,19 +208,18 @@ export default function UploadCsvForm({
       return { name: r.name, email: r.email, metadata };
     });
 
-    const result = await bulkAddAttendeesAction({
-      event_id: eventId,
+    const { results } = await attendeesApi.bulkAdd(eventId, {
       organization_id: ORG_ID,
       attendees,
     });
 
     const submitResults: SubmitResult[] = attendees.map((a) => {
-      const err = result.errors.find((e) => e.email === a.email);
+      const item = results?.find((r) => r.email === a.email);
       return {
         name: a.name,
         email: a.email,
-        success: !err,
-        error: err?.error,
+        success: !item?.error,
+        error: item?.error,
       };
     });
 

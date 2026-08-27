@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ORG_NAME } from "@/lib/org";
+import { hasAuthClaim } from "@/lib/permissions";
 import type { UserRole } from "@/types/organization";
 
-type NavChild = { label: string; href: string; roles?: UserRole[] };
+type NavChild = { label: string; href: string; roles?: UserRole[]; claim?: string };
 type NavItem = {
   label: string;
   href: string;
@@ -57,7 +58,14 @@ function NavLinks({
           );
         }
 
-        const children = item.children ?? [];
+        const children = (item.children ?? []).filter(
+          (c) =>
+            (!c.roles || !role || c.roles.includes(role)) &&
+            (!c.claim || hasAuthClaim(c.claim))
+        );
+        if (item.label === "Settings" && children.length === 0) {
+          return null;
+        }
         const childActive = children.some((c) => isActivePath(pathname, c.href));
         const parentActive =
           isActivePath(pathname, item.href, true) || childActive;
@@ -95,7 +103,6 @@ function NavLinks({
             {(item.label === "Settings" ? settingsOpen : certOpen) && (
               <div className="mt-1 space-y-1 pl-3">
                 {children
-                  .filter((child) => !child.roles || !role || child.roles.includes(role))
                   .map((child) => {
                   const active = isActivePath(pathname, child.href);
                   return (
@@ -136,27 +143,13 @@ export default function MobileNav({
 
   const adminItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard" },
-    { label: "Profile", href: "/my/profile" },
     { label: "Events", href: "/events", roles: ["admin", "staff"] },
     { label: "Certificates", href: "/certificates", roles: ["admin", "staff"] },
-    {
-      label: "Templates",
-      href: "/templates",
-      children: [
-        { label: "Certificates", href: "/templates/certificates" },
-        // HIDDEN: Email template management — system uses default email template
-        // { label: "Emails", href: "/templates/emails" },
-      ],
-      roles: ["admin", "staff"],
-    },
+    { label: "Templates", href: "/templates/certificates", roles: ["admin", "staff"] },
     {
       label: "Settings",
       href: "/settings",
-      children: [
-        { label: "Users", href: "/users" },
-        { label: "Audit Log", href: "/audit", roles: ["admin"] },
-        { label: "Auth Emails", href: "/templates/auth-emails", roles: ["admin"] },
-      ],
+      children: [{ label: "Users", href: "/users", claim: "users.view" }],
       roles: ["admin"],
     },
   ];
@@ -164,7 +157,6 @@ export default function MobileNav({
   const participantItems: NavItem[] = [
     { label: "My Dashboard", href: "/my" },
     { label: "My Certificates", href: "/my/certificates" },
-    { label: "Profile", href: "/my/profile" },
   ];
 
   const items =
@@ -251,19 +243,6 @@ export default function MobileNav({
                 onNavigate={() => setOpen(false)}
                 role={role}
               />
-              <div className="mt-4 border-t border-default pt-4">
-                <Link
-                  href="/faq"
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
-                    isActivePath(pathname, "/faq")
-                      ? "bg-brand-600 text-black font-medium"
-                      : "text-secondary hover:bg-surface-hover"
-                  }`}
-                >
-                  <span>FAQ</span>
-                </Link>
-              </div>
             </div>
           </div>
         </div>

@@ -4,15 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import {
-  getEmailTemplateAction,
-  updateTemplateAction,
-  isEmailTemplateLockedAction,
-} from "@/features/templates/server/template.actions";
+import { templatesApi } from "@/lib/api/templates";
 
 const TemplateForm = dynamic(() => import("@/features/templates/components/email-template-form-v2"), { ssr: false });
 import type { CertificateTemplate } from "@/types/template";
 import { SkeletonForm } from "@/components/ui/skeleton";
+import { NotFoundState } from "@/components/not-found-state";
 import { useEmailPreview } from "@/features/templates/hooks/use-email-preview";
 import {
   Breadcrumb,
@@ -34,13 +31,16 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const data = await getEmailTemplateAction(id);
-      if (!active) return;
-      setTemplate(data);
-      const isLocked = await isEmailTemplateLockedAction(id);
-      if (!active) return;
-      setLocked(isLocked);
-      setLoading(false);
+      try {
+        const { data: templateData } = await templatesApi.get(id);
+        if (!active) return;
+        setTemplate(templateData);
+        setLocked(templateData?.is_locked ?? false);
+      } catch {
+        if (active) setTemplate(null);
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
     return () => { active = false; };
   }, [id]);
@@ -50,7 +50,14 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
   }
 
   if (!template) {
-    return <p className="text-red-600">Email template not found.</p>;
+    return (
+      <NotFoundState
+        title="Email template not found"
+        description="It may have been deleted."
+        backHref="/templates/emails"
+        backLabel="Back to Email Templates"
+      />
+    );
   }
 
   return (
@@ -107,7 +114,13 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
         onPreview={onPreview}
         onSubmit={async (data) => {
           if (locked) return { error: "Template is locked." };
-          return await updateTemplateAction(id, data);
+          try {
+            await templatesApi.update(id, data);
+            return {};
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Failed to update template";
+            return { error: msg };
+          }
         }}
       />
 
