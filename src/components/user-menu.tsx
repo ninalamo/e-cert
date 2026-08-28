@@ -4,6 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useTransition } from "react";
 import { clearAccessToken } from "@/lib/auth";
+
+const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_BASE_URL ?? "https://auth.lyceumalabang.edu.ph";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -83,7 +85,7 @@ export default function UserMenu({
             e.stopPropagation();
             startTransition(async () => {
               clearAccessToken();
-              window.location.href = "/";
+              window.location.href = `${AUTH_BASE}/sso/logout?redirect=${encodeURIComponent(window.location.origin)}`;
             });
           }}
         >
