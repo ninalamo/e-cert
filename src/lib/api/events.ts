@@ -1,4 +1,6 @@
 import { api } from "./client";
+import { templatesApi } from "./templates";
+import { ORG_ID } from "@/lib/org";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import type { ApiResponse, PaginationMeta } from "./types";
@@ -71,13 +73,35 @@ export const eventsApi = {
 
   delete: (id: string) => api.delete(`/events/${id}`),
 
-  cloneTemplate: (id: string) =>
-    api.post<ApiResponse<{ template: CertificateTemplate }>>(
-      `/events/${id}/clone-template`
-    ),
+  cloneTemplate: async (sourceTemplateId: string) => {
+    const { data: source } = await templatesApi.get(sourceTemplateId);
+    if (!source) throw { status: "error", message: "Source template not found" };
 
-  cloneEmailTemplate: (id: string) =>
-    api.post<ApiResponse<{ template: CertificateTemplate }>>(
-      `/events/${id}/clone-email-template`
-    ),
+    const { data: cloned } = await templatesApi.create({
+      organization_id: ORG_ID,
+      name: `${source.name} (copy)`,
+      description: source.description ?? undefined,
+      html_content: source.html_content,
+      css_content: source.css_content ?? undefined,
+    });
+    if (!cloned) throw { status: "error", message: "Failed to create template clone" };
+
+    return { data: { template: cloned } } as ApiResponse<{ template: CertificateTemplate }>;
+  },
+
+  cloneEmailTemplate: async (sourceTemplateId: string) => {
+    const { data: source } = await templatesApi.get(sourceTemplateId);
+    if (!source) throw { status: "error", message: "Source template not found" };
+
+    const { data: cloned } = await templatesApi.createEmail({
+      organization_id: ORG_ID,
+      name: `${source.name} (copy)`,
+      description: source.description ?? undefined,
+      html_content: source.html_content,
+      css_content: source.css_content ?? undefined,
+    });
+    if (!cloned) throw { status: "error", message: "Failed to create email template clone" };
+
+    return { data: { template: cloned } } as ApiResponse<{ template: CertificateTemplate }>;
+  },
 };
