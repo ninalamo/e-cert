@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import type { Event } from "@/types/event";
 import { PlusIcon, UploadIcon, Loader2Icon, InfoIcon, XIcon, DownloadIcon, CheckCircle2Icon, XCircleIcon, ShieldIcon } from "lucide-react";
+import { getAccessToken, refreshAccessToken } from "@/lib/auth";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,26 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+
+async function authFetch(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = {
+    ...(init.headers as Record<string, string>),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  let res = await fetch(input, { ...init, headers });
+
+  if (res.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      headers["Authorization"] = `Bearer ${getAccessToken()}`;
+      res = await fetch(input, { ...init, headers });
+    }
+  }
+
+  return res;
+}
 
 const AttendeesManager = dynamic(
   () => import("@/features/events/components/attendees-manager"),
@@ -69,7 +90,7 @@ export default function AttendeesTab({
 
   useEffect(() => {
     let cancelled = false;
-    void fetch(`/api/events/${event.id}/revoke-expired`)
+    void authFetch(`/api/events/${event.id}/revoke-expired`)
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
@@ -97,7 +118,7 @@ export default function AttendeesTab({
     setIssueBusy(true);
     setIssueSummary(null);
     try {
-      const res = await fetch(`/api/events/${event.id}/bulk-issue`, {
+      const res = await authFetch(`/api/events/${event.id}/bulk-issue`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ attendeeIds: selectedAttendeeIds, sendEmail: true }),
@@ -129,7 +150,7 @@ export default function AttendeesTab({
   async function handleRevokeExpired() {
     setRevokeBusy(true);
     try {
-      const res = await fetch(`/api/events/${event.id}/revoke-expired`, {
+      const res = await authFetch(`/api/events/${event.id}/revoke-expired`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -158,7 +179,7 @@ export default function AttendeesTab({
   async function handleReissueSelected() {
     setIssueBusy(true);
     try {
-      const res = await fetch(`/api/events/${event.id}/reissue`, {
+      const res = await authFetch(`/api/events/${event.id}/reissue`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ attendeeIds: selectedAttendeeIds }),
