@@ -117,6 +117,7 @@ export default function NewEventForm({
           setLoading(false);
           return;
         }
+        await eventsApi.update(result.id, { template_id: cloned.template.id });
       } else if (selectedTemplate && !cloneTemplate) {
         await eventsApi.update(result.id, { template_id: selectedTemplate });
       }
