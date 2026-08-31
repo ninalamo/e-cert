@@ -28,7 +28,6 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      { source: "/api/v1/auth/:path*", destination: `${AUTH_BASE}/api/v1/auth/:path*` },
       { source: "/api/events/:path*", destination: `${CERT_BASE}/api/v1/events/:path*` },
       { source: "/api/v1/:path*", destination: `${CERT_BASE}/api/v1/:path*` },
     ];
