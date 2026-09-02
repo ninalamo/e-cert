@@ -75,6 +75,7 @@ async function request<T>(
 
   const token = getAccessToken();
   const headers: Record<string, string> = {
+    Accept: "application/json",
     ...(options.headers as Record<string, string>),
   };
 
@@ -94,7 +95,11 @@ async function request<T>(
 
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+      redirect: "manual",
+    });
   } catch (err) {
     if (isLocalhost) {
       console.error(
@@ -105,6 +110,15 @@ async function request<T>(
     throw err;
   }
 
+  if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
+    const location = res.headers.get("location") ?? "unknown";
+    const msg = `Request was redirected (${res.status}) to ${location}`;
+    if (isLocalhost) {
+      console.error(`[API] ${method} ${BASE_URL}${path} → ${msg}`);
+    }
+    throw { status: "redirect", message: msg, status_code: res.status, location };
+  }
+
   await logApi(method, path, startedAt, res);
 
   if (res.status === 401) {
@@ -112,8 +126,16 @@ async function request<T>(
     if (refreshed) {
       headers["Authorization"] = `Bearer ${getAccessToken()}`;
       const retryStartedAt = performance.now();
-      const retry = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+      const retry = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        headers,
+        redirect: "manual",
+      });
       await logApi(method, path, retryStartedAt, retry, "after refresh");
+      if (retry.type === "opaqueredirect" || (retry.status >= 300 && retry.status < 400)) {
+        const location = retry.headers.get("location") ?? "unknown";
+        throw { status: "redirect", message: `Redirect after refresh (${retry.status}) to ${location}`, status_code: retry.status, location };
+      }
       if (!retry.ok) {
         const retryErr = await retry
           .json()
