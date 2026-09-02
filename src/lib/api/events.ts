@@ -81,7 +81,7 @@ export const eventsApi = {
       organization_id: ORG_ID,
       name: `${source.name} (copy)`,
       description: source.description ?? undefined,
-      type: source.type ?? "certificate",
+      type: (source.type === "certificate" || source.type === "email") ? source.type : "certificate",
       html_content: source.html_content,
       css_content: source.css_content ?? undefined,
     });
