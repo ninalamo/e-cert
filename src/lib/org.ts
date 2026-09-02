@@ -1,3 +1,3 @@
-export const ORG_ID = "d4444444-4444-4444-4444-444444444444";
-export const ORG_NAME = "Lyceum Of Alabang";
-export const ORG_SLUG = "lyceum-of-alabang";
+export const ORG_ID = "00000000-0000-0000-0000-000000000001";
+export const ORG_NAME = "LOA e-Cert";
+export const ORG_SLUG = "loa-e-cert";

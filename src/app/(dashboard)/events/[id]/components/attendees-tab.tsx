@@ -24,13 +24,20 @@ async function authFetch(input: RequestInfo, init: RequestInit = {}): Promise<Re
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  let res = await fetch(input, { ...init, headers });
+  let res = await fetch(input, { ...init, headers, redirect: "manual" });
+
+  if (res.type === "opaqueredirect") {
+    throw new Error("Request was redirected (302). Please check server configuration.");
+  }
 
   if (res.status === 401) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       headers["Authorization"] = `Bearer ${getAccessToken()}`;
-      res = await fetch(input, { ...init, headers });
+      res = await fetch(input, { ...init, headers, redirect: "manual" });
+      if (res.type === "opaqueredirect") {
+        throw new Error("Request was redirected after token refresh. Please check server configuration.");
+      }
     }
   }
 
@@ -121,7 +128,7 @@ export default function AttendeesTab({
       const res = await authFetch(`/api/events/${event.id}/bulk-issue`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendeeIds: selectedAttendeeIds, sendEmail: true }),
+        body: JSON.stringify({ attendee_ids: selectedAttendeeIds, send_email: true }),
       });
 
       if (!res.ok) {

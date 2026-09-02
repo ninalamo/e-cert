@@ -51,9 +51,14 @@ export const templatesApi = {
     organization_id: string;
     name: string;
     description?: string;
+    type?: "certificate" | "email";
     html_content: string;
     css_content?: string;
-  }) => api.post<ApiResponse<CertificateTemplate>>("/templates", data),
+  }) =>
+    api.post<ApiResponse<CertificateTemplate>>("/templates", {
+      ...data,
+      type: data.type ?? "certificate",
+    }),
 
   createEmail: (data: {
     organization_id: string;

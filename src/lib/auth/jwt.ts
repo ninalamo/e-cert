@@ -10,7 +10,9 @@ export interface JwtPayload {
 
 export function parseAccessToken(token: string): JwtPayload | null {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    const raw = token.split(".")[1];
+    const normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(normalized));
     if (payload.type !== "access") return null;
     if (payload.exp * 1000 < Date.now()) return null;
     if (payload.tenant?.slug !== process.env.NEXT_PUBLIC_CERT_TENANT_SLUG) return null;
