@@ -4,6 +4,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import {
   getAccessToken,
+  clearRefreshToken,
   refreshAccessToken,
 } from "./token-store";
 import { parseAccessToken } from "./jwt";
@@ -41,6 +42,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const redirectToLogin = () => {
       if (cancelled || redirectingRef.current) return;
       redirectingRef.current = true;
+      clearRefreshToken();
       const redirect = encodeURIComponent(window.location.origin);
       router.replace(`${AUTH_LOGIN_URL}?redirect=${redirect}`);
     };

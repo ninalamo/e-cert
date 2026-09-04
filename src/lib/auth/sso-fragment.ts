@@ -1,4 +1,4 @@
-import { setAccessToken } from "./token-store";
+import { setAccessToken, setRefreshToken } from "./token-store";
 import { parseAccessToken } from "./jwt";
 import { resolveRoleFromPermissions, getHomePathForRole } from "@/lib/permissions";
 
@@ -29,10 +29,14 @@ export async function consumeSSOPayload(): Promise<boolean> {
   if (!res.ok) return false;
 
   const json = await res.json();
-  const accessToken = json.access_token || json.data?.access_token;
+  const data = json.data ?? json;
+  const accessToken = data.access_token;
   if (!accessToken) return false;
 
   setAccessToken(accessToken);
+  if (data.refresh_token) {
+    setRefreshToken(data.refresh_token);
+  }
 
   history.replaceState(null, "", window.location.pathname + window.location.search);
 

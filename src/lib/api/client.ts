@@ -1,4 +1,4 @@
-import { clearAccessToken, getAccessToken, refreshAccessToken } from "@/lib/auth";
+import { clearAccessToken, clearRefreshToken, getAccessToken, refreshAccessToken } from "@/lib/auth";
 
 const BASE_URL = "/api/v1";
 
@@ -148,6 +148,7 @@ async function request<T>(
     // logout-all, lockout). Drop the dead access token so guards route the
     // user to SSO login instead of trusting stale storage.
     clearAccessToken();
+    clearRefreshToken();
     throw { status: "error", message: "Session expired" };
   }
 
