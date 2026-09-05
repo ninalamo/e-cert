@@ -218,7 +218,7 @@ export default function AttendeesTab({
   function downloadCsv() {
     if (!issueSummary) return;
     const header = "Name,Email,Issued,Emailed,Error\n";
-    const rows = issueSummary.results.map((r) =>
+    const rows = (issueSummary.results ?? []).map((r) =>
       [
         `"${r.name}"`,
         `"${r.email}"`,
@@ -281,14 +281,14 @@ export default function AttendeesTab({
               </div>
               <p className="mt-1 text-[var(--color-info-text)] opacity-80">
                 {issueSummary.issued} issued, {issueSummary.emailed} emailed
-                {issueSummary.results.filter((r) => !r.success).length > 0 &&
-                  `, ${issueSummary.results.filter((r) => !r.success).length} failed`}
+                {(issueSummary.results ?? []).filter((r) => !r.success).length > 0 &&
+                  `, ${(issueSummary.results ?? []).filter((r) => !r.success).length} failed`}
               </p>
 
-              {issueSummary.results.some((r) => !r.success) && (
+              {(issueSummary.results ?? []).some((r) => !r.success) && (
                 <div className="mt-3 space-y-1">
                   <p className="text-xs font-medium text-[var(--color-info-text)] opacity-70">Failed:</p>
-                  {issueSummary.results.filter((r) => !r.success).map((r, i) => (
+                  {(issueSummary.results ?? []).filter((r) => !r.success).map((r, i) => (
                     <div key={i} className="flex items-center gap-1.5 text-xs text-[var(--color-info-text)] opacity-80">
                       <XCircleIcon className="size-3 shrink-0 text-red-500" />
                       <span className="truncate">{r.email}</span>
@@ -298,10 +298,10 @@ export default function AttendeesTab({
                 </div>
               )}
 
-              {issueSummary.results.some((r) => r.success && r.emailed) && (
+              {(issueSummary.results ?? []).some((r) => r.success && r.emailed) && (
                 <div className="mt-3 space-y-1">
                   <p className="text-xs font-medium text-[var(--color-info-text)] opacity-70">Emailed:</p>
-                  {issueSummary.results.filter((r) => r.success && r.emailed).map((r, i) => (
+                  {(issueSummary.results ?? []).filter((r) => r.success && r.emailed).map((r, i) => (
                     <div key={i} className="flex items-center gap-1.5 text-xs text-[var(--color-info-text)] opacity-80">
                       <CheckCircle2Icon className="size-3 shrink-0 text-green-600" />
                       <span className="truncate">{r.email}</span>
@@ -310,10 +310,10 @@ export default function AttendeesTab({
                 </div>
               )}
 
-              {issueSummary.results.some((r) => r.success && !r.emailed) && (
+              {(issueSummary.results ?? []).some((r) => r.success && !r.emailed) && (
                 <div className="mt-3 space-y-1">
                   <p className="text-xs font-medium text-[var(--color-info-text)] opacity-70">Issued (no email):</p>
-                  {issueSummary.results.filter((r) => r.success && !r.emailed).map((r, i) => (
+                  {(issueSummary.results ?? []).filter((r) => r.success && !r.emailed).map((r, i) => (
                     <div key={i} className="flex items-center gap-1.5 text-xs text-[var(--color-info-text)] opacity-80">
                       <CheckCircle2Icon className="size-3 shrink-0 text-amber-500" />
                       <span className="truncate">{r.email}</span>
