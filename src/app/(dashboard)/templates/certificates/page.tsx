@@ -56,7 +56,7 @@ export default function CertificateTemplatesPage() {
         </div>
         <Link href="/templates/certificates/new" className="btn">
           <PlusIcon className="size-4" />
-          New Certificate
+          New Template
         </Link>
       </div>
       {loading ? <SkeletonTable /> : <TemplatesTable initialTemplates={templates} />}
