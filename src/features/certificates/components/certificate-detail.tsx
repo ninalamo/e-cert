@@ -194,7 +194,7 @@ export default function CertificateDetail({
         </div>
       )}
 
-      {qrDataUrl && (
+      {qrDataUrl && qrDataUrl.startsWith("data:image") ? (
         <div className="app-card p-4">
           <h3 className="text-sm font-semibold mb-3">Verification</h3>
           <div className="flex items-center gap-4">
@@ -215,6 +215,16 @@ export default function CertificateDetail({
               </p>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="app-card p-4">
+          <h3 className="text-sm font-semibold mb-3">Verification</h3>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            QR code not available
+          </p>
+          <p className="text-xs font-mono text-[var(--color-text)] mt-1 break-all">
+            /verify?number={certificate.certificate_number}
+          </p>
         </div>
       )}
 

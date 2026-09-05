@@ -2192,7 +2192,7 @@ const content = (
         width: 200,
         margin: 1,
         color: { dark: "#000000", light: "#ffffff" },
-      }).then((url) => setQrDataUrl(url));
+      }).then((url) => setQrDataUrl(url)).catch(() => setQrDataUrl(""));
     }
   }, [showPreview]);
 
