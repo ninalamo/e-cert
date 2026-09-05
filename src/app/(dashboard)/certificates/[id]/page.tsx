@@ -41,6 +41,10 @@ export default function CertificateDetailPage() {
 
         const { data: qr } = await verifyApi.view(id);
         if (qr?.qr_data_url) setQrDataUrl(qr.qr_data_url);
+        else {
+          const { data: qrCode } = await certificatesApi.getQrCode(cert.certificate_number);
+          if (qrCode?.data_url) setQrDataUrl(qrCode.data_url);
+        }
       } catch {
         // ignore
       }
