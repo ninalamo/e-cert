@@ -166,10 +166,9 @@ export default function EventDetail({
   const canManageAttendees = event.status === "draft" || event.status === "active";
   const canIssue = event.status === "active";
   const showMissingFieldsWarning =
-    event.status === "draft" && (!event.template_id || !event.event_date);
+    event.status === "draft" && !event.event_date;
 
   const missingFields: string[] = [];
-  if (!event.template_id) missingFields.push("a template");
   if (!event.event_date) missingFields.push("a Certificate Issue Date");
   const missingFieldsMessage = `Set ${missingFields.join(" and ")} before activating this event.`;
 
