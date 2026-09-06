@@ -66,8 +66,8 @@ export const eventsApi = {
       certificate_number_pattern: string;
       valid_until: string;
       status: "draft" | "active" | "archive";
-      template_id: string;
-      email_template_id: string;
+      template_id: string | null;
+      email_template_id: string | null;
     }>
   ) => api.patch<ApiResponse<Event>>(`/events/${id}`, data),
 

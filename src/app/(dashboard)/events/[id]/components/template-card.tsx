@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { toast } from "sonner";
 import Link from "next/link";
 import { eventsApi } from "@/lib/api/events";
 import type { Event } from "@/types/event";
@@ -38,15 +39,17 @@ export default function TemplateCard({
     setSaving(true);
     setMessage(null);
     const { data: result } = await eventsApi.update(event.id, {
-      template_id: selected || undefined,
+      template_id: selected || null,
     });
     if (!result) {
       setMessage("Failed to update template");
+      toast.error("Failed to update template");
     } else {
       const updatedTemplate =
         displayTemplates.find((t) => t.id === (selected || undefined)) ?? null;
       onUpdated(result, updatedTemplate);
       setMessage("Template updated.");
+      toast.success("Template updated.");
     }
     setSaving(false);
   }
