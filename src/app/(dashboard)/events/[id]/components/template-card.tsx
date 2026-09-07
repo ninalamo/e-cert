@@ -98,7 +98,11 @@ export default function TemplateCard({
             }
             className="btn disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Assign Template"}
+            {saving
+              ? "Saving..."
+              : currentTemplate && selected === ""
+                ? "Unassign Template"
+                : "Assign Template"}
           </button>
           {(selected || event.template_id) && (
             <Link
