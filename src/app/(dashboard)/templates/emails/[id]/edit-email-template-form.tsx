@@ -65,7 +65,7 @@ export default function EditEmailTemplateForm({ id }: { id: string }) {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/templates" />}>
+            <BreadcrumbLink render={<Link href="/templates/emails" />}>
               Templates
             </BreadcrumbLink>
           </BreadcrumbItem>

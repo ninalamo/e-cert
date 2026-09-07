@@ -64,7 +64,7 @@ export default function EditTemplateForm({ id }: { id: string }) {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/templates" />}>
+            <BreadcrumbLink render={<Link href="/templates/certificates" />}>
               Templates
             </BreadcrumbLink>
           </BreadcrumbItem>
