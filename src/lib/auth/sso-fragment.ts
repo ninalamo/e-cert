@@ -1,4 +1,4 @@
-import { setAccessToken, setRefreshToken } from "./token-store";
+import { setAccessToken, setRefreshToken, clearAccessToken, clearRefreshToken } from "./token-store";
 import { parseAccessToken } from "./jwt";
 import { resolveRoleFromPermissions, getHomePathForRole } from "@/lib/permissions";
 
@@ -28,14 +28,24 @@ export async function consumeSSOPayload(): Promise<boolean> {
 
   if (!res.ok) return false;
 
-  const json = await res.json();
-  const data = json.data ?? json;
-  const accessToken = data.access_token;
+  //TODO: Check this out!!!
+  let json: Record<string, unknown>;
+  try {
+    json = await res.json();
+  } catch {
+    clearAccessToken();
+    clearRefreshToken();
+    window.location.href = "/";
+    return true;
+  }
+
+  const data = (json.data ?? json) as Record<string, unknown>;
+  const accessToken = data.access_token as string | undefined;
   if (!accessToken) return false;
 
   setAccessToken(accessToken);
   if (data.refresh_token) {
-    setRefreshToken(data.refresh_token);
+    setRefreshToken(data.refresh_token as string);
   }
 
   history.replaceState(null, "", window.location.pathname + window.location.search);
