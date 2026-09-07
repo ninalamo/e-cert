@@ -25,6 +25,7 @@ interface TemplateFormProps {
     type: 'certificate' | 'email';
     html_content: string;
     css_content: string;
+    is_public?: boolean;
   };
   onSubmit: (data: {
     name: string;
@@ -32,6 +33,7 @@ interface TemplateFormProps {
     type: 'certificate' | 'email';
     html_content: string;
     css_content: string;
+    is_public?: boolean;
   }) => Promise<{ error?: string }>;
   submitLabel: string;
   disabled?: boolean;
@@ -57,6 +59,7 @@ export default function TemplateForm({
   const [fullscreen, setFullscreen] = useState(false);
   const [showSource, setShowSource] = useState(false);
   const [sourceTab, setSourceTab] = useState<"html" | "css">("html");
+  const [isPublic, setIsPublic] = useState(initialData?.is_public ?? false);
   const canvasRef = useRef<TemplateCanvasHandle>(null);
 
   const isEmail = templateType === 'email';
@@ -93,6 +96,7 @@ export default function TemplateForm({
       type: templateType,
       html_content: html,
       css_content: css,
+      is_public: isPublic,
     });
 
     if (result?.error) {
@@ -105,13 +109,35 @@ export default function TemplateForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {error && (
+{error && (
         <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-4 text-sm text-[var(--color-danger-text)]">
           {error}
         </div>
       )}
-
-<fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">
+          Visibility
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="radio"
+            name="visibility"
+            checked={isPublic}
+            onChange={() => setIsPublic(true)}
+            className="rounded bg-brand-600 p-1"
+          />
+          <span className="text-sm text-[var(--color-text)]">Public</span>
+          <input
+            type="radio"
+            name="visibility"
+            checked={!isPublic}
+            onChange={() => setIsPublic(false)}
+            className="rounded bg-gray-200 p-1"
+          />
+          <span className="text-sm text-[var(--color-text)]">Private</span>
+        </div>
+      </div>
+      <fieldset disabled={disabled} className="space-y-5 disabled:opacity-60">
         {/* Editor */}
           {isEmail ? (
             <>

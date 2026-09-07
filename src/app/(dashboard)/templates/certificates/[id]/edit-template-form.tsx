@@ -100,13 +100,14 @@ export default function EditTemplateForm({ id }: { id: string }) {
        <TemplateForm
          key={template.id}
          templateType={template.type as 'certificate' | 'email'}
-         initialData={{
-           name: template.name,
-           description: template.description ?? "",
-           type: template.type as 'certificate' | 'email',
-           html_content: template.html_content,
-           css_content: template.css_content ?? "",
-         }}
+initialData={{
+            name: template.name,
+            description: template.description ?? "",
+            type: template.type as 'certificate' | 'email',
+            html_content: template.html_content,
+            css_content: template.css_content ?? "",
+            is_public: template.is_public ?? false,
+          }}
          disabled={locked}
          submitLabel="Save Changes"
          fullscreen={fullscreen}

@@ -9,7 +9,7 @@ import { PlusIcon } from "lucide-react";
 import { SkeletonTable } from "@/components/ui/skeleton";
 import type { CertificateTemplate } from "@/types/template";
 
-type TemplateWithLock = CertificateTemplate & { locked: boolean };
+type TemplateWithLock = CertificateTemplate & { locked: boolean; is_public: boolean };
 
 export default function EmailTemplatesPage() {
   const [templates, setTemplates] = useState<TemplateWithLock[]>([]);
@@ -34,6 +34,7 @@ export default function EmailTemplatesPage() {
           created_at: t.created_at,
           updated_at: t.updated_at,
           locked: t.is_locked,
+          is_public: t.is_public ?? false,
         })));
         setLoading(false);
       })

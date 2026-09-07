@@ -8,7 +8,7 @@ import type { CertificateTemplate } from "@/types/template";
 import { AUTH_PROCESS_LABELS } from "./email-placeholder-field";
 import { extractCanvasDimensions, buildCertificateSrcDoc } from "@/lib/certificate-renderer";
 
-type TemplateRow = CertificateTemplate & { locked: boolean };
+type TemplateRow = CertificateTemplate & { locked: boolean; is_public: boolean };
 import { usePagination, Paginator } from "@/components/ui/paginator";
 import {
   Dialog,
@@ -39,7 +39,7 @@ export default function TemplatesTable({ initialTemplates }: TemplatesTableProps
 
   const loadTemplates = useCallback(async () => {
     const { data } = await templatesApi.list(ORG_ID);
-    setTemplates(data.map(t => ({ ...t, locked: t.is_locked })));
+    setTemplates(data.map(t => ({ ...t, locked: t.is_locked, is_public: t.is_public ?? false })));
   }, []);
 
   const filtered = useMemo(() => {

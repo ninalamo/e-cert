@@ -54,10 +54,12 @@ export const templatesApi = {
     type?: "certificate" | "email";
     html_content: string;
     css_content?: string;
+    is_public?: boolean;
   }) =>
     api.post<ApiResponse<CertificateTemplate>>("/templates", {
       ...data,
       type: data.type ?? "certificate",
+      is_public: data.is_public ?? false,
     }),
 
   createEmail: (data: {
@@ -66,10 +68,12 @@ export const templatesApi = {
     description?: string;
     html_content: string;
     css_content?: string;
+    is_public?: boolean;
   }) =>
     api.post<ApiResponse<CertificateTemplate>>("/templates", {
       ...data,
       type: "email",
+      is_public: data.is_public ?? false,
     }),
 
   createAuth: (data: {

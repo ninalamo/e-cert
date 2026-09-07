@@ -76,7 +76,14 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
         setSelectedFile(null);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? (err as { error?: string }).error ?? err.message : "Failed to issue certificate";
+      const errObj = err as Error & { error?: string };
+      let msg = errObj.error ?? errObj.message;
+
+      // New: Specific handling for "Template is locked" 409 error
+      if (msg.includes("Template is locked")) {
+        msg = "This template is locked by another event and cannot be used. Please select a different template.";
+      }
+
       setError(msg);
     }
 
