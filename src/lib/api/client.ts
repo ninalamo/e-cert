@@ -153,17 +153,6 @@ async function request<T>(
     throw { status: "error", message: "Session expired" };
   }
 
-  if (res.status === 403) {
-    const body = await res.clone().json().catch(() => null);
-    const msg = body?.message ?? "";
-    if (msg.includes("Imunify360") || msg.includes("bot-protection")) {
-      clearAccessToken();
-      clearRefreshToken();
-      window.location.href = "/";
-      throw { status: "error", message: "Blocked by bot protection" };
-    }
-  }
-
   if (!res.ok) {
     const err = await res
       .json()
