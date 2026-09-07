@@ -25,7 +25,7 @@ interface TemplateFormProps {
     type: 'certificate' | 'email';
     html_content: string;
     css_content: string;
-    is_public?: boolean;
+    visibility?: string;
   };
   onSubmit: (data: {
     name: string;
@@ -33,7 +33,7 @@ interface TemplateFormProps {
     type: 'certificate' | 'email';
     html_content: string;
     css_content: string;
-    is_public?: boolean;
+    visibility: string;
   }) => Promise<{ error?: string }>;
   submitLabel: string;
   disabled?: boolean;
@@ -59,7 +59,7 @@ export default function TemplateForm({
   const [fullscreen, setFullscreen] = useState(false);
   const [showSource, setShowSource] = useState(false);
   const [sourceTab, setSourceTab] = useState<"html" | "css">("html");
-  const [isPublic, setIsPublic] = useState(initialData?.is_public ?? false);
+  const [isPublic, setIsPublic] = useState(initialData?.visibility === 'public');
   const canvasRef = useRef<TemplateCanvasHandle>(null);
 
   const isEmail = templateType === 'email';
@@ -96,7 +96,7 @@ export default function TemplateForm({
       type: templateType,
       html_content: html,
       css_content: css,
-      is_public: isPublic,
+      visibility: isPublic ? 'public' : 'private',
     });
 
     if (result?.error) {
