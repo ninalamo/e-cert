@@ -7,10 +7,10 @@ import { attendeesApi } from "@/lib/api/attendees";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
 import type { AttendeeMetadata } from "@/types/event-attendee";
+import { usePagination, Paginator } from "@/components/ui/paginator";
 import { SkeletonUpload } from "@/components/ui/skeleton";
 import { InfoIcon, DownloadIcon, UploadIcon, XIcon, AlertTriangleIcon } from "lucide-react";
 
-const PAGE_SIZE = 25;
 const MAX_FILE_MB = 10;
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg"];
 
@@ -71,7 +71,6 @@ export default function UploadCsvForm({
   const [rows, setRows] = useState<CsvRow[]>([]);
   const [removedRows, setRemovedRows] = useState<CsvRow[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<Map<string, UploadedFile>>(new Map());
-  const [page, setPage] = useState(0);
   const [results, setResults] = useState<SubmitResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(
@@ -80,7 +79,16 @@ export default function UploadCsvForm({
 
   const csvRef = useRef<HTMLInputElement>(null);
 
-  const totalPages = Math.ceil(rows.length / PAGE_SIZE);
+  const {
+    page,
+    totalPages,
+    pageSize,
+    paginatedItems: pageRows,
+    setPage,
+    setPageSize,
+  } = usePagination(rows, 25);
+
+  const resultsPagination = usePagination(results ?? [], 25);
 
   const handleCsvChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -177,7 +185,7 @@ export default function UploadCsvForm({
       if (removed) setRemovedRows((r) => [...r, removed]);
       return prev.filter((_, i) => i !== globalIndex);
     });
-    setPage((p) => Math.min(p, Math.max(0, Math.ceil(rows.length / PAGE_SIZE) - 2)));
+    setPage(0);
   }
 
   async function handleSubmit() {
@@ -393,8 +401,8 @@ export default function UploadCsvForm({
                 </tr>
               </thead>
               <tbody>
-                {rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((row, i) => {
-                  const globalIdx = page * PAGE_SIZE + i;
+                {pageRows.map((row, i) => {
+                  const globalIdx = page * pageSize + i;
                   const hasFile = canFileMode(row);
                   const uploadedFile = row.file_path ? uploadedFiles.get(row.file_path) : undefined;
                   const fileInputId = `file-upload-${globalIdx}`;
@@ -491,31 +499,14 @@ export default function UploadCsvForm({
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="btn disabled:opacity-50"
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPage(i)}
-                  className={`btn ${i === page ? "bg-[var(--color-brand-600)] text-white border-[var(--color-brand-700)]" : ""}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="btn disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
+            <Paginator
+              page={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={rows.length}
+              setPage={setPage}
+              setPageSize={setPageSize}
+            />
           )}
 
           <div className="flex justify-end gap-2">
@@ -586,9 +577,9 @@ export default function UploadCsvForm({
                 </tr>
               </thead>
               <tbody>
-                {results.map((r, i) => (
-                  <tr key={i} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
-                    <td className="py-3 pl-4 text-center text-tertiary text-xs">{i + 1}</td>
+                {resultsPagination.paginatedItems.map((r, i) => (
+                  <tr key={resultsPagination.page * resultsPagination.pageSize + i} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
+                    <td className="py-3 pl-4 text-center text-tertiary text-xs">{resultsPagination.page * resultsPagination.pageSize + i + 1}</td>
                     <td className="text-left font-medium text-[var(--color-text)]">
                       {r.name} <span className="font-normal text-tertiary">({r.email})</span>
                     </td>
@@ -606,6 +597,17 @@ export default function UploadCsvForm({
               </tbody>
             </table>
           </div>
+
+          {resultsPagination.totalPages > 1 && (
+            <Paginator
+              page={resultsPagination.page}
+              totalPages={resultsPagination.totalPages}
+              pageSize={resultsPagination.pageSize}
+              totalItems={(results ?? []).length}
+              setPage={resultsPagination.setPage}
+              setPageSize={resultsPagination.setPageSize}
+            />
+          )}
 
           <div className="flex justify-end gap-2">
             <Link
