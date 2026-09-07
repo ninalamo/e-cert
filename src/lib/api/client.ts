@@ -159,7 +159,8 @@ async function request<T>(
     throw err ?? { status: "error", message: `Request failed (${res.status})` };
   }
 
-  if (res.headers.get("content-type")?.includes("application/pdf")) {
+  const ct = res.headers.get("content-type") ?? "";
+  if (ct.includes("application/pdf") || ct.startsWith("image/")) {
     return res.blob() as unknown as T;
   }
 

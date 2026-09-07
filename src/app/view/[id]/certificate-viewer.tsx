@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
+import Image from "next/image";
 import type { Certificate } from "@/types/certificate";
 import type { Event } from "@/types/event";
 import type { CertificateTemplate } from "@/types/template";
@@ -15,12 +16,16 @@ import {
 
 const OVERLAY_STYLE: React.CSSProperties = { backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" };
 
+const PDF_DIMENSIONS = { width: 1123, height: 794 };
+
 interface Props {
   certificate: Certificate;
   template: CertificateTemplate | null;
   event: Event | null;
   qrDataUrl: string;
   orgName: string;
+  fileBlobUrl?: string | null;
+  fileType?: string | null;
 }
 
 export default function CertificateViewer({
@@ -29,16 +34,22 @@ export default function CertificateViewer({
   event,
   qrDataUrl,
   orgName,
+  fileBlobUrl,
+  fileType,
 }: Props) {
   const router = useRouter();
 
   const meta = (certificate.metadata as Record<string, unknown> | null) ?? {};
   const cachedHtml = typeof meta.rendered_html === "string" ? meta.rendered_html : null;
 
-  const { width: certWidth, height: certHeight } = useMemo(
-    () => extractCanvasDimensions(template?.html_content ?? ""),
-    [template?.html_content]
-  );
+  const isImage = fileType?.startsWith("image/");
+  const isPdf = fileType === "application/pdf";
+  const hasFile = !!fileBlobUrl && (isImage || isPdf);
+
+  const { width: certWidth, height: certHeight } = useMemo(() => {
+    if (hasFile && isPdf) return PDF_DIMENSIONS;
+    return extractCanvasDimensions(template?.html_content ?? "");
+  }, [template?.html_content, hasFile, isPdf]);
 
   const certHtml = useMemo(() => {
     if (!template) return cachedHtml;
@@ -74,6 +85,16 @@ export default function CertificateViewer({
   }, [certWidth, certHeight, windowSize.w, windowSize.h]);
 
   function handlePrint() {
+    if (hasFile && fileBlobUrl) {
+      const printWindow = window.open(fileBlobUrl, "_blank");
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+      return;
+    }
+
     if (!certHtml) return;
 
     const printWindow = window.open("", "_blank");
@@ -103,13 +124,15 @@ export default function CertificateViewer({
     printWindow.document.close();
   }
 
+  const showPrint = hasFile || certHtml;
+
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4"
       style={OVERLAY_STYLE}
     >
       <div className="fixed top-4 right-4 z-[201] flex items-center gap-2">
-        {certHtml && (
+        {showPrint && (
           <button
             type="button"
             onClick={handlePrint}
@@ -128,7 +151,54 @@ export default function CertificateViewer({
         </button>
       </div>
 
-      {certHtml ? (
+      {hasFile ? (
+        <div className="relative flex-shrink-0">
+          <div
+            style={{
+              width: certWidth,
+              height: certHeight,
+              transformOrigin: "center center",
+              transform: `scale(${scale})`,
+            }}
+          >
+            <div
+              className="bg-white shadow-2xl rounded-lg overflow-hidden relative"
+              style={{ width: certWidth, height: certHeight }}
+            >
+              {isImage ? (
+                <Image
+                  src={fileBlobUrl}
+                  alt={`Certificate ${certificate.certificate_number}`}
+                  width={certWidth}
+                  height={certHeight}
+                  unoptimized
+                  style={{ objectFit: "contain" }}
+                />
+              ) : (
+                <iframe
+                  src={fileBlobUrl}
+                  title={`Certificate ${certificate.certificate_number}`}
+                  style={{ width: certWidth, height: certHeight, border: "none" }}
+                />
+              )}
+              <div
+                className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <span
+                  className="select-none whitespace-nowrap font-bold uppercase tracking-widest text-gray-900/10"
+                  style={{
+                    fontSize: Math.min(certWidth, certHeight) * 0.18,
+                    transform: "rotate(-35deg)",
+                  }}
+                >
+                  PREVIEW
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : certHtml ? (
         <div className="relative flex-shrink-0">
           <div
             style={{

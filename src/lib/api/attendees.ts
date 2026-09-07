@@ -80,6 +80,9 @@ export const attendeesApi = {
       `/events/${eventId}/attendees/${attendeeId}/file-data`
     ),
 
+  getFileBlob: (attendeeId: string) =>
+    api.get<Blob>(`/attendees/${attendeeId}/file-data`),
+
   bulkAdd: (
     eventId: string,
     data: {
