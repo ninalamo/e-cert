@@ -8,6 +8,7 @@ import {
   refreshAccessToken,
 } from "./token-store";
 import { parseAccessToken } from "./jwt";
+import { waitForSession } from "./session-ready";
 import { FullPageLoader } from "@/components/full-page-loader";
 
 const AUTH_LOGIN_URL = `${process.env.NEXT_PUBLIC_AUTH_BASE_URL}/sso/login`;
@@ -67,6 +68,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     };
 
     (async () => {
+      await waitForSession();
+
       const token = getAccessToken();
 
       // Valid token: arm the proactive refresh clock.
@@ -75,17 +78,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Missing/expired access token: one silent refresh attempt before
-      // evicting to the sign-in page.
-      const ok = await refreshAccessToken();
-      if (cancelled || redirectingRef.current) return;
-      if (ok) {
-        const fresh = getAccessToken();
-        if (fresh && parseAccessToken(fresh)) {
-          scheduleProactiveRefresh(fresh);
-          return;
-        }
-      }
+      // No valid token after session init — session is genuinely absent.
       redirectToLogin();
     })();
 
