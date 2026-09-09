@@ -21,6 +21,11 @@ export const attendeesApi = {
       `/events/${eventId}/attendees`
     ),
 
+  listAll: (eventId: string) =>
+    api.get<{ data: EventAttendee[] }>(
+      `/events/${eventId}/attendees?limit=1000`
+    ),
+
   listPaginated: (
     eventId: string,
     params?: { limit?: number; offset?: number }

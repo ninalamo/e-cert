@@ -78,7 +78,7 @@ export default function AttendeesManager({
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const { data } = await attendeesApi.list(eventId);
+    const { data } = await attendeesApi.listAll(eventId);
     setAttendees(data);
     setLoading(false);
   }, [eventId]);
