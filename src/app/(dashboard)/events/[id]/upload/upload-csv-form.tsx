@@ -144,7 +144,7 @@ export default function UploadCsvForm({
       setStep("preview");
     };
     reader.readAsText(file);
-  }, []);
+  }, [setPage]);
 
   const handleRowFileUpload = useCallback((rowIndex: number, file: File) => {
     const reader = new FileReader();

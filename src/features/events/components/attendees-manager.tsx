@@ -16,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon, EyeIcon } from "lucide-react";
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
 
 type FilterStatus = "all" | "not_issued" | "issued" | "revoked" | "expired";
