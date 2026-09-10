@@ -5,8 +5,10 @@ const CERT_API_URL =
 const AUTH_API_URL =
   process.env.AUTH_API_URL ?? "https://auth.lyceumalabang.edu.ph";
 
+const AUTH_ROUTES_ON_CERT_API = new Set(["callback", "refresh", "logout"]);
+
 function isAuthRoute(path: string[]): boolean {
-  return path.length > 0 && path[0] === "auth";
+  return path.length > 0 && path[0] === "auth" && !AUTH_ROUTES_ON_CERT_API.has(path[1]);
 }
 
 function buildTargetUrl(base: string, path: string[], searchParams: URLSearchParams): string {
