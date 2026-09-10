@@ -48,7 +48,7 @@ export function Paginator({
   setPageSize?: (s: number) => void;
   showSizeSelector?: boolean;
 }) {
-  if (totalItems === 0) return null;
+  const hasData = totalItems > 0;
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-4 sm:px-6 pt-3 pb-1">
@@ -62,7 +62,8 @@ export function Paginator({
                 setPageSize(Number(e.target.value));
                 setPage(0);
               }}
-              className="input text-xs w-auto py-1"
+              disabled={!hasData}
+              className="input text-xs w-auto py-1 disabled:opacity-40"
             >
               {ROWS_OPTIONS.map((s) => (
                 <option key={s} value={s}>
@@ -75,13 +76,14 @@ export function Paginator({
       </div>
       <div className="flex items-center gap-2 text-xs text-tertiary w-full sm:w-auto justify-between sm:justify-normal">
         <span>
-          {page * pageSize + 1}–
-          {Math.min((page + 1) * pageSize, totalItems)} of {totalItems}
+          {hasData
+            ? `${page * pageSize + 1}–${Math.min((page + 1) * pageSize, totalItems)} of ${totalItems}`
+            : "0 of 0"}
         </span>
         <div className="flex gap-1">
           <button
             onClick={() => setPage(Math.max(0, page - 1))}
-            disabled={page === 0}
+            disabled={!hasData || page === 0}
             className="p-2 rounded border border-default bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             aria-label="Previous page"
           >
@@ -101,7 +103,7 @@ export function Paginator({
           </button>
           <button
             onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-            disabled={page >= totalPages - 1}
+            disabled={!hasData || page >= totalPages - 1}
             className="p-2 rounded border border-default bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             aria-label="Next page"
           >

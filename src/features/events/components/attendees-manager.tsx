@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { attendeesApi } from "@/lib/api/attendees";
 import type { EventAttendee } from "@/types/event-attendee";
@@ -45,8 +45,9 @@ export default function AttendeesManager({
 }) {
   const [attendees, setAttendees] = useState<EventAttendee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
   const [searchInput, setSearchInput] = useState("");
-  const debouncedSearchRef = useRef("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
@@ -79,42 +80,78 @@ export default function AttendeesManager({
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const fetchPage = useCallback(async (p: number, ps: number, search: string, status?: FilterStatus) => {
-    const result = await attendeesApi.list(eventId, {
-      search: search.trim() || undefined,
-      status: status && status !== "all" ? status : undefined,
-      limit: ps,
-      offset: p * ps,
-    });
-    setAttendees(result.data ?? []);
-    setMeta(result.meta);
-    setLoading(false);
+    setFetching(true);
+    try {
+      const result = await attendeesApi.list(eventId, {
+        search: search.trim() || undefined,
+        status: status && status !== "all" ? status : undefined,
+        limit: ps,
+        offset: p * ps,
+      });
+      setAttendees(result.data ?? []);
+      setMeta(result.meta);
+    } finally {
+      setFetching(false);
+    }
   }, [eventId]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    let active = true;
-    const timer = setTimeout(
-      () => {
-        if (active) fetchPage(0, pageSize, searchInput, filter);
-      },
-      searchInput !== debouncedSearchRef.current ? SEARCH_DEBOUNCE_MS : 0
-    );
-    debouncedSearchRef.current = searchInput;
-    setPage(0);
-    return () => { active = false; clearTimeout(timer); };
-  }, [fetchPage, pageSize, searchInput, filter]);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setPage(0);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
-    fetchPage(page, pageSize, debouncedSearchRef.current, filter);
-  }, [page, pageSize, fetchPage, filter]);
+    let cancelled = false;
+    setLoading(false);
+    setFetching(true);
+    attendeesApi
+      .list(eventId, {
+        search: debouncedSearch.trim() || undefined,
+        status: filter !== "all" ? filter : undefined,
+        limit: pageSize,
+        offset: page * pageSize,
+      })
+      .then((result) => {
+        if (cancelled) return;
+        setAttendees(result.data ?? []);
+        setMeta(result.meta);
+      })
+      .finally(() => {
+        if (!cancelled) setFetching(false);
+      });
+    return () => { cancelled = true; };
+  }, [eventId, page, pageSize, debouncedSearch, filter]);
 
   useEffect(() => {
     onSelectionChange?.(Array.from(selected));
   }, [selected, onSelectionChange]);
 
   useEffect(() => {
-    if (refreshTrigger > 0) fetchPage(page, pageSize, debouncedSearchRef.current, filter);
-  }, [refreshTrigger, fetchPage, page, pageSize, filter]);
+    if (refreshTrigger <= 0) return;
+    let cancelled = false;
+    setFetching(true);
+    attendeesApi
+      .list(eventId, {
+        search: debouncedSearch.trim() || undefined,
+        status: filter !== "all" ? filter : undefined,
+        limit: pageSize,
+        offset: page * pageSize,
+      })
+      .then((result) => {
+        if (cancelled) return;
+        setAttendees(result.data ?? []);
+        setMeta(result.meta);
+      })
+      .finally(() => {
+        if (!cancelled) setFetching(false);
+      });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger]);
 
   useEffect(() => {
     if (showAddDialog) {
@@ -186,7 +223,7 @@ export default function AttendeesManager({
       setAddMode("template");
       setAddFile(null);
       setAddOpen(false);
-      await fetchPage(page, pageSize, debouncedSearchRef.current);
+      await fetchPage(page, pageSize, debouncedSearch);
       setMessage("Attendee added.");
     }
   }
@@ -239,7 +276,7 @@ export default function AttendeesManager({
       setEditFile(null);
       setEditTarget(null);
       setEditOpen(false);
-      await fetchPage(page, pageSize, debouncedSearchRef.current);
+      await fetchPage(page, pageSize, debouncedSearch);
       setMessage("Attendee updated.");
     }
   }
@@ -261,7 +298,7 @@ export default function AttendeesManager({
         next.delete(id);
         return next;
       });
-      await fetchPage(page, pageSize, debouncedSearchRef.current);
+      await fetchPage(page, pageSize, debouncedSearch);
     }
   }
 
@@ -352,7 +389,7 @@ export default function AttendeesManager({
         />
       )}
 
-      {attendees.length === 0 ? (
+      {attendees.length === 0 && !fetching ? (
         <div className="app-card p-12 text-center">
           <p className="text-sm text-tertiary">
             {(meta?.total ?? 0) === 0 && filter === "all" && !searchInput.trim()
@@ -361,8 +398,23 @@ export default function AttendeesManager({
           </p>
         </div>
       ) : (
-        <div className="app-card overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="app-card overflow-hidden relative">
+          {fetching && (
+            <div className="absolute inset-0 z-10 bg-background/70 backdrop-blur-[1px]">
+              <div className="divide-y divide-[var(--color-border)]">
+                {Array.from({ length: Math.min(pageRows.length || 5, 10) }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 px-4 py-3">
+                    <Skeleton className="size-4 rounded" />
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-5 w-12 rounded-full" />
+                    <Skeleton className="hidden h-4 w-20 sm:block" />
+                    <Skeleton className="ml-auto h-4 w-16" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <table className={`w-full text-sm ${fetching ? "opacity-40" : ""}`}>
             <thead>
               <tr className="border-b border-[var(--color-border)]">
                 <th className="w-12 py-3 pl-4 text-left">
