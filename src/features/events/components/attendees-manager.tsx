@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon, EyeIcon } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
 const SEARCH_DEBOUNCE_MS = 300;
@@ -266,8 +267,27 @@ export default function AttendeesManager({
 
   if (loading) {
     return (
-      <div className="app-card p-12 text-center">
-        <p className="text-sm text-tertiary">Loading attendees...</p>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-4 w-28" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </div>
+        <div className="app-card overflow-hidden">
+          <div className="divide-y divide-[var(--color-border)]">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3">
+                <Skeleton className="size-4 rounded" />
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-5 w-12 rounded-full" />
+                <Skeleton className="hidden h-4 w-20 sm:block" />
+                <Skeleton className="ml-auto h-4 w-16" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -321,6 +341,17 @@ export default function AttendeesManager({
         </div>
       </div>
 
+      {(meta?.total ?? 0) > 0 && (
+        <Paginator
+          page={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={meta?.total ?? 0}
+          setPage={setPage}
+          setPageSize={(s) => { setPageSize(s); setPage(0); }}
+        />
+      )}
+
       {attendees.length === 0 ? (
         <div className="app-card p-12 text-center">
           <p className="text-sm text-tertiary">
@@ -330,120 +361,120 @@ export default function AttendeesManager({
           </p>
         </div>
       ) : (
-        <>
-          <div className="app-card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-border)]">
-                  <th className="w-12 py-3 pl-4 text-left">
+        <div className="app-card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)]">
+                <th className="w-12 py-3 pl-4 text-left">
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    disabled={readOnly}
+                    ref={(el) => {
+                      if (el) el.indeterminate = somePageSelected && !allPageSelected;
+                    }}
+                    onChange={toggleSelectAll}
+                    className="size-4 rounded border-border-strong accent-[var(--color-brand-600)] disabled:opacity-50"
+                  />
+                </th>
+                <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name (Email)</th>
+                <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Certificate Issue</th>
+                <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden sm:table-cell">Document Type</th>
+                {!readOnly && (
+                  <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {pageRows.map((a, idx) => (
+                <tr
+                  key={a.id}
+                  className={`border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)] ${idx === 0 ? "" : ""}`}
+                >
+                  <td className="w-12 py-3 pl-4">
                     <input
                       type="checkbox"
-                      checked={allPageSelected}
+                      checked={selected.has(a.id)}
                       disabled={readOnly}
-                      ref={(el) => {
-                        if (el) el.indeterminate = somePageSelected && !allPageSelected;
-                      }}
-                      onChange={toggleSelectAll}
+                      onChange={() => toggleSelect(a.id)}
                       className="size-4 rounded border-border-strong accent-[var(--color-brand-600)] disabled:opacity-50"
                     />
-                  </th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name (Email)</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Certificate Issue</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden sm:table-cell">Document Type</th>
+                  </td>
+                  <td className="py-3 px-2">
+                    <p className="font-medium text-[var(--color-text)]">{a.name}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">({a.email})</p>
+                  </td>
+                  <td className="py-3 px-2">
+                    {a.certificate_id ? (
+                      <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-success-text)]">Yes</span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">No</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-2 hidden sm:table-cell">
+                    {a.metadata?.generation_mode === "file" ? (
+                      <span className="inline-flex items-center rounded-full bg-[var(--color-brand-100)] px-2 py-0.5 text-xs font-medium text-[var(--color-brand-700)]">Uploaded</span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">System-Generated</span>
+                    )}
+                  </td>
                   {!readOnly && (
-                    <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
+                    <td className="py-3 pr-4">
+                      <div className="flex items-center justify-end gap-1">
+                        {a.certificate_id && (
+                          <Link
+                            href={`/certificates/${a.certificate_id}?eventId=${eventId}`}
+                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
+                            title="View Certificate"
+                          >
+                            <EyeIcon className="size-4" />
+                          </Link>
+                        )}
+                        {!a.certificate_id && (
+                          <button
+                            type="button"
+                            onClick={() => openEdit(a)}
+                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
+                          >
+                            <PencilIcon className="size-4" />
+                          </button>
+                        )}
+                        {(isAdmin || !a.certificate_id) && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setRemoveTarget(a);
+                              setPreviewLoading(true);
+                              setDeletePreview(null);
+                              const { data: preview } = await attendeesApi.getDeletePreview(eventId, a.id);
+                              setDeletePreview(preview);
+                              setPreviewLoading(false);
+                            }}
+                            title={a.certificate_id ? "This will also delete the issued certificate" : undefined}
+                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                          >
+                            <Trash2Icon className="size-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   )}
                 </tr>
-              </thead>
-              <tbody>
-                {pageRows.map((a, idx) => (
-                  <tr
-                    key={a.id}
-                    className={`border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)] ${idx === 0 ? "" : ""}`}
-                  >
-                    <td className="w-12 py-3 pl-4">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(a.id)}
-                        disabled={readOnly}
-                        onChange={() => toggleSelect(a.id)}
-                        className="size-4 rounded border-border-strong accent-[var(--color-brand-600)] disabled:opacity-50"
-                      />
-                    </td>
-                    <td className="py-3 px-2">
-                      <p className="font-medium text-[var(--color-text)]">{a.name}</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">({a.email})</p>
-                    </td>
-                    <td className="py-3 px-2">
-                      {a.certificate_id ? (
-                        <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-success-text)]">Yes</span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">No</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-2 hidden sm:table-cell">
-                      {a.metadata?.generation_mode === "file" ? (
-                        <span className="inline-flex items-center rounded-full bg-[var(--color-brand-100)] px-2 py-0.5 text-xs font-medium text-[var(--color-brand-700)]">Uploaded</span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">System-Generated</span>
-                      )}
-                    </td>
-                    {!readOnly && (
-                      <td className="py-3 pr-4">
-                        <div className="flex items-center justify-end gap-1">
-                          {a.certificate_id && (
-                            <Link
-                              href={`/certificates/${a.certificate_id}?eventId=${eventId}`}
-                              className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
-                              title="View Certificate"
-                            >
-                              <EyeIcon className="size-4" />
-                            </Link>
-                          )}
-                          {!a.certificate_id && (
-                            <button
-                              type="button"
-                              onClick={() => openEdit(a)}
-                              className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
-                            >
-                              <PencilIcon className="size-4" />
-                            </button>
-                          )}
-                          {(isAdmin || !a.certificate_id) && (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                setRemoveTarget(a);
-                                setPreviewLoading(true);
-                                setDeletePreview(null);
-                                const { data: preview } = await attendeesApi.getDeletePreview(eventId, a.id);
-                                setDeletePreview(preview);
-                                setPreviewLoading(false);
-                              }}
-                              title={a.certificate_id ? "This will also delete the issued certificate" : undefined}
-                              className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
-                            >
-                              <Trash2Icon className="size-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-          <Paginator
-            page={page}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalItems={meta?.total ?? 0}
-            setPage={setPage}
-            setPageSize={(s) => { setPageSize(s); setPage(0); }}
-          />
-        </>
+      {(meta?.total ?? 0) > 0 && (
+        <Paginator
+          page={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={meta?.total ?? 0}
+          setPage={setPage}
+          setPageSize={(s) => { setPageSize(s); setPage(0); }}
+        />
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
