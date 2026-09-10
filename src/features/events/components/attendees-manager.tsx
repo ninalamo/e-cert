@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { attendeesApi } from "@/lib/api/attendees";
 import type { EventAttendee } from "@/types/event-attendee";
-import type { PaginationMeta } from "@/lib/api/types";
 import { Paginator } from "@/components/ui/paginator";
 import {
   Dialog,
@@ -55,7 +54,7 @@ export default function AttendeesManager({
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  const [totalItems, setTotalItems] = useState(0);
 
   const pageRef = useRef(page);
   const pageSizeRef = useRef(pageSize);
@@ -98,7 +97,9 @@ export default function AttendeesManager({
         offset: p * ps,
       });
       setAttendees(result.data ?? []);
-      setMeta(result.meta);
+      if (result.meta) {
+        setTotalItems(result.meta.total);
+      }
     } finally {
       setFetching(false);
     }
@@ -127,7 +128,12 @@ export default function AttendeesManager({
       .then((result) => {
         if (cancelled) return;
         setAttendees(result.data ?? []);
-        setMeta(result.meta);
+        if (result.meta) {
+          setTotalItems(result.meta.total);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError("Failed to load attendees");
       })
       .finally(() => {
         if (!cancelled) setFetching(false);
@@ -155,7 +161,12 @@ export default function AttendeesManager({
       .then((result) => {
         if (cancelled) return;
         setAttendees(result.data ?? []);
-        setMeta(result.meta);
+        if (result.meta) {
+          setTotalItems(result.meta.total);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError("Failed to load attendees");
       })
       .finally(() => {
         if (!cancelled) setFetching(false);
@@ -173,7 +184,7 @@ export default function AttendeesManager({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const pageRows = attendees;
-  const totalPages = meta ? Math.max(1, Math.ceil(meta.total / pageSize)) : 1;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   const allPageSelected =
     pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
@@ -358,7 +369,7 @@ export default function AttendeesManager({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm text-tertiary">
-            {meta?.total ?? 0} attendee{(meta?.total ?? 0) !== 1 ? "s" : ""}
+            {totalItems} attendee{totalItems !== 1 ? "s" : ""}
           </span>
           {selected.size > 0 && (
             <span className="badge-brand">{selected.size} selected</span>
@@ -389,12 +400,12 @@ export default function AttendeesManager({
         </div>
       </div>
 
-      {(meta?.total ?? 0) > 0 && (
+      {totalItems > 0 && (
         <Paginator
           page={page}
           totalPages={totalPages}
           pageSize={pageSize}
-          totalItems={meta?.total ?? 0}
+          totalItems={totalItems}
           setPage={setPage}
           setPageSize={(s) => { setPageSize(s); setPage(0); }}
         />
@@ -403,7 +414,7 @@ export default function AttendeesManager({
       {attendees.length === 0 && !fetching ? (
         <div className="app-card p-12 text-center">
           <p className="text-sm text-tertiary">
-            {(meta?.total ?? 0) === 0 && filter === "all" && !searchInput.trim()
+            {totalItems === 0 && filter === "all" && !searchInput.trim()
               ? "No attendees yet."
               : "No matches found."}
           </p>
@@ -529,12 +540,12 @@ export default function AttendeesManager({
         </div>
       )}
 
-      {(meta?.total ?? 0) > 0 && (
+      {totalItems > 0 && (
         <Paginator
           page={page}
           totalPages={totalPages}
           pageSize={pageSize}
-          totalItems={meta?.total ?? 0}
+          totalItems={totalItems}
           setPage={setPage}
           setPageSize={(s) => { setPageSize(s); setPage(0); }}
         />
