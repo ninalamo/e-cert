@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 const CERT_API_URL =
   process.env.CERT_API_URL ?? "https://cert-api.lyceumalabang.edu.ph";
 
-function buildTargetUrl(base: string, path: string[]): string {
-  return `${base}/api/v1/events/${path.join("/")}`;
+function buildTargetUrl(base: string, path: string[], searchParams: URLSearchParams): string {
+  const qs = searchParams.toString();
+  const base_url = `${base}/api/v1/events/${path.join("/")}`;
+  return qs ? `${base_url}?${qs}` : base_url;
 }
 
 function forwardHeaders(request: NextRequest): Headers {
@@ -42,7 +44,7 @@ async function proxyRequest(
     );
   }
 
-  const targetUrl = buildTargetUrl(CERT_API_URL, path);
+  const targetUrl = buildTargetUrl(CERT_API_URL, path, request.nextUrl.searchParams);
   const headers = forwardHeaders(request);
 
   let body: BodyInit | undefined = undefined;

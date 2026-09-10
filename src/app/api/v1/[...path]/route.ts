@@ -9,8 +9,10 @@ function isAuthRoute(path: string[]): boolean {
   return path.length > 0 && path[0] === "auth";
 }
 
-function buildTargetUrl(base: string, path: string[]): string {
-  return `${base}/api/v1/${path.join("/")}`;
+function buildTargetUrl(base: string, path: string[], searchParams: URLSearchParams): string {
+  const qs = searchParams.toString();
+  const base_url = `${base}/api/v1/${path.join("/")}`;
+  return qs ? `${base_url}?${qs}` : base_url;
 }
 
 function forwardHeaders(
@@ -58,7 +60,7 @@ async function proxyRequest(
 
   const authRoute = isAuthRoute(path);
   const baseUrl = authRoute ? AUTH_API_URL : CERT_API_URL;
-  const targetUrl = buildTargetUrl(baseUrl, path);
+  const targetUrl = buildTargetUrl(baseUrl, path, request.nextUrl.searchParams);
   const headers = forwardHeaders(request, authRoute);
 
   let body: BodyInit | undefined = undefined;
