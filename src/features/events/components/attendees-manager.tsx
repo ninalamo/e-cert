@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { attendeesApi } from "@/lib/api/attendees";
 import type { EventAttendee } from "@/types/event-attendee";
@@ -56,6 +56,15 @@ export default function AttendeesManager({
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
+
+  const pageRef = useRef(page);
+  const pageSizeRef = useRef(pageSize);
+  const debouncedSearchRef = useRef(debouncedSearch);
+  const filterRef = useRef(filter);
+  useEffect(() => { pageRef.current = page; });
+  useEffect(() => { pageSizeRef.current = pageSize; });
+  useEffect(() => { debouncedSearchRef.current = debouncedSearch; });
+  useEffect(() => { filterRef.current = filter; });
 
   const [addOpen, setAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
@@ -134,12 +143,14 @@ export default function AttendeesManager({
     if (refreshTrigger <= 0) return;
     let cancelled = false;
     setFetching(true);
+    const search = debouncedSearchRef.current.trim() || undefined;
+    const status = filterRef.current !== "all" ? filterRef.current : undefined;
     attendeesApi
       .list(eventId, {
-        search: debouncedSearch.trim() || undefined,
-        status: filter !== "all" ? filter : undefined,
-        limit: pageSize,
-        offset: page * pageSize,
+        search,
+        status,
+        limit: pageSizeRef.current,
+        offset: pageRef.current * pageSizeRef.current,
       })
       .then((result) => {
         if (cancelled) return;
