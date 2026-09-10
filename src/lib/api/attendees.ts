@@ -1,6 +1,6 @@
 import { api } from "./client";
 import type { EventAttendee, AttendeeMetadata } from "@/types/event-attendee";
-import type { ApiResponse, PaginationMeta, BulkResponse } from "./types";
+import type { ApiResponse, PaginatedResponse, PaginationMeta, PaginationLinks, BulkResponse } from "./types";
 
 export interface AttendeeDeletePreview {
   attendee: EventAttendee;
@@ -15,26 +15,32 @@ export interface IssueCompletedResult {
   errors: string[];
 }
 
+export interface AttendeesListParams {
+  search?: string;
+  attended?: boolean;
+  completed?: boolean;
+  status?: "not_issued" | "issued" | "revoked" | "expired";
+  limit?: number;
+  offset?: number;
+}
+
+export interface AttendeesListResult {
+  data: EventAttendee[];
+  meta: PaginationMeta;
+  links: PaginationLinks;
+}
+
 export const attendeesApi = {
-  list: (eventId: string) =>
-    api.get<{ data: EventAttendee[] }>(
-      `/events/${eventId}/attendees`
-    ),
-
-  listAll: (eventId: string) =>
-    api.get<{ data: EventAttendee[] }>(
-      `/events/${eventId}/attendees?limit=1000`
-    ),
-
-  listPaginated: (
-    eventId: string,
-    params?: { limit?: number; offset?: number }
-  ) => {
+  list: (eventId: string, params?: AttendeesListParams) => {
     const qs = new URLSearchParams();
+    if (params?.search) qs.set("search", params.search);
+    if (params?.attended !== undefined) qs.set("attended", String(params.attended));
+    if (params?.completed !== undefined) qs.set("completed", String(params.completed));
+    if (params?.status) qs.set("status", params.status);
     if (params?.limit) qs.set("limit", String(params.limit));
-    if (params?.offset) qs.set("offset", String(params.offset));
+    if (params?.offset !== undefined) qs.set("offset", String(params.offset));
     const q = qs.toString();
-    return api.get<{ data: EventAttendee[]; meta: PaginationMeta }>(
+    return api.get<PaginatedResponse<EventAttendee>>(
       `/events/${eventId}/attendees${q ? `?${q}` : ""}`
     );
   },

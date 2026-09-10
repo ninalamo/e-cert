@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { attendeesApi } from "@/lib/api/attendees";
 import type { EventAttendee } from "@/types/event-attendee";
-import { usePagination, Paginator } from "@/components/ui/paginator";
+import type { PaginationMeta } from "@/lib/api/types";
+import { Paginator } from "@/components/ui/paginator";
 import {
   Dialog,
   DialogContent,
@@ -17,15 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon, EyeIcon } from "lucide-react";
 
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
+const SEARCH_DEBOUNCE_MS = 300;
+const PAGE_SIZE = 25;
 
 type FilterStatus = "all" | "not_issued" | "issued" | "revoked" | "expired";
-
-function getAttendeeStatus(a: EventAttendee): "issued" | "revoked" | "expired" | "not_issued" {
-  if (!a.certificate_id) return "not_issued";
-  if (a.certificates?.revoked_at) return "revoked";
-  if (a.certificates?.expires_at && new Date(a.certificates.expires_at) < new Date()) return "expired";
-  return "issued";
-}
 
 export default function AttendeesManager({
   eventId,
@@ -48,12 +44,16 @@ export default function AttendeesManager({
 }) {
   const [attendees, setAttendees] = useState<EventAttendee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearchRef = useRef("");
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
 
   const [addOpen, setAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
@@ -77,24 +77,43 @@ export default function AttendeesManager({
   } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  const load = useCallback(async () => {
-    const { data } = await attendeesApi.listAll(eventId);
-    setAttendees(data);
+  const fetchPage = useCallback(async (p: number, ps: number, search: string, status?: FilterStatus) => {
+    const result = await attendeesApi.list(eventId, {
+      search: search.trim() || undefined,
+      status: status && status !== "all" ? status : undefined,
+      limit: ps,
+      offset: p * ps,
+    });
+    setAttendees(result.data ?? []);
+    setMeta(result.meta);
     setLoading(false);
   }, [eventId]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    load();
-  }, [load]);
+    let active = true;
+    const timer = setTimeout(
+      () => {
+        if (active) fetchPage(0, pageSize, searchInput, filter);
+      },
+      searchInput !== debouncedSearchRef.current ? SEARCH_DEBOUNCE_MS : 0
+    );
+    debouncedSearchRef.current = searchInput;
+    setPage(0);
+    return () => { active = false; clearTimeout(timer); };
+  }, [fetchPage, pageSize, searchInput, filter]);
+
+  useEffect(() => {
+    fetchPage(page, pageSize, debouncedSearchRef.current, filter);
+  }, [page, pageSize, fetchPage, filter]);
 
   useEffect(() => {
     onSelectionChange?.(Array.from(selected));
   }, [selected, onSelectionChange]);
 
   useEffect(() => {
-    if (refreshTrigger > 0) load();
-  }, [refreshTrigger, load]);
+    if (refreshTrigger > 0) fetchPage(page, pageSize, debouncedSearchRef.current, filter);
+  }, [refreshTrigger, fetchPage, page, pageSize, filter]);
 
   useEffect(() => {
     if (showAddDialog) {
@@ -104,36 +123,15 @@ export default function AttendeesManager({
   }, [showAddDialog, onAddDialogHandled]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const filtered = useMemo(() => {
-    let list = attendees;
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (a) => a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q)
-      );
-    }
-    if (filter !== "all") {
-      list = list.filter((a) => getAttendeeStatus(a) === filter);
-    }
-    return list;
-  }, [attendees, search, filter]);
-
-  const {
-    page,
-    totalPages,
-    pageSize,
-    paginatedItems: pageRows,
-    setPage,
-    setPageSize,
-  } = usePagination(filtered, 25);
+  const pageRows = attendees;
+  const totalPages = meta ? Math.max(1, Math.ceil(meta.total / pageSize)) : 1;
 
   const allPageSelected =
     pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
   const somePageSelected = pageRows.some((r) => selected.has(r.id));
 
   function handleSearchChange(value: string) {
-    setSearch(value);
-    setPage(0);
+    setSearchInput(value);
   }
 
   function handleFilterChange(value: FilterStatus) {
@@ -187,7 +185,7 @@ export default function AttendeesManager({
       setAddMode("template");
       setAddFile(null);
       setAddOpen(false);
-      await load();
+      await fetchPage(page, pageSize, debouncedSearchRef.current);
       setMessage("Attendee added.");
     }
   }
@@ -240,7 +238,7 @@ export default function AttendeesManager({
       setEditFile(null);
       setEditTarget(null);
       setEditOpen(false);
-      await load();
+      await fetchPage(page, pageSize, debouncedSearchRef.current);
       setMessage("Attendee updated.");
     }
   }
@@ -262,7 +260,7 @@ export default function AttendeesManager({
         next.delete(id);
         return next;
       });
-      await load();
+      await fetchPage(page, pageSize, debouncedSearchRef.current);
     }
   }
 
@@ -292,7 +290,7 @@ export default function AttendeesManager({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm text-tertiary">
-            {filtered.length} attendee{filtered.length !== 1 ? "s" : ""}
+            {meta?.total ?? 0} attendee{(meta?.total ?? 0) !== 1 ? "s" : ""}
           </span>
           {selected.size > 0 && (
             <span className="badge-brand">{selected.size} selected</span>
@@ -303,7 +301,7 @@ export default function AttendeesManager({
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-tertiary" />
             <input
               type="text"
-              value={search}
+              value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search name or email..."
               className="input pl-8 py-1.5 text-xs w-48"
@@ -323,10 +321,12 @@ export default function AttendeesManager({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {attendees.length === 0 ? (
         <div className="app-card p-12 text-center">
           <p className="text-sm text-tertiary">
-            {attendees.length === 0 ? "No attendees yet." : "No matches found."}
+            {(meta?.total ?? 0) === 0 && filter === "all" && !searchInput.trim()
+              ? "No attendees yet."
+              : "No matches found."}
           </p>
         </div>
       ) : (
@@ -435,16 +435,14 @@ export default function AttendeesManager({
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <Paginator
-              page={page}
-              totalPages={totalPages}
-              pageSize={pageSize}
-              totalItems={filtered.length}
-              setPage={setPage}
-              setPageSize={setPageSize}
-            />
-          )}
+          <Paginator
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={meta?.total ?? 0}
+            setPage={setPage}
+            setPageSize={(s) => { setPageSize(s); setPage(0); }}
+          />
         </>
       )}
 

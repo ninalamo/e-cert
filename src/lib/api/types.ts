@@ -5,6 +5,18 @@ export interface PaginationMeta {
   has_more: boolean;
 }
 
+export interface PaginationLinks {
+  self: string;
+  next: string | null;
+  prev: string | null;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginationMeta;
+  links: PaginationLinks;
+}
+
 export interface ApiResponse<T> {
   data: T;
   meta?: PaginationMeta;
