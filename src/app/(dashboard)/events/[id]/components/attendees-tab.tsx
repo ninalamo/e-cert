@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
@@ -16,6 +16,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+
+const BATCH_CHUNK = 25;
+const MAX_BATCH = 200;
+const CHUNK_TIMEOUT_MS = 60_000;
 
 async function authFetch(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
   const token = getAccessToken();
@@ -54,6 +58,7 @@ interface IssueResult {
   email: string;
   success: boolean;
   emailed?: boolean;
+  skipped?: boolean;
   certNumber?: string;
   error?: string;
 }
@@ -61,6 +66,7 @@ interface IssueResult {
 interface IssueSummary {
   issued: number;
   emailed: number;
+  skipped?: number;
   results: IssueResult[];
 }
 
@@ -85,6 +91,9 @@ export default function AttendeesTab({
   const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
   const [revokeBusy, setRevokeBusy] = useState(false);
   const [expiredCount, setExpiredCount] = useState(0);
+  const [issueProgress, setIssueProgress] = useState<{ current: number; total: number; processed: number; totalAttendees: number } | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const cancelRequestedRef = useRef(false);
 
   useEffect(() => {
     if (!issueBusy) return;
@@ -122,36 +131,149 @@ export default function AttendeesTab({
   }, [refresh, event.id]);
 
   async function handleIssueSelected() {
+    const allIds = selectedAttendeeIds;
+    const effectiveIds = allIds.length > MAX_BATCH ? allIds.slice(0, MAX_BATCH) : allIds;
+    const remaining = allIds.length > MAX_BATCH ? allIds.length - MAX_BATCH : 0;
+    const chunks: string[][] = [];
+    for (let i = 0; i < effectiveIds.length; i += BATCH_CHUNK) {
+      chunks.push(effectiveIds.slice(i, i + BATCH_CHUNK));
+    }
+    const totalChunks = chunks.length;
+    const totalAttendees = effectiveIds.length;
+
     setIssueBusy(true);
     setIssueSummary(null);
-    try {
-      const res = await authFetch(`/api/events/${event.id}/bulk-issue`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendee_ids: selectedAttendeeIds, send_email: true }),
-      });
+    setIssueProgress({ current: 0, total: totalChunks, processed: 0, totalAttendees });
+    cancelRequestedRef.current = false;
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error ?? `Request failed (${res.status})`);
+    let mergedIssued = 0;
+    let mergedEmailed = 0;
+    let mergedSkipped = 0;
+    let mergedResults: IssueResult[] = [];
+    let hadChunkError = false;
+
+    try {
+      for (let idx = 0; idx < chunks.length; idx++) {
+        if (cancelRequestedRef.current) break;
+
+        const chunk = chunks[idx];
+        setIssueProgress({ current: idx + 1, total: totalChunks, processed: mergedResults.length, totalAttendees });
+
+        const controller = new AbortController();
+        abortRef.current = controller;
+        const timeoutId = setTimeout(() => controller.abort(), CHUNK_TIMEOUT_MS);
+
+        try {
+          const res = await authFetch(`/api/events/${event.id}/bulk-issue`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ attendee_ids: chunk, send_email: true }),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (cancelRequestedRef.current) break;
+
+          if (!res.ok) {
+            const body = await res.json().catch(() => null);
+            const msg = body?.message ?? body?.error ?? `Request failed (${res.status})`;
+            // quick-fail this chunk: mark its attendees as failed, keep prior chunks
+            hadChunkError = true;
+            const chunkFailed: IssueResult[] = chunk.map((_, i) => ({
+              name: `Attendee ${i + 1}`,
+              email: `chunk-${idx + 1}-attendee-${i + 1}`,
+              success: false,
+              emailed: false,
+              skipped: false,
+              error: msg,
+            }));
+            // try to use server returned results if available for better names
+            if (body?.data?.results && Array.isArray(body.data.results)) {
+              // if server returned per-attendee results despite error, use them
+              // otherwise keep generic
+            }
+            mergedResults = mergedResults.concat(chunkFailed);
+            // surface but continue to allow user to see partial; stop remaining chunks on non-cancel chunk error
+            toast.warning(`Batch ${idx + 1}/${totalChunks} failed: ${msg}`, { duration: 8000 });
+            break;
+          }
+
+          const json = await res.json();
+          const data = json?.data ?? json;
+          const issued: number = Number(data?.issued ?? 0);
+          const emailed: number = Number(data?.emailed ?? 0);
+          const skipped: number = Number(data?.skipped ?? 0);
+          const results: IssueResult[] = Array.isArray(data?.results) ? data.results : [];
+
+          mergedIssued += Number.isFinite(issued) ? issued : 0;
+          mergedEmailed += Number.isFinite(emailed) ? emailed : 0;
+          mergedSkipped += Number.isFinite(skipped) ? skipped : results.filter((r) => r.skipped).length;
+          mergedResults = mergedResults.concat(results);
+          setIssueProgress({ current: idx + 1, total: totalChunks, processed: mergedResults.length, totalAttendees });
+        } catch (err) {
+          clearTimeout(timeoutId);
+          if (cancelRequestedRef.current) break;
+          const isAbort = err instanceof DOMException && err.name === "AbortError";
+          const msg = isAbort ? "Chunk timed out — not sent, retryable" : err instanceof Error ? err.message : "Network error — not sent, retryable";
+          hadChunkError = true;
+          // mark this chunk's attendees as failed with retryable error
+          const chunkFailed: IssueResult[] = chunk.map((_, i) => ({
+            name: `Attendee ${i + 1}`,
+            email: `attendee-${i + 1}`,
+            success: false,
+            emailed: false,
+            skipped: false,
+            error: msg,
+          }));
+          mergedResults = mergedResults.concat(chunkFailed);
+          toast.warning(`Batch ${idx + 1}/${totalChunks} failed: ${msg}`, { duration: 8000 });
+          break;
+        } finally {
+          abortRef.current = null;
+        }
       }
 
-      const result: IssueSummary = await res.json();
-      setIssueSummary(result);
-      setSelectedAttendeeIds([]);
+      const finalSummary: IssueSummary = {
+        issued: mergedIssued,
+        emailed: mergedEmailed,
+        skipped: mergedSkipped,
+        results: mergedResults,
+      };
+
+      // if we processed less than total due to early break, keep results as-is
+      setIssueSummary(finalSummary);
       setRefresh((n) => n + 1);
 
-      const failed = result.results.filter((r) => !r.success).length;
-      if (failed > 0) {
-        toast.warning(`${result.issued} issued, ${failed} failed`, { duration: 8000 });
+      // keep remaining selection if we sliced first 200
+      if (remaining > 0) {
+        setSelectedAttendeeIds((prev) => prev.slice(MAX_BATCH));
+        toast.warning(`${mergedEmailed} emailed, ${mergedSkipped} skipped, ${mergedResults.filter((r) => !r.success && !r.skipped).length} failed — ${remaining} remaining not processed. Run again for next batch.`, { duration: 8000 });
       } else {
-        toast.success(`${result.issued} issued, ${result.emailed} emailed`, { duration: 8000 });
+        setSelectedAttendeeIds([]);
+        const failed = mergedResults.filter((r) => !r.success && !r.skipped).length;
+        const skippedCount = mergedResults.filter((r) => r.skipped).length;
+        if (failed > 0) {
+          toast.warning(`${mergedEmailed} emailed, ${skippedCount} skipped, ${failed} failed`, { duration: 8000 });
+        } else if (hadChunkError) {
+          toast.warning(`${mergedEmailed} emailed, ${skippedCount} skipped`, { duration: 8000 });
+        } else {
+          toast.success(`${mergedEmailed} emailed${skippedCount ? `, ${skippedCount} skipped` : ""}`, { duration: 8000 });
+        }
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to start certificate issuance");
     } finally {
       setIssueBusy(false);
+      setIssueProgress(null);
+      abortRef.current = null;
     }
+  }
+
+  function handleCancelIssue() {
+    cancelRequestedRef.current = true;
+    abortRef.current?.abort();
+    toast.info("Cancelling — keeping completed batches");
   }
 
   async function handleRevokeExpired() {
@@ -212,18 +334,28 @@ export default function AttendeesTab({
 
   function getIssueDialogDescription(): string {
     if (selectedAttendeeIds.length === 0) return "";
-    return "Are you sure? This will issue certificates to attendees that are not yet issued. Attendees that already have a certificate will be re-issued with updated details while keeping the same certificate number.";
+    const n = selectedAttendeeIds.length;
+    const effective = Math.min(n, MAX_BATCH);
+    const remaining = n > MAX_BATCH ? n - MAX_BATCH : 0;
+    const chunks = Math.ceil(effective / BATCH_CHUNK);
+    const estSec = chunks * 15;
+    const estText = estSec < 60 ? `~${estSec}s` : `~${Math.ceil(estSec / 60)} min`;
+    if (n > MAX_BATCH) {
+      return `You've selected ${n} attendees. Only the first ${MAX_BATCH} will be issued in this batch (equivalent to Select All when not choosing meticulously). Remaining ${remaining} can be issued in the next batch. This batch will run as ${chunks} chunk(s) of ${BATCH_CHUNK} — estimated ${estText}. Already issued attendees will be skipped. Failures are quick-fail and listed for retry.`;
+    }
+    return `This will issue certificates for ${effective} attendee(s) in ${chunks} chunk(s) of ${BATCH_CHUNK} — estimated ${estText}. Already issued attendees will be shown as Skipped. Attendees are only marked issued after email is sent, so you can safely retry failed ones.`;
   }
 
   function downloadCsv() {
     if (!issueSummary) return;
-    const header = "Name,Email,Issued,Emailed,Error\n";
+    const header = "Name,Email,Issued,Emailed,Skipped,Error\n";
     const rows = (issueSummary.results ?? []).map((r) =>
       [
         `"${r.name}"`,
         `"${r.email}"`,
         r.success ? "Yes" : "No",
         r.emailed ? "Yes" : r.success ? "No" : "N/A",
+        r.skipped ? "Yes" : "No",
         r.error ? `"${r.error.replace(/"/g, '""')}"` : "",
       ].join(",")
     ).join("\n");
@@ -237,14 +369,28 @@ export default function AttendeesTab({
   }
 
   if (issueBusy) {
+    const pct = issueProgress && issueProgress.total > 0 ? Math.round((issueProgress.current / issueProgress.total) * 100) : 0;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-        <div className="flex flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-lg">
+        <div className="flex flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-lg min-w-[340px] max-w-[90vw]">
           <Loader2Icon className="size-10 animate-spin text-brand-600" />
-          <div className="text-center">
+          <div className="text-center w-full">
             <p className="text-lg font-semibold">Issuing certificates...</p>
             <p className="text-sm text-muted-foreground">Please do not close or navigate away.</p>
+            {issueProgress && (
+              <div className="mt-4 space-y-2">
+                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-brand-600 transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Batch {issueProgress.current}/{issueProgress.total} — {issueProgress.processed} of {issueProgress.totalAttendees} processed
+                </p>
+              </div>
+            )}
           </div>
+          <Button variant="outline" size="sm" onClick={handleCancelIssue}>
+            Cancel
+          </Button>
         </div>
       </div>
     );
@@ -280,15 +426,32 @@ export default function AttendeesTab({
                 </div>
               </div>
               <p className="mt-1 text-[var(--color-info-text)] opacity-80">
-                {issueSummary.issued} issued, {issueSummary.emailed} emailed
-                {(issueSummary.results ?? []).filter((r) => !r.success).length > 0 &&
-                  `, ${(issueSummary.results ?? []).filter((r) => !r.success).length} failed`}
+                {issueSummary.emailed} emailed
+                {(issueSummary.skipped ?? 0) > 0 && `, ${issueSummary.skipped} skipped`}
+                {(issueSummary.results ?? []).filter((r) => !r.success && !r.skipped).length > 0 &&
+                  `, ${(issueSummary.results ?? []).filter((r) => !r.success && !r.skipped).length} failed`}
+                {(issueSummary.results ?? []).filter((r) => r.skipped).length === 0 &&
+                  (issueSummary.results ?? []).filter((r) => !r.success && !r.skipped).length === 0 &&
+                  `, ${issueSummary.issued} issued`}
               </p>
 
-              {(issueSummary.results ?? []).some((r) => !r.success) && (
+              {(issueSummary.results ?? []).some((r) => r.skipped) && (
                 <div className="mt-3 space-y-1">
-                  <p className="text-xs font-medium text-[var(--color-info-text)] opacity-70">Failed:</p>
-                  {(issueSummary.results ?? []).filter((r) => !r.success).map((r, i) => (
+                  <p className="text-xs font-medium text-[var(--color-info-text)] opacity-70">Skipped — already issued:</p>
+                  {(issueSummary.results ?? []).filter((r) => r.skipped).map((r, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-xs text-[var(--color-info-text)] opacity-80">
+                      <XCircleIcon className="size-3 shrink-0 text-amber-500" />
+                      <span className="truncate">{r.email}</span>
+                      <span className="shrink-0 opacity-60">— {r.error}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {(issueSummary.results ?? []).some((r) => !r.success && !r.skipped) && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs font-medium text-[var(--color-info-text)] opacity-70">Failed — not emailed (retryable):</p>
+                  {(issueSummary.results ?? []).filter((r) => !r.success && !r.skipped).map((r, i) => (
                     <div key={i} className="flex items-center gap-1.5 text-xs text-[var(--color-info-text)] opacity-80">
                       <XCircleIcon className="size-3 shrink-0 text-red-500" />
                       <span className="truncate">{r.email}</span>
@@ -360,7 +523,7 @@ export default function AttendeesTab({
           >
             {issueBusy
               ? "Issuing..."
-              : "Issue Certificate"}
+              : `Issue Certificate${selectedAttendeeIds.length > MAX_BATCH ? ` (first ${MAX_BATCH} of ${selectedAttendeeIds.length})` : ""}`}
           </button>
         )}
         {isAdmin && expiredCount > 0 && (
