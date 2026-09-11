@@ -75,20 +75,20 @@ export const attendeesApi = {
       data
     ),
 
-  remove: (eventId: string, attendeeId: string) =>
-    api.delete(`/events/${eventId}/attendees/${attendeeId}`),
+  remove: (attendeeId: string) =>
+    api.delete(`/attendees/${attendeeId}`),
 
-  removeWithCert: (eventId: string, attendeeId: string) =>
-    api.delete(`/events/${eventId}/attendees/${attendeeId}?with_cert=true`),
+  removeWithCert: (attendeeId: string) =>
+    api.delete(`/attendees/${attendeeId}?with_cert=true`),
 
-  getDeletePreview: (eventId: string, attendeeId: string) =>
+  getDeletePreview: (attendeeId: string) =>
     api.get<ApiResponse<AttendeeDeletePreview>>(
-      `/events/${eventId}/attendees/${attendeeId}/delete-preview`
+      `/attendees/${attendeeId}/delete-preview`
     ),
 
-  getFileData: (eventId: string, attendeeId: string) =>
+  getFileData: (attendeeId: string) =>
     api.get<ApiResponse<{ file_data: string; file_name: string; file_type: string }>>(
-      `/events/${eventId}/attendees/${attendeeId}/file-data`
+      `/attendees/${attendeeId}/file-data`
     ),
 
   getFileBlob: (attendeeId: string) =>

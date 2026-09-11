@@ -273,7 +273,7 @@ export default function AttendeesManager({
       metadata.file_name = editFile.name;
       metadata.file_type = editFile.type;
     } else if (editMode === "file" && !editFile) {
-      const { data: fileData } = await attendeesApi.getFileData(eventId, editTarget.id);
+      const { data: fileData } = await attendeesApi.getFileData(editTarget.id);
       metadata.file_data = fileData?.file_data ?? null;
       metadata.file_name = fileData?.file_name ?? null;
       metadata.file_type = fileData?.file_type ?? null;
@@ -307,8 +307,8 @@ export default function AttendeesManager({
     setRemoveBusy(true);
     const target = attendees.find((a) => a.id === id);
     const apiResult = isAdmin && target?.certificate_id
-      ? await attendeesApi.removeWithCert(eventId, id)
-      : await attendeesApi.remove(eventId, id);
+      ? await attendeesApi.removeWithCert(id)
+      : await attendeesApi.remove(id);
     setRemoveBusy(false);
     setRemoveTarget(null);
     setDeletePreview(null);
@@ -520,7 +520,7 @@ export default function AttendeesManager({
                               setRemoveTarget(a);
                               setPreviewLoading(true);
                               setDeletePreview(null);
-                              const { data: preview } = await attendeesApi.getDeletePreview(eventId, a.id);
+                              const { data: preview } = await attendeesApi.getDeletePreview(a.id);
                               setDeletePreview(preview);
                               setPreviewLoading(false);
                             }}
