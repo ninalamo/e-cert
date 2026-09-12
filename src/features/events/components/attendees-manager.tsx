@@ -306,21 +306,28 @@ export default function AttendeesManager({
   async function handleRemove(id: string) {
     setRemoveBusy(true);
     const target = attendees.find((a) => a.id === id);
-    const apiResult = isAdmin && target?.certificate_id
-      ? await attendeesApi.removeWithCert(id)
-      : await attendeesApi.remove(id);
-    setRemoveBusy(false);
-    setRemoveTarget(null);
-    setDeletePreview(null);
-    if (!apiResult) {
+    try {
+      const apiResult = isAdmin && target?.certificate_id
+        ? await attendeesApi.removeWithCert(id)
+        : await attendeesApi.remove(id);
+      setRemoveBusy(false);
+      setRemoveTarget(null);
+      setDeletePreview(null);
+      if (!apiResult && apiResult !== undefined) {
+        setError("Failed to remove attendee");
+      } else {
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        await fetchPage(page, pageSize, debouncedSearch);
+      }
+    } catch {
+      setRemoveBusy(false);
+      setRemoveTarget(null);
+      setDeletePreview(null);
       setError("Failed to remove attendee");
-    } else {
-      setSelected((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      await fetchPage(page, pageSize, debouncedSearch);
     }
   }
 

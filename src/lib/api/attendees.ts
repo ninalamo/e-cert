@@ -76,10 +76,16 @@ export const attendeesApi = {
     ),
 
   remove: (attendeeId: string) =>
-    api.delete(`/attendees/${attendeeId}`),
+    api.delete(`/attendees/${attendeeId}`).catch((err) => {
+      if (err?.message?.includes("No query results")) return null;
+      throw err;
+    }),
 
   removeWithCert: (attendeeId: string) =>
-    api.delete(`/attendees/${attendeeId}?with_cert=true`),
+    api.delete(`/attendees/${attendeeId}?with_cert=true`).catch((err) => {
+      if (err?.message?.includes("No query results")) return null;
+      throw err;
+    }),
 
   getDeletePreview: (attendeeId: string) =>
     api.get<ApiResponse<AttendeeDeletePreview>>(
