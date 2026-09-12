@@ -67,7 +67,7 @@ export const certificatesApi = {
 
   issueFromEvent: (data: IssueFromEventInput) =>
     api.post<ApiResponse<{ certificate: Certificate; error?: string }>>(
-      "/certificates/issue-from-event",
+      "/certificates",
       data
     ),
 
