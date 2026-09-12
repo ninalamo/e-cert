@@ -41,23 +41,28 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
     setSuccess(null);
     setLoading(true);
 
-    const { data: result } = await certificatesApi.issueFromEvent({
-      event_id: eventId,
-      organization_id: ORG_ID,
-      recipient_name: name,
-      recipient_email: email,
-      send_email: sendEmail,
-    });
+    try {
+      const { data: result } = await certificatesApi.issueFromEvent({
+        event_id: eventId,
+        organization_id: ORG_ID,
+        recipient_name: name,
+        recipient_email: email,
+        send_email: sendEmail,
+      });
 
-    if (result?.error) {
-      setError(result.error);
-    } else if (result?.certificate) {
-      setSuccess(`Certificate ${result.certificate.certificate_number} issued!`);
-      setName("");
-      setEmail("");
+      if (result?.error) {
+        setError(result.error);
+      } else if (result?.certificate) {
+        setSuccess(`Certificate ${result.certificate.certificate_number} issued!`);
+        setName("");
+        setEmail("");
+      }
+    } catch (err) {
+      const msg = (err as { message?: string })?.message ?? "Failed to issue certificate.";
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   if (!event) {
