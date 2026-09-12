@@ -269,7 +269,9 @@ export default function UploadCsvForm({
   const invalidFileCount = rows.filter(
     (r) => r.file_path && rowFileError(r) !== null && rowFileError(r) !== "Certificate not attached"
   ).length;
-  const missingFileCount = invalidFileCount;
+  const missingFileCount = rows.filter(
+    (r) => r.file_path && rowFileError(r) === "Certificate not attached"
+  ).length;
 
   if (!event) return <SkeletonUpload />;
 

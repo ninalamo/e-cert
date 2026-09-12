@@ -12,10 +12,7 @@ interface TemplateCardProps {
   event: Event;
   templates: CertificateTemplate[];
   currentTemplate: CertificateTemplate | null;
-  emailTemplates?: CertificateTemplate[];
-  currentEmailTemplate?: CertificateTemplate | null;
   onUpdated: (event: Event, template: CertificateTemplate | null) => void;
-  onEmailTemplateUpdated: (event: Event, emailTemplate: CertificateTemplate | null) => void;
 }
 
 export default function TemplateCard({
@@ -120,67 +117,7 @@ export default function TemplateCard({
         </div>
       </div>
 
-      {/* HIDDEN: Email template selector — always uses the system default email template.
-          The underlying state (selectedEmail) remains initialized from event.email_template_id
-          but the UI is hidden so users cannot change it. To re-enable, uncomment the block below. */}
-      {/* <div className="app-card p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <MailIcon className="size-4 text-[var(--color-text-muted)]" />
-          <p className="section-title mb-0">Email Template</p>
-        </div>
-        <div className="mb-2 text-sm">
-          <span className="text-tertiary">Current: </span>
-          <span className="font-medium">{currentEmailTemplate?.name ?? "System default"}</span>
-          {event.status !== "draft" && (
-            <span
-              title="Locked: this template cannot be edited while the event is active or archived"
-              className="status-badge status-badge--archive ml-2"
-            >
-              Locked
-            </span>
-          )}
-        </div>
-        <select
-          value={selectedEmail}
-          onChange={(e) => setSelectedEmail(e.target.value)}
-          disabled={event.status !== "draft"}
-          className="input mb-3 disabled:opacity-50"
-        >
-          <option value="">System default template</option>
-          {emailTemplates.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleEmailSave}
-            disabled={
-              savingEmail ||
-              selectedEmail === (event.email_template_id ?? "") ||
-              event.status !== "draft"
-            }
-            className="btn disabled:opacity-50"
-          >
-            {savingEmail ? "Saving..." : "Assign Email Template"}
-          </button>
-          {(selectedEmail || event.email_template_id) && (
-            <Link
-              href={`/templates/emails/${selectedEmail || event.email_template_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn"
-            >
-              Edit in Page
-            </Link>
-          )}
-          {emailMessage && (
-            <span className="text-xs text-tertiary">{emailMessage}</span>
-          )}
-        </div>
-      </div> */}
+
     </div>
   );
 }

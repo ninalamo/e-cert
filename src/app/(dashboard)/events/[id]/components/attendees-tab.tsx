@@ -99,6 +99,7 @@ export default function AttendeesTab({
     if (!issueBusy) return;
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
+      e.returnValue = "Certificates are still being issued. Are you sure you want to leave?";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);

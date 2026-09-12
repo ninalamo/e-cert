@@ -37,7 +37,7 @@ export default function UploadCsvPage({
       .get(id)
       .then(async (result) => {
         if (!active) return;
-        const ev = (result as { data?: Event })?.data ?? (result as unknown as Event);
+        const ev = result.data ?? null;
         setEvent(ev);
         if (ev?.template_id && ev?.organization_id) {
           const templates = await templatesApi.list(ev.organization_id);
