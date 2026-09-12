@@ -33,7 +33,7 @@ export default function VerifyPage() {
         <VerifySearch />
 
         <p className="mt-8 text-center text-sm text-tertiary">
-          <Link href="/login" className="font-medium text-brand hover:underline">
+          <Link href="/sso/login" className="font-medium text-brand hover:underline">
             Back to login
           </Link>
         </p>

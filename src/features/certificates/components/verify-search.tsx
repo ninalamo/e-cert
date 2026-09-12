@@ -34,7 +34,7 @@ function VerifySearchInner() {
     setResult(null);
 
     try {
-      const res = await fetch(`/api/verify/${encodeURIComponent(number)}`);
+      const res = await fetch(`/api/v1/verify/${encodeURIComponent(number)}`);
       const data = await res.json();
 
       if (!res.ok) {
