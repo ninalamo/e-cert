@@ -60,7 +60,7 @@ export default function VerifyCertificatePage({
         if (!res.ok) {
           setError(data.error || "Certificate not found");
         } else {
-          setResult(data);
+          setResult(data.data ?? data);
         }
       } catch {
         setError("Failed to verify certificate. Please try again.");
