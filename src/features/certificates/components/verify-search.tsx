@@ -98,7 +98,7 @@ function VerifySearchInner() {
             placeholder="CERT-000001"
             required
             disabled={loading}
-            className="w-full px-4 py-4 pr-12 text-base text-primary bg-white dark:bg-surface-secondary border border-border rounded-xl placeholder:text-tertiary/50 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-4 pr-12 text-base text-gray-900 bg-white dark:bg-surface-secondary border border-border rounded-xl placeholder:text-tertiary/50 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             autoComplete="off"
             autoFocus={!initialNumber}
           />
