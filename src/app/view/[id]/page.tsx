@@ -6,6 +6,7 @@ import { certificatesApi } from "@/lib/api/certificates";
 import { templatesApi } from "@/lib/api/templates";
 import { eventsApi } from "@/lib/api/events";
 import { attendeesApi } from "@/lib/api/attendees";
+import { generateQrDataUrl, buildCertificateVerifyUrl } from "@/lib/qr";
 import { ORG_NAME } from "@/lib/org";
 import CertificateViewer from "./certificate-viewer";
 import { NotFoundState } from "@/components/not-found-state";
@@ -20,7 +21,7 @@ export default function CertificateViewPage() {
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [template, setTemplate] = useState<CertificateTemplate | null>(null);
   const [event, setEvent] = useState<Event | null>(null);
-  const [qrDataUrl] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [fileBlobUrl, setFileBlobUrl] = useState<string | null>(null);
   const [fileType, setFileType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,10 @@ export default function CertificateViewPage() {
           const { data: ev } = await eventsApi.get(cert.event_id);
           if (!revoked) setEvent(ev);
         }
+
+        const verifyUrl = buildCertificateVerifyUrl(cert.certificate_number);
+        const qr = await generateQrDataUrl(verifyUrl);
+        if (!revoked) setQrDataUrl(qr);
 
         if (cert.file_path && cert.event_id) {
           const { data: attendees } = await attendeesApi.list(cert.event_id);

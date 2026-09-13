@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { certificatesApi } from "@/lib/api/certificates";
 import { eventsApi } from "@/lib/api/events";
+import { generateQrDataUrl, buildCertificateVerifyUrl } from "@/lib/qr";
 import CertificateDetail from "@/features/certificates/components/certificate-detail";
 import { SkeletonDetail } from "@/components/ui/skeleton";
 import { NotFoundState } from "@/components/not-found-state";
@@ -16,7 +17,7 @@ export default function MyCertificateDetailPage() {
 
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [event, setEvent] = useState<Event | null>(null);
-  const [qrDataUrl] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,6 +31,10 @@ export default function MyCertificateDetailPage() {
           const { data: ev } = await eventsApi.get(cert.event_id);
           setEvent(ev);
         }
+
+        const verifyUrl = buildCertificateVerifyUrl(cert.certificate_number);
+        const qr = await generateQrDataUrl(verifyUrl);
+        setQrDataUrl(qr);
       } catch {
         // ignore
       }
