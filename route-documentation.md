@@ -166,7 +166,7 @@
 - **deleteUserAction** — DELETE /api/users/[id] — `{userId}` — admin — Delete a user.
 
 ### Attendees (`attendee.actions.ts`)
-- **getAttendeesAction** — GET /api/events/[id]/attendees — `{eventId}` — session — List attendees for an event.
+- **getAttendeesAction** — GET /api/events/[id]/attendees — `{eventId, status?, search?, attended?, completed?, limit?, offset?}` — session — List attendees for an event. `status`: `not_issued`|`issued`|`revoked`|`expired` (LEFT JOIN with certificates).
 - **addAttendeeAction** — POST /api/events/[id]/attendees — `{event_id, organization_id, name, email, file_path?, mode?, file_data?, file_name?, file_type?}` — admin, staff — Add a single attendee.
 - **updateAttendeeAction** — PATCH /api/attendees/[id] — `{id, name?, email?, attended?, completed?, metadata?}` — admin, staff — Update an attendee.
 - **removeAttendeeAction** — DELETE /api/attendees/[id] — `{id}` — admin, staff — Remove an attendee.
