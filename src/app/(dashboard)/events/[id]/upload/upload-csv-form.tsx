@@ -266,9 +266,6 @@ export default function UploadCsvForm({
     return validateUploadedFile(f);
   };
 
-  const invalidFileCount = rows.filter(
-    (r) => r.file_path && rowFileError(r) !== null && rowFileError(r) !== "Certificate not attached"
-  ).length;
   const missingFileCount = rows.filter(
     (r) => r.file_path && rowFileError(r) === "Certificate not attached"
   ).length;
