@@ -11,6 +11,13 @@ function isAuthRoute(path: string[]): boolean {
   return path.length > 0 && path[0] === "auth" && !AUTH_ROUTES_ON_CERT_API.has(path[1]);
 }
 
+const COOKIE_FORWARD_ROUTES = new Set(["refresh", "logout"]);
+
+function shouldForwardCookies(path: string[]): boolean {
+  if (path.length < 2 || path[0] !== "auth") return false;
+  return isAuthRoute(path) || COOKIE_FORWARD_ROUTES.has(path[1]);
+}
+
 function buildTargetUrl(base: string, path: string[], searchParams: URLSearchParams): string {
   const qs = searchParams.toString();
   const base_url = `${base}/api/v1/${path.join("/")}`;
@@ -63,7 +70,7 @@ async function proxyRequest(
   const authRoute = isAuthRoute(path);
   const baseUrl = authRoute ? AUTH_API_URL : CERT_API_URL;
   const targetUrl = buildTargetUrl(baseUrl, path, request.nextUrl.searchParams);
-  const headers = forwardHeaders(request, authRoute);
+  const headers = forwardHeaders(request, shouldForwardCookies(path));
 
   let body: BodyInit | undefined = undefined;
   if (request.method !== "GET" && request.method !== "HEAD") {

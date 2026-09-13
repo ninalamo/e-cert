@@ -87,6 +87,29 @@ describe("BFF proxy route handler", () => {
     }
   );
 
+  // ─── Routing: auth platform routes → AUTH_API ───────────────────
+
+  it.each(["auth/login", "auth/register"])(
+    "POST /api/v1/%s → AUTH_API_URL",
+    async (path) => {
+      fetchSpy = mockFetchSuccess();
+      vi.stubGlobal("fetch", fetchSpy);
+
+      const req = makeRequest(path, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "test@test.com" }),
+      });
+
+      await POST(req, { params: Promise.resolve({ path: path.split("/") }) });
+
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const [targetUrl] = fetchSpy.mock.calls[0];
+      expect(targetUrl).toContain(AUTH_API);
+      expect(targetUrl).toContain(`/api/v1/${path}`);
+    }
+  );
+
   // ─── Routing: non-auth routes → CERT_API ────────────────────────
 
   it("GET /api/v1/events → CERT_API_URL", async () => {
@@ -178,9 +201,9 @@ describe("BFF proxy route handler", () => {
     expect(init.headers.get("cookie")).toBe("session=abc123");
   });
 
-  // ─── cert-owned auth routes do NOT forward cookies ──────────────
+  // ─── refresh/logout forward cookies (cert refresh token) ────────
 
-  it("does not forward cookies for cert-owned auth routes (callback/refresh/logout)", async () => {
+  it("forwards cookies for refresh and logout routes", async () => {
     fetchSpy = mockFetchSuccess();
     vi.stubGlobal("fetch", fetchSpy);
 
@@ -196,7 +219,7 @@ describe("BFF proxy route handler", () => {
     await POST(req, { params: Promise.resolve({ path: ["auth", "refresh"] }) });
 
     const [, init] = fetchSpy.mock.calls[0];
-    expect(init.headers.get("cookie")).toBeNull();
+    expect(init.headers.get("cookie")).toBe("loa_cert_refresh=xyz");
   });
 
   // ─── Set-cookie forwarding ──────────────────────────────────────
