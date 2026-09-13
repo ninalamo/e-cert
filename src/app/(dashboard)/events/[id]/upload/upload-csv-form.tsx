@@ -9,7 +9,7 @@ import type { CertificateTemplate } from "@/types/template";
 import type { AttendeeMetadata } from "@/types/event-attendee";
 import { usePagination, Paginator } from "@/components/ui/paginator";
 import { SkeletonUpload } from "@/components/ui/skeleton";
-import { InfoIcon, DownloadIcon, UploadIcon, XIcon, AlertTriangleIcon } from "lucide-react";
+import { InfoIcon, DownloadIcon, UploadIcon, XIcon, AlertTriangleIcon, Loader2Icon } from "lucide-react";
 
 const MAX_FILE_MB = 10;
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg"];
@@ -20,6 +20,7 @@ interface CsvRow {
   file_path: string;
   mode: "template" | "file";
   _originalIndex: number;
+  _emailError?: string;
 }
 
 interface UploadedFile {
@@ -53,6 +54,14 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateEmail(email: string): string | null {
+  if (!email) return "Email is required";
+  if (!EMAIL_RE.test(email)) return "Invalid email format";
+  return null;
+}
+
 export default function UploadCsvForm({
   eventId,
   isAdmin = false,
@@ -67,12 +76,13 @@ export default function UploadCsvForm({
   const event = initialEvent;
   const template = initialTemplate;
 
-  const [step, setStep] = useState<"upload" | "preview" | "results">("upload");
+  const [step, setStep] = useState<"upload" | "preview" | "submitting" | "results">("upload");
   const [rows, setRows] = useState<CsvRow[]>([]);
   const [removedRows, setRemovedRows] = useState<CsvRow[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<Map<string, UploadedFile>>(new Map());
   const [results, setResults] = useState<SubmitResult[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState(0);
   const [error, setError] = useState<string | null>(
     initialEvent?.status === "archive" ? "This event is archived. CSV uploads are no longer available." : null
   );
@@ -104,13 +114,39 @@ export default function UploadCsvForm({
         return;
       }
 
-      const splitRow = (line: string) =>
-        line.split(/\t|,/).map((c) => c.trim());
+      const splitRow = (line: string): string[] => {
+        if (line.includes("|")) {
+          return line.split("|").map((c) => c.trim());
+        }
+        if (line.includes('"')) {
+          const result: string[] = [];
+          let current = "";
+          let inQuotes = false;
+          for (let ci = 0; ci < line.length; ci++) {
+            const ch = line[ci];
+            if (ch === '"') {
+              if (inQuotes && ci + 1 < line.length && line[ci + 1] === '"') {
+                current += '"';
+                ci++;
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (ch === "," && !inQuotes) {
+              result.push(current.trim());
+              current = "";
+            } else {
+              current += ch;
+            }
+          }
+          result.push(current.trim());
+          return result;
+        }
+        return line.split(",").map((c) => c.trim());
+      };
 
       const header = splitRow(lines[0].toLowerCase());
       const nameIdx = header.indexOf("name");
       const emailIdx = header.indexOf("email");
-      const filePathIdx = header.indexOf("file_path");
 
       if (nameIdx === -1 || emailIdx === -1) {
         setError("CSV must have 'name' and 'email' columns");
@@ -122,14 +158,14 @@ export default function UploadCsvForm({
         const cols = splitRow(lines[i]);
         const name = cols[nameIdx] ?? "";
         const email = cols[emailIdx] ?? "";
-        const filePath = filePathIdx !== -1 ? (cols[filePathIdx] ?? "").split(/[\\/]/).pop() ?? "" : "";
         if (name && email) {
           parsed.push({
             name,
             email,
-            file_path: filePath,
-            mode: filePath ? "file" : "template",
+            file_path: "",
+            mode: "template",
             _originalIndex: i - 1,
+            _emailError: validateEmail(email) ?? undefined,
           });
         }
       }
@@ -138,6 +174,12 @@ export default function UploadCsvForm({
         setError("No valid rows found in CSV");
         return;
       }
+
+      parsed.sort((a, b) => {
+        if (a._emailError && !b._emailError) return -1;
+        if (!a._emailError && b._emailError) return 1;
+        return 0;
+      });
 
       setRows(parsed);
       setPage(0);
@@ -194,8 +236,14 @@ export default function UploadCsvForm({
       setError(`${missingFileCount} row(s) have a file path but no uploaded file. Upload the matching files or remove those rows.`);
       return;
     }
+    if (invalidEmailCount > 0) {
+      setError(`${invalidEmailCount} row(s) have invalid email addresses. Fix or remove those rows before submitting.`);
+      return;
+    }
     setLoading(true);
     setError(null);
+    setStep("submitting");
+    setSubmitProgress(0);
 
     const attendees = rows.map((r) => {
       const useFile = !!r.file_path && uploadedFiles.has(r.file_path);
@@ -216,31 +264,49 @@ export default function UploadCsvForm({
       return { name: r.name, email: r.email, metadata };
     });
 
-    const { results } = await attendeesApi.bulkAdd(eventId, {
-      organization_id: ORG_ID,
-      attendees,
-    });
+    const progressTimer = setInterval(() => {
+      setSubmitProgress((prev) => {
+        if (prev >= 90) return prev;
+        const increment = prev < 30 ? 8 : prev < 60 ? 4 : prev < 80 ? 2 : 1;
+        return Math.min(prev + increment, 90);
+      });
+    }, 200);
 
-    const submitResults: SubmitResult[] = attendees.map((a) => {
-      const item = results?.find((r) => r.email === a.email);
-      return {
-        name: a.name,
-        email: a.email,
-        success: !item?.error,
-        error: item?.error,
-      };
-    });
+    try {
+      const { results } = await attendeesApi.bulkAdd(eventId, {
+        organization_id: ORG_ID,
+        attendees,
+      });
 
-    setResults(submitResults);
-    setLoading(false);
-    setStep("results");
+      clearInterval(progressTimer);
+      setSubmitProgress(100);
 
-    if (removedRows.length > 0) {
-      downloadCsv(
-        `removed-rows-${event.name.replace(/\s+/g, "-")}.csv`,
-        ["name", "email", "file_path"],
-        removedRows.map((r) => [r.name, r.email, r.file_path])
-      );
+      const submitResults: SubmitResult[] = attendees.map((a) => {
+        const item = results?.find((r) => r.email === a.email);
+        return {
+          name: a.name,
+          email: a.email,
+          success: !item?.error,
+          error: item?.error,
+        };
+      });
+
+      setResults(submitResults);
+      setLoading(false);
+      setStep("results");
+
+      if (removedRows.length > 0) {
+        downloadCsv(
+          `removed-rows-${event.name.replace(/\s+/g, "-")}.csv`,
+          ["name", "email", "file_path"],
+          removedRows.map((r) => [r.name, r.email, r.file_path])
+        );
+      }
+    } catch {
+      clearInterval(progressTimer);
+      setLoading(false);
+      setStep("preview");
+      setError("Failed to add participants. Please try again.");
     }
   }
 
@@ -270,6 +336,8 @@ export default function UploadCsvForm({
     (r) => r.file_path && rowFileError(r) === "Certificate not attached"
   ).length;
 
+  const invalidEmailCount = rows.filter((r) => !!r._emailError).length;
+
   if (!event) return <SkeletonUpload />;
 
   return (
@@ -289,15 +357,10 @@ export default function UploadCsvForm({
           <p className="font-medium">How it works</p>
           <ol className="list-decimal space-y-1 pl-4">
             <li>
-              Upload a <strong>CSV</strong> with columns{" "}
-              <code className="rounded bg-black/5 px-1 py-0.5 text-xs">name, email</code>{" "}
-              (and optional <code className="rounded bg-black/5 px-1 py-0.5 text-xs">file_path</code>).
+              Upload a file with <strong>name</strong> and <strong>email</strong> columns.
+              Supports <strong>comma-separated</strong> or <strong>pipe-separated</strong> (<code className="rounded bg-black/5 px-1 py-0.5 text-xs">|</code>) formats. Quoted names are handled (e.g. <code className="rounded bg-black/5 px-1 py-0.5 text-xs">&quot;Reynaldo, Jr.&quot;,email@domain.com</code>).
             </li>
-            <li>
-              Preview the rows. For rows with a <code className="rounded bg-black/5 px-1 py-0.5 text-xs">file_path</code>,
-              upload the matching file inline. Rows without a file are
-              system-generated from the event template.
-            </li>
+            <li>Preview the rows and remove any with invalid emails.</li>
             <li>
               Click <strong>Add Participants</strong> to import them into this event.
             </li>
@@ -338,7 +401,7 @@ export default function UploadCsvForm({
               </button>
             </div>
             <p className="mb-3 text-xs text-tertiary">
-              Columns: <code className="rounded bg-black/5 px-1 py-0.5">name, email</code>
+              Comma or pipe separated: <code className="rounded bg-black/5 px-1 py-0.5">name, email</code> / <code className="rounded bg-black/5 px-1 py-0.5">name | email</code>
             </p>
             <label
               className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)] px-4 py-10 text-center transition-colors hover:border-[var(--color-brand-500)] hover:bg-[var(--color-brand-50)] ${
@@ -347,7 +410,7 @@ export default function UploadCsvForm({
             >
               <UploadIcon className="size-7 text-[var(--color-brand-600)]" />
               <span className="text-sm font-medium text-[var(--color-text)]">
-                Tap to choose a CSV file
+                Tap to choose a file
               </span>
               <span className="text-xs text-tertiary">.csv or .txt</span>
               <input
@@ -377,6 +440,11 @@ export default function UploadCsvForm({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-tertiary">
               {rows.length} participant(s) — Page {page + 1} of {totalPages || 1}
+              {invalidEmailCount > 0 && (
+                <span className="ml-2 text-[var(--color-danger-text)] font-medium">
+                  ({invalidEmailCount} shown first — invalid email)
+                </span>
+              )}
             </p>
           </div>
 
@@ -385,6 +453,15 @@ export default function UploadCsvForm({
               <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-warning-text)]" />
               <p className="text-[var(--color-warning-text)]">
                 {missingFileCount} attached certificate(s) are invalid. Attach a valid file (PDF/PNG/JPG, up to {MAX_FILE_MB} MB) or remove those rows before submitting.
+              </p>
+            </div>
+          )}
+
+          {invalidEmailCount > 0 && (
+            <div className="flex items-start gap-3 rounded-2xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm">
+              <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-[var(--color-danger-text)]" />
+              <p className="text-[var(--color-danger-text)]">
+                {invalidEmailCount} row(s) have invalid email addresses. Fix or remove those rows before submitting.
               </p>
             </div>
           )}
@@ -413,6 +490,17 @@ export default function UploadCsvForm({
                       </td>
                       <td className="text-center">
                         {(() => {
+                          if (row._emailError) {
+                            return (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-danger-text)]"
+                                title={row._emailError}
+                              >
+                                <AlertTriangleIcon className="size-3" />
+                                {row._emailError}
+                              </span>
+                            );
+                          }
                           if (!row.file_path) {
                             return (
                               <span className="inline-flex items-center rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-muted)]">
@@ -529,11 +617,34 @@ export default function UploadCsvForm({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={loading || rows.length === 0 || missingFileCount > 0}
+              disabled={loading || rows.length === 0 || missingFileCount > 0 || invalidEmailCount > 0}
               className="btn disabled:opacity-50"
             >
               {loading ? "Adding..." : `Add ${rows.length} Participant(s)`}
             </button>
+          </div>
+        </div>
+      )}
+
+      {step === "submitting" && (
+        <div className="app-card flex flex-col items-center gap-4 p-8">
+          <Loader2Icon className="size-10 animate-spin text-[var(--color-brand-600)]" />
+          <div className="text-center w-full max-w-md">
+            <p className="text-lg font-semibold text-[var(--color-text)]">Adding participants...</p>
+            <p className="text-sm text-tertiary mt-1">Please do not close or navigate away.</p>
+            <div className="mt-4 space-y-2">
+              <div className="h-2 w-full rounded-full bg-[var(--color-surface-muted)] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[var(--color-brand-600)] transition-all duration-300"
+                  style={{ width: `${submitProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-tertiary">
+                {submitProgress < 100
+                  ? `Processing ${rows.length} participant(s)... ${submitProgress}%`
+                  : "Done!"}
+              </p>
+            </div>
           </div>
         </div>
       )}
