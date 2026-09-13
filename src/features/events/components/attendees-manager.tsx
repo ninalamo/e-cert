@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon, EyeIcon, CheckCircle2Icon, Loader2Icon } from "lucide-react";
+import { Trash2Icon, PencilIcon, InfoIcon, SearchIcon, EyeIcon, CheckCircle2Icon, Loader2Icon, SendIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
@@ -89,6 +89,7 @@ export default function AttendeesManager({
   } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [issuingAttendeeId, setIssuingAttendeeId] = useState<string | null>(null);
+  const [resendingAttendeeId, setResendingAttendeeId] = useState<string | null>(null);
 
   const fetchPage = useCallback(async (p: number, ps: number, search: string, status?: FilterStatus) => {
     setFetching(true);
@@ -361,6 +362,22 @@ export default function AttendeesManager({
     }
   }
 
+  async function handleResendEmail(attendee: EventAttendee) {
+    if (!attendee.certificate_id) {
+      toast.error("No certificate to resend");
+      return;
+    }
+    setResendingAttendeeId(attendee.id);
+    try {
+      await certificatesApi.sendEmail(attendee.certificate_id);
+      toast.success(`Email resent to ${attendee.name}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to resend email");
+    } finally {
+      setResendingAttendeeId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -541,9 +558,26 @@ export default function AttendeesManager({
                             <EyeIcon className="size-4" />
                           </Link>
                         )}
+                        {a.certificate_id && (
+                          <button
+                            type="button"
+                            id="resend-row-button"
+                            onClick={() => handleResendEmail(a)}
+                            disabled={resendingAttendeeId === a.id}
+                            title="Resend Certificate Email"
+                            className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)] disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {resendingAttendeeId === a.id ? (
+                              <Loader2Icon className="size-4 animate-spin" />
+                            ) : (
+                              <SendIcon className="size-4" />
+                            )}
+                          </button>
+                        )}
                         {!a.certificate_id && (
                           <button
                             type="button"
+                            id="issue-row-button"
                             onClick={() => handleIssueSingle(a)}
                             disabled={issuingAttendeeId === a.id}
                             title="Issue Certificate"
