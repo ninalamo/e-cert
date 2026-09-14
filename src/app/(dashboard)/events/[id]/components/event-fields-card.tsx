@@ -158,6 +158,7 @@ export default function EventFieldsCard({
               <input
                 value={values.organizer}
                 onChange={(e) => setValues((p) => ({ ...p, organizer: e.target.value }))}
+                required
                 className="input text-sm"
               />
             </div>

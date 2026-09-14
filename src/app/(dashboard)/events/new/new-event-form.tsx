@@ -197,6 +197,7 @@ export default function NewEventForm({
                 value={organizer}
                 onChange={(e) => setOrganizer(e.target.value)}
                 placeholder="e.g. Office of the Registrar"
+                required
                 className="input h-11 rounded-xl text-[15px]"
               />
             </div>

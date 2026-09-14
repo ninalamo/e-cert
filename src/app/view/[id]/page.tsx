@@ -87,7 +87,7 @@ export default function CertificateViewPage() {
       template={template}
       event={event}
       qrDataUrl={qrDataUrl ?? ""}
-      orgName={ORG_NAME}
+      orgName={event?.organizer ?? ORG_NAME}
       fileBlobUrl={fileBlobUrl}
       fileType={fileType}
     />
