@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
 export interface VerificationResult {
+  id?: string;
   valid: boolean;
   certificate_number?: string;
   issued_date?: string;
