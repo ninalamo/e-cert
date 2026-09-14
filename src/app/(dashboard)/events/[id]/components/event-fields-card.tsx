@@ -66,7 +66,7 @@ export default function EventFieldsCard({
     const { data: result } = await eventsApi.update(event.id, {
       event_date: values.event_date || undefined,
       description: values.description || undefined,
-      organizer: values.organizer || undefined,
+      organizer: values.organizer.trim() || undefined,
       location: values.location || undefined,
       certificate_title: values.certificate_title || undefined,
       certificate_number_pattern: trimPatternTrailingDash(values.certificate_number_pattern) || undefined,

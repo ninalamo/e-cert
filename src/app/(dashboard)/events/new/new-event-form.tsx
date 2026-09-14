@@ -88,6 +88,11 @@ export default function NewEventForm({
       return;
     }
 
+    if (!organizer.trim()) {
+      setError("Organizer name is required.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -97,7 +102,7 @@ export default function NewEventForm({
         description: description || undefined,
         event_date: eventDate || undefined,
         location: location || undefined,
-        organizer: organizer || undefined,
+        organizer: organizer.trim() || undefined,
         certificate_title: certTitle || undefined,
         certificate_number_pattern: certPattern,
         valid_until: validUntil || undefined,
