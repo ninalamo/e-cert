@@ -353,7 +353,7 @@ export default function AttendeesManager({
         toast.error(result.error);
       } else if (result?.certificate) {
         toast.success(`Certificate ${result.certificate.certificate_number} issued to ${attendee.name}`);
-        await fetchPage(page, pageSize, debouncedSearch, filter);
+        void fetchPage(page, pageSize, debouncedSearch, filter);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to issue certificate");
