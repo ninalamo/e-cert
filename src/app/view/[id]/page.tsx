@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { certificatesApi } from "@/lib/api/certificates";
-import { templatesApi } from "@/lib/api/templates";
-import { eventsApi } from "@/lib/api/events";
 import { attendeesApi } from "@/lib/api/attendees";
-import { generateQrDataUrl, buildCertificateVerifyUrl } from "@/lib/qr";
 import { ORG_NAME } from "@/lib/org";
 import CertificateViewer from "./certificate-viewer";
 import { NotFoundState } from "@/components/not-found-state";
@@ -30,22 +26,25 @@ export default function CertificateViewPage() {
     let revoked = false;
     async function load() {
       try {
-        const { data: cert } = await certificatesApi.get(id);
+        const res = await fetch(`/api/v1/view/${id}`);
+        if (!res.ok || revoked) return;
+        const json = await res.json();
+        const data = json.data;
+        if (!data || revoked) return;
+
+        const cert = data.certificate as Certificate;
         if (!cert || revoked) return;
         setCertificate(cert);
 
-        if (cert.template_id) {
-          const { data: tmpl } = await templatesApi.get(cert.template_id);
-          if (!revoked) setTemplate(tmpl);
+        if (data.template) {
+          setTemplate(data.template as CertificateTemplate);
         }
-        if (cert.event_id) {
-          const { data: ev } = await eventsApi.get(cert.event_id);
-          if (!revoked) setEvent(ev);
+        if (data.event) {
+          setEvent(data.event as Event);
         }
-
-        const verifyUrl = buildCertificateVerifyUrl(cert.certificate_number);
-        const qr = await generateQrDataUrl(verifyUrl);
-        if (!revoked) setQrDataUrl(qr);
+        if (data.qr_data_url) {
+          setQrDataUrl(data.qr_data_url);
+        }
 
         if (cert.file_path && cert.event_id) {
           const { data: attendees } = await attendeesApi.list(cert.event_id);
