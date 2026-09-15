@@ -1,8 +1,8 @@
 # LOA e-cert — Event Attendee Deletion with Linked Certificate
 ## Product Assembly Component Specification
 
-**Version:** 0.2
-**Status:** Draft
+**Version:** 1.0
+**Status:** Final
 **Layer:** Product Assembly (`e-cert`) + Cert Platform API (`loa-cert-platform`)
 **Audience:** Engineers, AI Development Agents
 
@@ -299,3 +299,4 @@ Component state becomes `useState<AttendeeDeletePreview | null>` (import the typ
 |---------|------|--------|
 | 0.1 | 2026-09-14 | Initial draft: traced call chain, recorded D1–D4 defects, specified preview/delete mapping, recorded auth-user check-only verification. |
 | 0.2 | 2026-09-14 | Review fixes: corrected §6.1 preview example (null vs object), specified `previewError` state, clarified preview-is-display-only + `isAdmin` naming, fixed null/already-gone path to idempotent success, fixed §9.7 to row-preservation (not byte-identical), scoped out import-replace/storage-file/event-cascade orphans, noted OA schema + storage-file hardening. |
+| 1.0 | 2026-09-14 | Promoted to Final: spec complete, verification done, no open items blocking implementation. |

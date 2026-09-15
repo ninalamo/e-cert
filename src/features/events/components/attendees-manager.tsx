@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { attendeesApi } from "@/lib/api/attendees";
+import type { AttendeeDeletePreview } from "@/lib/api/attendees";
 import { certificatesApi } from "@/lib/api/certificates";
 import type { EventAttendee } from "@/types/event-attendee";
 import { Paginator } from "@/components/ui/paginator";
@@ -83,11 +84,9 @@ export default function AttendeesManager({
 
   const [removeTarget, setRemoveTarget] = useState<EventAttendee | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
-  const [deletePreview, setDeletePreview] = useState<{
-    has_certificate: boolean;
-    certificate_number: string | null;
-  } | null>(null);
+  const [deletePreview, setDeletePreview] = useState<AttendeeDeletePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [issuingAttendeeId, setIssuingAttendeeId] = useState<string | null>(null);
   const [resendingAttendeeId, setResendingAttendeeId] = useState<string | null>(null);
 
@@ -317,8 +316,15 @@ export default function AttendeesManager({
       setRemoveBusy(false);
       setRemoveTarget(null);
       setDeletePreview(null);
-      if (!apiResult && apiResult !== undefined) {
-        setError("Failed to remove attendee");
+      setPreviewError(null);
+      if (apiResult === null) {
+        toast.info("Attendee was already removed.");
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        await fetchPage(page, pageSize, debouncedSearch);
       } else {
         setSelected((prev) => {
           const next = new Set(prev);
@@ -331,6 +337,7 @@ export default function AttendeesManager({
       setRemoveBusy(false);
       setRemoveTarget(null);
       setDeletePreview(null);
+      setPreviewError(null);
       setError("Failed to remove attendee");
     }
   }
@@ -606,9 +613,15 @@ export default function AttendeesManager({
                               setRemoveTarget(a);
                               setPreviewLoading(true);
                               setDeletePreview(null);
-                              const { data: preview } = await attendeesApi.getDeletePreview(a.id);
-                              setDeletePreview(preview);
-                              setPreviewLoading(false);
+                              setPreviewError(null);
+                              try {
+                                const { data: preview } = await attendeesApi.getDeletePreview(a.id);
+                                setDeletePreview(preview);
+                              } catch {
+                                setPreviewError("Could not load preview. The backend will re-validate at delete time.");
+                              } finally {
+                                setPreviewLoading(false);
+                              }
                             }}
                             title={a.certificate_id ? "This will also delete the issued certificate" : undefined}
                             className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
@@ -912,7 +925,7 @@ export default function AttendeesManager({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!removeTarget} onOpenChange={(open) => { if (!open && !removeBusy) { setRemoveTarget(null); setDeletePreview(null); } }}>
+      <Dialog open={!!removeTarget} onOpenChange={(open) => { if (!open && !removeBusy) { setRemoveTarget(null); setDeletePreview(null); setPreviewError(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Remove Attendee</DialogTitle>
@@ -922,20 +935,26 @@ export default function AttendeesManager({
           </DialogHeader>
           {previewLoading ? (
             <p className="text-sm text-[var(--color-text-muted)]">Checking what will be deleted...</p>
-          ) : deletePreview ? (
-            <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm space-y-1">
-              <p className="font-medium text-[var(--color-danger-text)]">The following will be permanently deleted:</p>
-              <ul className="list-disc list-inside text-[var(--color-danger-text)] opacity-80 space-y-0.5">
-                <li>Attendee record</li>
-                {deletePreview.has_certificate && <li>Issued certificate</li>}
-                {deletePreview.has_certificate && (
-                  <li>User account (no other event records found)</li>
-                )}
-              </ul>
+          ) : (
+            <div className="space-y-2">
+              {previewError && (
+                <p className="text-sm text-amber-600">{previewError}</p>
+              )}
+              {deletePreview && (
+                <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] p-3 text-sm space-y-1">
+                  <p className="font-medium text-[var(--color-danger-text)]">The following will be permanently deleted:</p>
+                  <ul className="list-disc list-inside text-[var(--color-danger-text)] opacity-80 space-y-0.5">
+                    <li>Attendee record</li>
+                    {deletePreview.deletes_certificate && (
+                      <li>Issued certificate {deletePreview.linked_certificate?.number}</li>
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
-          ) : null}
+          )}
           <DialogFooter>
-            <Button variant="outline" disabled={removeBusy} onClick={() => { setRemoveTarget(null); setDeletePreview(null); }}>
+            <Button variant="outline" disabled={removeBusy} onClick={() => { setRemoveTarget(null); setDeletePreview(null); setPreviewError(null); }}>
               {removeBusy ? "Please wait..." : "Cancel"}
             </Button>
             <Button
@@ -945,7 +964,7 @@ export default function AttendeesManager({
             >
               {removeBusy
                 ? "Removing..."
-                : deletePreview?.has_certificate
+                : deletePreview?.deletes_certificate
                     ? "Delete Certificate & Remove"
                     : "Remove"}
             </Button>

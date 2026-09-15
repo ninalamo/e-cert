@@ -2,10 +2,18 @@ import { api } from "./client";
 import type { EventAttendee, AttendeeMetadata } from "@/types/event-attendee";
 import type { ApiResponse, PaginatedResponse, PaginationMeta, PaginationLinks, BulkResponse } from "./types";
 
+export interface AttendeeLinkedCertificate {
+  id: string;
+  number: string;
+  status: string;
+}
+
 export interface AttendeeDeletePreview {
-  attendee: EventAttendee;
-  has_certificate: boolean;
-  certificate_number: string | null;
+  attendee_id: string;
+  name: string;
+  email: string;
+  linked_certificate: AttendeeLinkedCertificate | null;
+  deletes_certificate: boolean;
 }
 
 export interface IssueCompletedResult {
@@ -82,7 +90,7 @@ export const attendeesApi = {
     }),
 
   removeWithCert: (attendeeId: string) =>
-    api.delete(`/attendees/${attendeeId}?with_cert=true`).catch((err) => {
+    api.delete(`/attendees/${attendeeId}/with-cert`).catch((err) => {
       if (err?.message?.includes("No query results")) return null;
       throw err;
     }),
