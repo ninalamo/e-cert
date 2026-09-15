@@ -87,6 +87,24 @@ Matches the existing `UserRole` type in `src/types/organization.ts`.
 | `cert-user` | `read` on `/me/certificates*` only | `participant` |
 | (unassigned) | No `<level>:<path>` entries | `guest` |
 
+## 4.1 Required Grants per Group
+
+The table below lists the **exact `<level>:<path>` grants** each seed group must receive in the Auth Platform for the role to function. A missing grant on any path causes the middleware to return `403`, which the frontend treats as an empty result.
+
+| Seed group | Required grants |
+|------------|-----------------|
+| `cert-user` | `read:/api/v1/me/certificates` |
+| | `read:/api/v1/me/certificates/{id}` |
+| | `read:/api/v1/certificates/{id}` |
+| | `read:/api/v1/certificates/{id}/pdf` |
+| | `read:/api/v1/certificates/{id}/download` |
+| | `read:/api/v1/events/{id}` |
+| | `read:/api/v1/certificates/qr` |
+| `cert-staff` | `read`/`write` on management paths (events, attendees, templates, certificates) **excluding** admin paths (revoke, delete, reissue, expire, audit, with-cert). Plus `read` on `/api/v1/me/events` and `/api/v1/me/templates`. |
+| `cert-admin` | `admin` on every cataloged path. |
+
+> **Common misconfiguration:** granting `cert-user` group membership without the `read:/api/v1/me/certificates` grant. The user can log in (SSO works) and sees the `participant` role in the UI, but the `/my/certificates` page returns empty because the middleware rejects the request.
+
 ---
 
 # 5. Integration Points
