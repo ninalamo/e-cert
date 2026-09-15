@@ -52,6 +52,7 @@ export const eventsApi = {
     valid_until?: string;
     template_id?: string;
     email_template_id?: string;
+    is_public?: boolean;
   }) => api.post<ApiResponse<Event>>("/events", data),
 
   update: (
@@ -66,6 +67,7 @@ export const eventsApi = {
       certificate_number_pattern: string;
       valid_until: string;
       status: "draft" | "active" | "archive";
+      is_public: boolean;
       template_id: string | null;
       email_template_id: string | null;
     }>

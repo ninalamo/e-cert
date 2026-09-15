@@ -1,38 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import CertificatesList from "@/features/certificates/components/certificates-list";
-import { certificatesApi } from "@/lib/api/certificates";
 import { getCurrentGroups } from "@/lib/permissions";
-import { ORG_ID } from "@/lib/org";
-import type { CertificateWithEvent } from "@/lib/api/certificates";
 
 export default function CertificatesPage() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
 
-  const isAdminGroup = getCurrentGroups().includes("cert-admin");
-
-  const [certificates, setCertificates] = useState<CertificateWithEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    const request = isAdminGroup
-      ? certificatesApi.listWithEvent(ORG_ID)
-      : certificatesApi.getMy();
-    request
-      .then((result) => {
-        if (!active) return;
-        setCertificates(result.data ?? []);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (active) setLoading(false);
-      });
-    return () => { active = false; };
-  }, [isAdminGroup]);
+  const groups = getCurrentGroups();
+  const isAdminGroup = groups.includes("cert-admin");
+  // Staff see the org list scoped server-side by event visibility
+  // (public + authored private events); participants see only their own.
+  const mode = isAdminGroup || groups.includes("cert-staff") ? "all" : "mine";
 
   return (
     <div className="space-y-6">
@@ -44,17 +24,11 @@ export default function CertificatesPage() {
           Manage and review issued certificates
         </p>
       </div>
-      {loading ? (
-        <div className="app-card p-12 text-center">
-          <p className="text-sm text-tertiary">Loading certificates...</p>
-        </div>
-      ) : (
-        <CertificatesList
-          initialCertificates={certificates}
-          initialQuery={q}
-          isCertAdmin={isAdminGroup}
-        />
-      )}
+      <CertificatesList
+        mode={mode}
+        initialQuery={q}
+        isCertAdmin={isAdminGroup}
+      />
     </div>
   );
 }

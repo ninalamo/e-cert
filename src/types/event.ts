@@ -12,6 +12,7 @@ export interface Event {
   certificate_number_pattern: string;
   valid_until: string | null;
   status: "draft" | "active" | "archive";
+  is_public: boolean;
   created_at: string;
   updated_at: string;
 }

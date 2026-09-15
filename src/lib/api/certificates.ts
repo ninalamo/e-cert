@@ -1,10 +1,18 @@
 import { api } from "./client";
 import type { Certificate } from "@/types/certificate";
 import type { CertificateEmailLog } from "@/types/certificate-email";
-import type { ApiResponse } from "./types";
+import type { ApiResponse, PaginationMeta } from "./types";
+
+export interface CertificateEventRef {
+  id: string;
+  name: string;
+  status: string;
+  is_public: boolean;
+}
 
 export interface CertificateWithEvent extends Certificate {
   events: { name: string } | null;
+  event?: CertificateEventRef | null;
 }
 
 export interface IssueCertificateInput {
@@ -51,6 +59,25 @@ export const certificatesApi = {
     api.get<{ data: CertificateWithEvent[] }>(
       `/certificates?organization_id=${organizationId}&with_event=true`
     ),
+
+  listPaged: (params?: {
+    search?: string;
+    event_id?: string;
+    status?: "active" | "revoked" | "expired";
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params?.search?.trim()) qs.set("search", params.search.trim());
+    if (params?.event_id) qs.set("event_id", params.event_id);
+    if (params?.status) qs.set("status", params.status);
+    if (params?.limit != null) qs.set("limit", String(params.limit));
+    if (params?.offset != null) qs.set("offset", String(params.offset));
+    const q = qs.toString();
+    return api.get<{ data: CertificateWithEvent[]; meta: PaginationMeta }>(
+      `/certificates${q ? `?${q}` : ""}`
+    );
+  },
 
   get: (id: string) => api.get<ApiResponse<Certificate>>(`/certificates/${id}`),
 
