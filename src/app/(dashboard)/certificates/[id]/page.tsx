@@ -5,7 +5,8 @@ import { useParams, useSearchParams } from "next/navigation";
 import { certificatesApi } from "@/lib/api/certificates";
 import { eventsApi } from "@/lib/api/events";
 import { verifyApi } from "@/lib/api/verify";
-import { canManageCertificates, getCurrentSession, DEFAULT_ROLE } from "@/lib/permissions";
+import { canManageCertificates, getCurrentGroups, getCurrentSession, DEFAULT_ROLE } from "@/lib/permissions";
+import { hasDashboardAccess } from "@/lib/roles";
 import CertificateDetail from "@/features/certificates/components/certificate-detail";
 import { SkeletonDetail } from "@/components/ui/skeleton";
 import { NotFoundState } from "@/components/not-found-state";
@@ -19,9 +20,7 @@ export default function CertificateDetailPage() {
   const eventId = searchParams.get("eventId");
 
   const session = getCurrentSession();
-  const isAdmin = canManageCertificates(session?.role ?? DEFAULT_ROLE);
-
-  const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const isAdmin = canManageCertificates(session?.role ?? DEFAULT_ROLE);  const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [event, setEvent] = useState<Event | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +51,17 @@ export default function CertificateDetailPage() {
     }
     load();
   }, [id, eventId]);
+
+  if (!hasDashboardAccess(getCurrentGroups())) {
+    return (
+      <NotFoundState
+        title="Insufficient access"
+        description="Your account does not have permission to view certificates."
+        backHref="/my"
+        backLabel="Back to My Certificates"
+      />
+    );
+  }
 
   if (loading) return <SkeletonDetail />;
   if (!certificate)

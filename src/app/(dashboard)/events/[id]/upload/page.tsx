@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { parseAccessToken, getAccessToken } from "@/lib/auth";
+import { getCurrentGroups } from "@/lib/permissions";
+import { hasDashboardAccess } from "@/lib/roles";
+import { NotFoundState } from "@/components/not-found-state";
 import { eventsApi } from "@/lib/api/events";
 import { templatesApi } from "@/lib/api/templates";
 import type { Event } from "@/types/event";
@@ -57,6 +60,17 @@ export default function UploadCsvPage({
 
   if (loading || !id) {
     return <div className="app-card p-12 text-center"><p className="text-sm text-tertiary">Loading...</p></div>;
+  }
+
+  if (!hasDashboardAccess(getCurrentGroups())) {
+    return (
+      <NotFoundState
+        title="Insufficient access"
+        description="Your account does not have permission to manage events."
+        backHref="/my"
+        backLabel="Back to My Certificates"
+      />
+    );
   }
 
   return (

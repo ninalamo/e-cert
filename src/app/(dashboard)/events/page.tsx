@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import EventsList from "@/features/events/components/events-list";
-import { parseAccessToken, getAccessToken } from "@/lib/auth";
-import { canDelete } from "@/lib/permissions";
+import { getCurrentGroups } from "@/lib/permissions";
+import { hasDashboardAccess } from "@/lib/roles";
+import { NotFoundState } from "@/components/not-found-state";
 import { eventsApi } from "@/lib/api/events";
 import type { Event } from "@/types/event";
 import { useSearchParams } from "next/navigation";
@@ -23,11 +24,8 @@ export default function EventsPage() {
     : undefined
   , [statusParam]);
 
-  const token = getAccessToken();
-  const parsed = token ? parseAccessToken(token) : null;
-  const permissions = parsed?.permissions ?? [];
-  const hasAdmin = permissions.some((p: string) => p.startsWith("admin:"));
-  const canUserDelete = canDelete(hasAdmin ? "admin" : "participant");
+  const tokenGroups = getCurrentGroups();
+  const canUserDelete = tokenGroups.includes("cert-admin");
 
   const [events, setEvents] = useState<Event[]>([]);
   const [total, setTotal] = useState(0);
@@ -55,6 +53,17 @@ export default function EventsPage() {
   }, [page, search, statusParam, statuses]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  if (!hasDashboardAccess(tokenGroups)) {
+    return (
+      <NotFoundState
+        title="Insufficient access"
+        description="Your account does not have permission to view events."
+        backHref="/my"
+        backLabel="Back to My Certificates"
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

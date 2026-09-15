@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import IssueForm from "@/features/certificates/components/issue-form";
 import { templatesApi } from "@/lib/api/templates";
 import { ORG_ID } from "@/lib/org";
+import { getCurrentGroups } from "@/lib/permissions";
+import { hasDashboardAccess } from "@/lib/roles";
+import { NotFoundState } from "@/components/not-found-state";
 import type { CertificateTemplate } from "@/types/template";
 
 export default function IssueCertificatePage() {
@@ -25,6 +28,17 @@ export default function IssueCertificatePage() {
       });
     return () => { active = false; };
   }, []);
+
+  if (!hasDashboardAccess(getCurrentGroups())) {
+    return (
+      <NotFoundState
+        title="Insufficient access"
+        description="Your account does not have permission to issue certificates."
+        backHref="/my"
+        backLabel="Back to My Certificates"
+      />
+    );
+  }
 
   return (
     <Card>

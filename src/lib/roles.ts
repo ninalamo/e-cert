@@ -89,7 +89,17 @@ export function isCertAdminCaller(callerGroups: string[]): boolean {
   return callerGroups.includes("cert-admin");
 }
 
-export function isStaffCaller(callerGroups: string[]): boolean {
+/**
+ * Dashboard access (events/certificates/users pages): every staff role except
+ * cert-user. cert-user lives on the participant pages only. Callers with no
+ * cert groups are denied (least privilege — they hold no grants either).
+ */
+export function hasDashboardAccess(callerGroups: string[]): boolean {
+  return (
+    callerGroups.includes("cert-admin") ||
+    callerGroups.includes("cert-staff")
+  );
+}export function isStaffCaller(callerGroups: string[]): boolean {
   return (
     !callerGroups.includes("cert-admin") &&
     callerGroups.includes("cert-staff")

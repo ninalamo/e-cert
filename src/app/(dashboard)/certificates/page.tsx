@@ -3,6 +3,8 @@
 import { useSearchParams } from "next/navigation";
 import CertificatesList from "@/features/certificates/components/certificates-list";
 import { getCurrentGroups } from "@/lib/permissions";
+import { hasDashboardAccess } from "@/lib/roles";
+import { NotFoundState } from "@/components/not-found-state";
 
 export default function CertificatesPage() {
   const searchParams = useSearchParams();
@@ -10,9 +12,17 @@ export default function CertificatesPage() {
 
   const groups = getCurrentGroups();
   const isAdminGroup = groups.includes("cert-admin");
-  // Staff see the org list scoped server-side by event visibility
-  // (public + authored private events); participants see only their own.
-  const mode = isAdminGroup || groups.includes("cert-staff") ? "all" : "mine";
+
+  if (!hasDashboardAccess(groups)) {
+    return (
+      <NotFoundState
+        title="Insufficient access"
+        description="Your account does not have permission to view certificates."
+        backHref="/my"
+        backLabel="Back to My Certificates"
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -25,7 +35,6 @@ export default function CertificatesPage() {
         </p>
       </div>
       <CertificatesList
-        mode={mode}
         initialQuery={q}
         isCertAdmin={isAdminGroup}
       />

@@ -1,8 +1,9 @@
 "use client";
 
 import EventDetail from "./event-detail";
-import { parseAccessToken, getAccessToken } from "@/lib/auth";
-import { canDelete, type UserRole } from "@/lib/permissions";
+import { getCurrentGroups } from "@/lib/permissions";
+import { hasDashboardAccess } from "@/lib/roles";
+import { NotFoundState } from "@/components/not-found-state";
 import { useSearchParams, useParams } from "next/navigation";
 
 export default function EventDetailPage() {
@@ -11,12 +12,19 @@ export default function EventDetailPage() {
   const id = params.id as string;
   const tab = searchParams.get("tab");
 
-  const token = getAccessToken();
-  const parsed = token ? parseAccessToken(token) : null;
-  const permissions = parsed?.permissions ?? [];
-  const hasAdmin = permissions.some((p: string) => p.startsWith("admin:"));
-  const role: UserRole = hasAdmin ? "admin" : "participant";
-  const canUserDelete = canDelete(role);
+  const tokenGroups = getCurrentGroups();
+  const canUserDelete = tokenGroups.includes("cert-admin");
+
+  if (!hasDashboardAccess(tokenGroups)) {
+    return (
+      <NotFoundState
+        title="Insufficient access"
+        description="Your account does not have permission to view events."
+        backHref="/my"
+        backLabel="Back to My Certificates"
+      />
+    );
+  }
 
   return (
     <EventDetail

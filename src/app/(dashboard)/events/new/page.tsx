@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { templatesApi } from "@/lib/api/templates";
 import { ORG_ID } from "@/lib/org";
+import { getCurrentGroups } from "@/lib/permissions";
+import { hasDashboardAccess } from "@/lib/roles";
+import { NotFoundState } from "@/components/not-found-state";
 import type { CertificateTemplate } from "@/types/template";
 import NewEventForm from "./new-event-form";
 
@@ -28,6 +31,17 @@ export default function NewEventPage() {
       });
     return () => { active = false; };
   }, []);
+
+  if (!hasDashboardAccess(getCurrentGroups())) {
+    return (
+      <NotFoundState
+        title="Insufficient access"
+        description="Your account does not have permission to create events."
+        backHref="/my"
+        backLabel="Back to My Certificates"
+      />
+    );
+  }
 
   if (loading) {
     return <div className="app-card p-12 text-center"><p className="text-sm text-tertiary">Loading templates...</p></div>;

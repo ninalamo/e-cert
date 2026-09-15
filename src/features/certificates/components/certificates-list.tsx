@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Paginator, usePagination } from "@/components/ui/paginator";
+import { Paginator } from "@/components/ui/paginator";
 import {
   Select,
   SelectContent,
@@ -29,11 +29,9 @@ import {
   ShieldIcon,
 } from "lucide-react";
 
-type ListMode = "all" | "mine";
 type StatusFilter = "all" | "active" | "revoked" | "expired";
 
 interface CertificatesListProps {
-  mode: ListMode;
   initialQuery?: string;
   isCertAdmin?: boolean;
 }
@@ -91,7 +89,6 @@ function groupByEvent(items: CertificateWithEvent[]): EventGroup[] {
 }
 
 export default function CertificatesList({
-  mode,
   initialQuery = "",
   isCertAdmin = false,
 }: CertificatesListProps) {
@@ -124,7 +121,7 @@ export default function CertificatesList({
   const [certRevokeError, setCertRevokeError] = useState<string | null>(null);
 
   async function fetchExpiredTotal() {
-    if (mode !== "all" || !isCertAdmin) return;
+    if (!isCertAdmin) return;
     try {
       const res = await certificatesApi.listPaged({ status: "expired", limit: 1 });
       setExpiredTotal(res.meta?.total ?? 0);
@@ -134,15 +131,6 @@ export default function CertificatesList({
   }
 
   async function reload() {
-    if (mode === "mine") {
-      try {
-        const result = await certificatesApi.getMy();
-        setCertificates(result.data ?? []);
-      } catch {
-        setLoadError("Failed to load certificates.");
-      }
-      return;
-    }
     try {
       const result = await certificatesApi.listPaged({
         search: searchInput.trim() || undefined,
@@ -159,31 +147,8 @@ export default function CertificatesList({
     await fetchExpiredTotal();
   }
 
-  // Mine mode: single fetch, client-side filter. Initial isFetching covers
-  // the first load; background reloads stay silent.
+  // Debounced server fetch (300ms for typing, immediate otherwise).
   useEffect(() => {
-    if (mode !== "mine") return;
-    let active = true;
-    certificatesApi
-      .getMy()
-      .then((result) => {
-        if (!active) return;
-        setCertificates(result.data ?? []);
-        setIsFetching(false);
-      })
-      .catch(() => {
-        if (!active) return;
-        setLoadError("Failed to load certificates.");
-        setIsFetching(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [mode]);
-
-  // All mode: debounced server fetch (300ms for typing, immediate otherwise).
-  useEffect(() => {
-    if (mode !== "all") return;
     let active = true;
     const timer = setTimeout(
       () => {
@@ -216,11 +181,10 @@ export default function CertificatesList({
       active = false;
       clearTimeout(timer);
     };
-  }, [mode, searchInput, eventFilter, statusFilter, page, pageSize]);
+  }, [searchInput, eventFilter, statusFilter, page, pageSize]);
 
-  // All mode: visible-events filter options + expired badge count.
+  // Visible-events filter options + expired badge count.
   useEffect(() => {
-    if (mode !== "all") return;
     let active = true;
     eventsApi
       .list({ limit: 100 })
@@ -237,7 +201,7 @@ export default function CertificatesList({
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, isCertAdmin]);
+  }, [isCertAdmin]);
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -247,7 +211,7 @@ export default function CertificatesList({
       await certificatesApi.delete(deleteTarget.id);
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
-      if (mode === "all" && certificates.length <= 1 && page > 0) {
+      if (certificates.length <= 1 && page > 0) {
         // Deleted the last row on this page — step back, effect refetches.
         setPage(page - 1);
       } else {
@@ -350,76 +314,17 @@ export default function CertificatesList({
     setRevokeError(null);
   };
 
-  // Mine mode: client-side filter over the fetched set.
-  const mineFiltered = useMemo(() => {
-    if (mode !== "mine") return certificates;
-    const q = searchInput.trim().toLowerCase();
-    return certificates.filter((c) => {
-      const matchesSearch =
-        !q ||
-        c.recipient_name.toLowerCase().includes(q) ||
-        c.recipient_email.toLowerCase().includes(q) ||
-        c.certificate_number.toLowerCase().includes(q);
-      const matchesStatus =
-        statusFilter === "all" || displayStatus(c) === statusFilter;
-      const matchesEvent =
-        eventFilter === "all" ||
-        (eventFilter === "none" ? !c.event_id : c.event_id === eventFilter);
-      return matchesSearch && matchesStatus && matchesEvent;
-    });
-  }, [mode, certificates, searchInput, statusFilter, eventFilter]);
-
-  const {
-    page: minePage,
-    totalPages: mineTotalPages,
-    pageSize: minePageSize,
-    paginatedItems: mineItems,
-    setPage: setMinePage,
-    setPageSize: setMinePageSize,
-  } = usePagination(mineFiltered, PAGE_SIZE_DEFAULT);
-
-  const displayedItems = mode === "mine" ? mineItems : certificates;
+  const displayedItems = certificates;
   const groups = useMemo(() => groupByEvent(displayedItems), [displayedItems]);
 
-  const totalPages =
-    mode === "mine" ? mineTotalPages : Math.max(1, Math.ceil(metaTotal / pageSize));
-  const totalItems = mode === "mine" ? mineFiltered.length : metaTotal;
+  const totalPages = Math.max(1, Math.ceil(metaTotal / pageSize));
+  const totalItems = metaTotal;
 
-  const filterEvents: Event[] =
-    mode === "all"
-      ? events
-      : mineFiltered.length > 0 || certificates.length > 0
-        ? certificates
-            .filter((c) => c.event_id)
-            .reduce<Event[]>((acc, c) => {
-              if (!acc.some((e) => e.id === c.event_id)) {
-                acc.push({
-                  id: c.event_id as string,
-                  organization_id: "",
-                  template_id: null,
-                  email_template_id: null,
-                  name: eventNameOf(c),
-                  description: null,
-                  event_date: null,
-                  location: null,
-                  organizer: null,
-                  certificate_title: null,
-                  certificate_number_pattern: "",
-                  valid_until: null,
-                  status: (c.event?.status as Event["status"]) ?? "active",
-                  is_public: c.event?.is_public ?? true,
-                  created_by: null,
-                  created_at: "",
-                  updated_at: "",
-                });
-              }
-              return acc;
-            }, [])
-        : [];
+  const filterEvents: Event[] = events;
 
   const showInitialLoading = isFetching && certificates.length === 0 && !loadError;
   const showEmpty =
-    !isFetching && !loadError && (mode === "mine" ? mineFiltered.length === 0 : certificates.length === 0);
+    !isFetching && !loadError && certificates.length === 0;
 
   function renderRow(cert: CertificateWithEvent) {
     const status = displayStatus(cert);
@@ -478,7 +383,7 @@ export default function CertificatesList({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
-        {isCertAdmin && mode === "all" && expiredTotal > 0 && (
+        {isCertAdmin && expiredTotal > 0 && (
           <button
             type="button"
             onClick={openRevokeDialog}
@@ -498,11 +403,7 @@ export default function CertificatesList({
             value={searchInput}
             onChange={(e) => {
               setSearchInput(e.target.value);
-              if (mode === "mine") {
-                setMinePage(0);
-              } else {
-                setPage(0);
-              }
+              setPage(0);
             }}
             placeholder="Search by recipient, email, or number..."
             className="input pl-8 py-1.5 text-xs"
@@ -514,11 +415,7 @@ export default function CertificatesList({
               value={eventFilter}
               onValueChange={(value) => {
                 setEventFilter(value ?? "all");
-                if (mode === "mine") {
-                  setMinePage(0);
-                } else {
-                  setPage(0);
-                }
+                setPage(0);
               }}
             >
               <SelectTrigger className="w-[180px]">
@@ -552,11 +449,7 @@ export default function CertificatesList({
                 type="button"
                 onClick={() => {
                   setStatusFilter(active ? "all" : opt.value);
-                  if (mode === "mine") {
-                    setMinePage(0);
-                  } else {
-                    setPage(0);
-                  }
+                  setPage(0);
                 }}
                 className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all cursor-pointer ${
                   active
@@ -573,11 +466,7 @@ export default function CertificatesList({
               type="button"
               onClick={() => {
                 setStatusFilter("all");
-                if (mode === "mine") {
-                  setMinePage(0);
-                } else {
-                  setPage(0);
-                }
+                setPage(0);
               }}
               className="text-xs text-tertiary hover:text-secondary cursor-pointer"
             >
@@ -632,28 +521,17 @@ export default function CertificatesList({
         </div>
       )}
 
-      {mode === "mine" ? (
-        <Paginator
-          page={minePage}
-          totalPages={totalPages}
-          pageSize={minePageSize}
-          totalItems={totalItems}
-          setPage={setMinePage}
-          setPageSize={setMinePageSize}
-        />
-      ) : (
-        <Paginator
-          page={page}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          totalItems={totalItems}
-          setPage={setPage}
-          setPageSize={(s) => {
-            setPageSize(s);
-            setPage(0);
-          }}
-        />
-      )}
+      <Paginator
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        setPage={setPage}
+        setPageSize={(s) => {
+          setPageSize(s);
+          setPage(0);
+        }}
+      />
 
       {/* Delete Confirmation Dialog (certificate only — attendee kept) */}
       <Dialog open={deleteDialogOpen} onOpenChange={closeDeleteDialog}>
