@@ -49,6 +49,7 @@ export default function NewEventForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
 
   const previewTemplate = useMemo(() => {
     if (!selectedTemplate) return null;
@@ -107,6 +108,7 @@ export default function NewEventForm({
         certificate_number_pattern: certPattern,
         valid_until: validUntil || undefined,
         email_template_id: selectedEmailTemplate || undefined,
+        is_public: isPublic,
       });
 
       if (!result) {
@@ -283,6 +285,22 @@ export default function NewEventForm({
               Clone template for this event (independent copy you can customize)
             </label>
           )}
+          <div className="border-t border-border pt-4">
+            <label className="flex items-center gap-2.5 text-[14px] text-secondary cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="size-4 rounded border-border-strong accent-[var(--color-brand-600)]"
+              />
+              Public event
+            </label>
+            <p className="mt-1.5 text-[11px] text-tertiary">
+              {isPublic
+                ? "Visible to all staff."
+                : "Private — only you (and Vericert Admins) will see this event."}
+            </p>
+          </div>
           <div className="border-t border-border pt-4">
             <label htmlFor="cert_number_Prefix" className="mb-1.5 block text-[13px] font-semibold text-tertiary">
               Certificate Number Prefix

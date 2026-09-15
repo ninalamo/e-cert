@@ -2,7 +2,7 @@
 
 ## Product Assembly Component Specification
 
-**Version:** 1.6
+**Version:** 1.7
 **Status:** Final
 **Layer:** Product Assembly (`e-cert` + `loa-cert-platform`) — Events Module
 **Audience:** Engineers, AI Development Agents
@@ -85,13 +85,17 @@ Rules:
 
 # 4. Data Model
 
-Migration `2026_09_15_000001_add_is_public_to_events_table`:
+Migration `2026_09_15_000001_add_is_public_to_events_table` and
+`2026_09_15_000002_add_updated_by_to_events_table` apply via `artisan migrate`
+(no standalone SQL scripts — deploy runs migrations; fresh installs use the
+SQL installer below, kept in sync with migrate output):
 
 ```text
-events.is_public  boolean  NOT NULL  DEFAULT false  (after `status`)
+events.is_public    boolean  NOT NULL  DEFAULT false  (after `status`)
+events.updated_by   string   NULL → NOT NULL  (after `created_by`)
 ```
 
-- Existing rows backfill to `false` (private).
+- Existing rows backfill `is_public` to `false` (private).
 - `created_by` is `NOT NULL` (follow-up constraint migration using raw
   `ALTER TABLE ... MODIFY`, no dbal in the project). Deploy runbook: legacy
   rows with `created_by = NULL` must first be resolved by operator SQL
@@ -114,23 +118,34 @@ events.is_public  boolean  NOT NULL  DEFAULT false  (after `status`)
   null fall under the operator runbook above.
 - `Event` model: `is_public`, `updated_by` in `$fillable`;
   `'is_public' => 'boolean'` cast.
-- Fresh-install SQL carries both columns `NOT NULL` where constrained + migrations row.
+- Fresh-install SQL carries the new columns, with `NOT NULL` on `created_by`,
+  `updated_by`, `created_at`, and `updated_at` once constrained, plus the
+  migrations row.
 - Factories set `created_by` = `updated_by` (mirrors the existing
   `CertificateTemplateFactory::ownedBy()` pattern).
 
 ---
 
-# 5. API Contract (implemented)
+# 5. API Contract
 
-## 5.1 Write paths
+Implementation status per subsection: v1.0 items are in code; v1.1+ items
+(401 guards, `updated_by`, constraints, guard rail) are specified below and
+pending implementation. Code must match this section, never the reverse.
+
+## 5.1 Write paths (v1.0 implemented; guards pending)
 
 `POST /api/v1/events` accepts `is_public?: boolean` (default `false` when omitted).
 `created_by` in the request body is ignored — the server stamps the caller sub,
 and rejects with 401 when no sub is resolvable (never persists null). Before
 persisting, the author guard rail (§2) verifies the sub is an active tenant
-user; no extra round-trip is cached — writes are infrequent, freshness wins.
+user; the lookup result is not cached — writes are infrequent, freshness wins.
 
-`PATCH /api/v1/events/{id}` accepts `is_public?: boolean` with two guards:
+`PATCH /api/v1/events/{id}` accepts `is_public?: boolean` with three guards.
+`created_by` in the request body is ignored and `updated_by` is re-stamped from
+the caller sub (never client-settable); a PATCH with no resolvable sub is
+rejected with 401 before any write. Before persisting, the author guard rail
+(§2) verifies the sub is an active tenant user — same lookup as create, result
+not cached.
 
 1. Target must be visible to the caller, else 404 (same as missing).
 2. Changing the flag requires author (`created_by` = sub) or `cert-admin`, else 403
@@ -139,12 +154,14 @@ user; no extra round-trip is cached — writes are infrequent, freshness wins.
 
 `created_by` is stripped from update payloads (immutable authorship).
 
-## 5.2 Read paths
+## 5.2 Read paths (v1.0 implemented)
 
 - `GET /api/v1/events` — scoped: `is_public OR created_by = sub`; `cert-admin` unscoped.
 - `GET /api/v1/events/{id}` — same rule, non-visible → 404.
 - `DELETE /api/v1/events/{id}` — same visibility pre-check, then existing behavior.
 - List/show responses include `is_public: boolean` and `created_by: string | null`.
+  `updated_by` is deliberately omitted from list payloads (nothing in v1 displays
+  it; avoids leaking editor subs).
 
 ---
 
@@ -212,3 +229,4 @@ user; no extra round-trip is cached — writes are infrequent, freshness wins.
 | 1.4 | 2026-09-15 | Author guard rail: `created_by`/`updated_by` must resolve to an active tenant user at write time (Auth lookup, fail-closed 403/502); platform-admin authorship unsupported. Status: **Final**. |
 | 1.5 | 2026-09-15 | Active refined to `status === 'active'` and `locked_until === null`; Auth show must expose `locked_until`. Status: **Final**. |
 | 1.6 | 2026-09-15 | Lockout check deferred: guard enforces `status` only; `locked_until` noted in §2/§8.5 until Auth exposes the field. Status: **Final**. |
+| 1.7 | 2026-09-15 | Review fixes: §5 carries per-item implementation status (v1.0 done, v1.1+ pending); PATCH mirrors create guards (401 + `updated_by` re-stamp + author lookup); `updated_by` omission from list payloads declared deliberate; wording. Status: **Final**. |

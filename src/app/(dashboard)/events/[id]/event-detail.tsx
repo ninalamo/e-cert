@@ -20,6 +20,7 @@ import {
 import { statusConfig } from "./components/status-change-dialog";
 import { NotFoundState } from "@/components/not-found-state";
 import StatusChangeDialog from "./components/status-change-dialog";
+import VisibilityCard from "./components/visibility-card";
 import DeleteDialog from "./components/delete-dialog";
 import EventFieldsCard from "./components/event-fields-card";
 import TemplateCard from "./components/template-card";
@@ -299,6 +300,8 @@ export default function EventDetail({
               onStatusChanged={handleDataUpdated}
             />
           </div>
+
+          <VisibilityCard event={event} onVisibilityChanged={handleDataUpdated} />
 
           {showArchiveTip && (
             <div className="flex items-start gap-3 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] p-4 text-sm">

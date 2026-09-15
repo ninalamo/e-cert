@@ -192,6 +192,11 @@ export default function EventsList({
                 <span className={statusColors[event.status] ?? "status-pill status-draft"}>
                   {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                 </span>
+                {!event.is_public ? (
+                  <span className="status-pill" title="Only the author and Vericert Admins can see this event">
+                    Private
+                  </span>
+                ) : null}
                 <Link href={`/events/${event.id}`} className="btn-disclosure">
                   View
                 </Link>

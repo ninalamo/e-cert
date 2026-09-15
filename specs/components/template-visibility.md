@@ -148,6 +148,24 @@ Template content reaches users through more than the show endpoint. **Every path
 
 Without §5.6, `show()` masking is decorative: any staff member could pass a private template's UUID to either clone endpoint and receive its full HTML/CSS as their own copy.
 
+## 5.7 Write-time author guard (Draft — pending approval)
+
+Mirrors the event write guard (`event-visibility.md` §2): JWTs validate locally,
+so a disabled or tenant-removed user could otherwise keep writing templates
+until token expiry.
+
+- On `POST /api/v1/templates` and `PATCH /api/v1/templates/{id}`, after all
+  existing checks pass and before persisting, the server looks the caller sub
+  up against Auth (`GET /api/v1/users/{sub}` with the caller JWT) and proceeds
+  only on HTTP 200 with `status === 'active'`.
+- Missing sub → `401`; resolved non-active/unknown → `403`; Auth
+  unreachable → `502`. Nothing is written in any rejection case (fail-closed).
+  The lookup result is not cached — writes are infrequent, freshness wins.
+- Independent of the visibility flag: it applies to public templates and to
+  `cert-admin` callers alike. Owner-set semantics (§6) are unchanged.
+- Lockout (`locked_until`) is out of scope here, same as events — see
+  `event-visibility.md` §8.5.
+
 ---
 
 # 6. Ownership & Caller Resolution

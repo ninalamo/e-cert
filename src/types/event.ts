@@ -13,6 +13,7 @@ export interface Event {
   valid_until: string | null;
   status: "draft" | "active" | "archive";
   is_public: boolean;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }

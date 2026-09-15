@@ -408,6 +408,7 @@ export default function CertificatesList({
                   valid_until: null,
                   status: (c.event?.status as Event["status"]) ?? "active",
                   is_public: c.event?.is_public ?? true,
+                  created_by: null,
                   created_at: "",
                   updated_at: "",
                 });
