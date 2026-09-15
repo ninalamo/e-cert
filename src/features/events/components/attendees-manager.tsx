@@ -248,7 +248,7 @@ export default function AttendeesManager({
       setAddMode("template");
       setAddFile(null);
       setAddOpen(false);
-      await fetchPage(page, pageSize, debouncedSearch);
+      await fetchPage(page, pageSize, debouncedSearch, filter);
       setMessage("Attendee added.");
     }
   }
@@ -301,7 +301,7 @@ export default function AttendeesManager({
       setEditFile(null);
       setEditTarget(null);
       setEditOpen(false);
-      await fetchPage(page, pageSize, debouncedSearch);
+      await fetchPage(page, pageSize, debouncedSearch, filter);
       setMessage("Attendee updated.");
     }
   }
@@ -324,14 +324,14 @@ export default function AttendeesManager({
           next.delete(id);
           return next;
         });
-        await fetchPage(page, pageSize, debouncedSearch);
+        await fetchPage(page, pageSize, debouncedSearch, filter);
       } else {
         setSelected((prev) => {
           const next = new Set(prev);
           next.delete(id);
           return next;
         });
-        await fetchPage(page, pageSize, debouncedSearch);
+        await fetchPage(page, pageSize, debouncedSearch, filter);
       }
     } catch {
       setRemoveBusy(false);
