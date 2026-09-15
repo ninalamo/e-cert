@@ -28,11 +28,13 @@ import {
 } from "@/components/ui/select";
 import { canManageUserStatus, canViewUsers, getCurrentSession, getCurrentTenantId } from "@/lib/permissions";
 import {
+  canPromoteToAdmin,
   filterableRoleGroups,
   getCertRoleNames,
-  isRoleEditable,
+  lateralRoleTargets,
   roleEditBlockReason,
   roleLabel,
+  roleTargets,
   type EditableRole,
 } from "@/lib/roles";
 import { UserActivityBadges } from "./user-activity-badges";
@@ -165,9 +167,18 @@ export default function UsersPage() {
 
   async function applyRole() {
     if (!roleTarget) return;
-    // Guard: only cert-staff <-> cert-user swaps are allowed.
-    if (!isRoleEditable(roleTarget.user)) {
-      setActionError("Only Staff/User roles can be changed.");
+    // Guard: lateral swaps cert-staff <-> cert-user, plus staff -> admin
+    // promotion. cert-admin can never be demoted here.
+    const allowed = roleTargets(
+      roleTarget.user,
+      roleTarget.user.id === currentSub
+    );
+    if (!allowed.includes(roleTarget.next)) {
+      setActionError(
+        roleTarget.next === "cert-admin"
+          ? "Only Staff can be promoted to Admin here."
+          : "Only Staff/User roles can be changed."
+      );
       setRoleTarget(null);
       return;
     }
@@ -325,7 +336,9 @@ export default function UsersPage() {
                   const isSelf = user.id === currentSub;
                   const certRoles = getCertRoleNames(user.groups);
                   const primaryRole = certRoles[0] ?? null;
-                  const editable = isRoleEditable(user);
+                  const lateral = lateralRoleTargets(user, isSelf);
+                  const promotable = canPromoteToAdmin(user, isSelf);
+                  const canReassign = lateral.length > 0 || promotable;
                   const blockReason = roleEditBlockReason(user, isSelf);
                   return (
                     <TableRow key={user.id}>
@@ -379,41 +392,54 @@ export default function UsersPage() {
                       <TableCell className="text-right">
                         {canManage && !isSelf ? (
                           <div className="flex items-center justify-end gap-2">
-                            {editable && primaryRole ? (
-                              <Select
-                                value={primaryRole}
-                                onValueChange={(value) => {
-                                  if (
-                                    (value === "cert-staff" || value === "cert-user") &&
-                                    value !== primaryRole
-                                  ) {
-                                    setRoleTarget({
-                                      user,
-                                      next: value as EditableRole,
-                                    });
-                                  }
-                                }}
-                              >
-                                <SelectTrigger className="w-[150px]">
-                                  <SelectValue>
-                                    {() => roleLabel(primaryRole)}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="cert-staff">
-                                    {roleLabel("cert-staff")}
-                                  </SelectItem>
-                                  <SelectItem value="cert-user">
-                                    {roleLabel("cert-user")}
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
+                            {canReassign && primaryRole ? (
+                              <>
+                                <div
+                                  role="group"
+                                  aria-label="Change role"
+                                  className="inline-flex rounded-full border border-border bg-surface p-0.5"
+                                >
+                                  {lateral.map((option) => {
+                                    const active = option === primaryRole;
+                                    return (
+                                      <button
+                                        key={option}
+                                        type="button"
+                                        disabled={active}
+                                        onClick={() =>
+                                          setRoleTarget({ user, next: option })
+                                        }
+                                        className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                                          active
+                                            ? "bg-[var(--color-brand-600)] text-white"
+                                            : "text-tertiary hover:text-[var(--color-text)]"
+                                        }`}
+                                      >
+                                        {roleLabel(option).replace("Vericert ", "")}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                {promotable ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      setRoleTarget({ user, next: "cert-admin" })
+                                    }
+                                  >
+                                    Make Admin
+                                  </Button>
+                                ) : null}
+                              </>
                             ) : (
                               <span
                                 className="text-xs text-tertiary"
                                 title={blockReason ?? undefined}
                               >
-                                Role locked
+                                {primaryRole === "cert-admin"
+                                  ? "Manage in Auth admin"
+                                  : "Role locked"}
                               </span>
                             )}
                             {user.status === "active" ? (
@@ -522,13 +548,26 @@ export default function UsersPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Role</DialogTitle>
+            <DialogTitle>
+              {roleTarget?.next === "cert-admin" ? "Promote to Admin" : "Change Role"}
+            </DialogTitle>
             <DialogDescription>
-              Change role for <strong>{roleTarget?.user.email}</strong> to{" "}
-              <strong>
-                {roleTarget ? roleLabel(roleTarget.next) : ""}
-              </strong>
-              ? Their permissions take effect on next login/refresh.
+              {roleTarget?.next === "cert-admin" ? (
+                <>
+                  Promote <strong>{roleTarget?.user.email}</strong> to{" "}
+                  <strong>{roleLabel("cert-admin")}</strong>? They gain full
+                  platform access on next login/refresh. Demotion is only
+                  possible in Auth admin.
+                </>
+              ) : (
+                <>
+                  Change role for <strong>{roleTarget?.user.email}</strong> to{" "}
+                  <strong>
+                    {roleTarget ? roleLabel(roleTarget.next) : ""}
+                  </strong>
+                  ? Their permissions take effect on next login/refresh.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -536,7 +575,11 @@ export default function UsersPage() {
               Cancel
             </Button>
             <Button onClick={applyRole} disabled={roleWorking}>
-              {roleWorking ? "Saving..." : "Yes, change role"}
+              {roleWorking
+                ? "Saving..."
+                : roleTarget?.next === "cert-admin"
+                  ? "Yes, promote"
+                  : "Yes, change role"}
             </Button>
           </DialogFooter>
         </DialogContent>

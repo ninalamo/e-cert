@@ -79,12 +79,24 @@ export const usersAdminApi = {
 
   changeUserRole: async (
     user: ManagedUser,
-    targetRole: "cert-staff" | "cert-user",
+    targetRole: "cert-staff" | "cert-user" | "cert-admin",
     groups: ManagedGroup[]
   ): Promise<UserGroupRef[]> => {
     const groupByName = new Map(groups.map((g) => [g.name, g]));
     const target = groupByName.get(targetRole);
     if (!target) throw { message: `Group "${targetRole}" not found.` };
+
+    const currentCertNames = (user.groups ?? [])
+      .map((g) => g.name)
+      .filter((n) => n.startsWith("cert-"));
+
+    // cert-admin cannot be demoted here — revoke only in Auth admin.
+    if (
+      currentCertNames.includes("cert-admin") &&
+      targetRole !== "cert-admin"
+    ) {
+      throw { message: "Admins can only be changed in Auth admin." };
+    }
 
     const currentCertGroupIds = new Set(
       (user.groups ?? [])

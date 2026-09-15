@@ -72,6 +72,10 @@ export default function AttendeesManager({
   const [addOpen, setAddOpen] = useState(false);
   const [addName, setAddName] = useState("");
   const [addEmail, setAddEmail] = useState("");
+  // Cross-event lookup note keyed by email — shown only when it matches the
+  // current input, so stale results never linger. Same-roster note is derived
+  // during render (no state). Both are informational and never block submit.
+  const [lookupNote, setLookupNote] = useState<{ email: string; text: string } | null>(null);
   const [addMode, setAddMode] = useState<"template" | "file">("template");
   const [addFile, setAddFile] = useState<{ name: string; data: string; type: string } | null>(null);
 
@@ -272,15 +276,71 @@ export default function AttendeesManager({
     if (!result) {
       setError("Failed to add attendee");
     } else {
+      const addedEmail = addEmail;
+      const certNo = (result as EventAttendee).certificate_number ?? null;
       setAddName("");
       setAddEmail("");
+      setLookupNote(null);
       setAddMode("template");
       setAddFile(null);
       setAddOpen(false);
       await fetchPage(page, pageSize, debouncedSearch, filter);
-      setMessage("Attendee added.");
+      setMessage(
+        certNo
+          ? `Note: ${addedEmail} was already issued ${certNo} for this event — details updated, nothing duplicated.`
+          : "Attendee added."
+      );
     }
   }
+
+  // Non-blocking pre-save note: same-roster match (derived during render) +
+  // cross-event lookup (async callbacks only — never blocks submit, lookup
+  // failures stay silent).
+  const addEmailTrimmed = addEmail.trim();
+  const addEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addEmailTrimmed);
+  const addRosterMatch =
+    addOpen && addEmailValid
+      ? (attendees.find((a) => a.email.toLowerCase() === addEmailTrimmed.toLowerCase()) ?? null)
+      : null;
+  const addRosterNote = addRosterMatch
+    ? addRosterMatch.certificate_number
+      ? `Note: ${addEmailTrimmed} is already on this roster and was issued ${addRosterMatch.certificate_number}. Saving updates their details — nothing is duplicated.`
+      : `Note: ${addEmailTrimmed} is already on this roster. Saving updates their details — nothing is duplicated.`
+    : null;
+  const freshLookupNote =
+    lookupNote && lookupNote.email.toLowerCase() === addEmailTrimmed.toLowerCase()
+      ? lookupNote.text
+      : null;
+  const addNote = addRosterNote ?? freshLookupNote;
+  const addChecking =
+    addOpen && addEmailValid && !addRosterNote && !freshLookupNote;
+
+  useEffect(() => {
+    if (!addOpen || !addEmailValid || addRosterMatch) return;
+    const email = addEmailTrimmed;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      attendeesApi
+        .lookup(email)
+        .then(({ data }) => {
+          if (cancelled || !data) return;
+          const { totals } = data;
+          if (totals.certificates_active > 0 || totals.events > 0) {
+            setLookupNote({
+              email,
+              text: `Note: ${email} has ${totals.certificates_active} active certificate(s) across ${totals.events} event(s). Adding here never duplicates — it only adds them to this event's roster.`,
+            });
+          }
+        })
+        .catch(() => {
+          // Silent: note is informational only.
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [addOpen, addEmailValid, addEmailTrimmed, addRosterMatch]);
 
   function openEdit(a: EventAttendee) {
     setEditTarget(a);
@@ -740,6 +800,15 @@ export default function AttendeesManager({
                 required
                 className="input mt-1"
               />
+              {addChecking ? (
+                <p className="mt-1.5 text-xs text-tertiary">Checking roster history…</p>
+              ) : null}
+              {addNote ? (
+                <p className="mt-1.5 flex items-start gap-1.5 text-xs text-tertiary">
+                  <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
+                  <span>{addNote}</span>
+                </p>
+              ) : null}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">

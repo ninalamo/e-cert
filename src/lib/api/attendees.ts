@@ -38,7 +38,35 @@ export interface AttendeesListResult {
   links: PaginationLinks;
 }
 
+export interface AttendeeLookupTotals {
+  events: number;
+  attended: number;
+  certificates_active: number;
+  certificates_revoked: number;
+}
+
+export interface AttendeeLookupEvent {
+  id: string;
+  name: string | null;
+  attended: boolean;
+  completed: boolean;
+  attended_at: string | null;
+  completed_at: string | null;
+  has_certificate: boolean;
+  certificate_revoked: boolean;
+}
+
+export interface AttendeeLookupResult {
+  email: string;
+  events: AttendeeLookupEvent[];
+  totals: AttendeeLookupTotals;
+}
+
 export const attendeesApi = {
+  lookup: (email: string) =>
+    api.get<{ data: AttendeeLookupResult }>(
+      `/attendees/lookup?email=${encodeURIComponent(email.trim())}`
+    ),
   list: (eventId: string, params?: AttendeesListParams) => {
     const qs = new URLSearchParams();
     if (params?.search) qs.set("search", params.search);
