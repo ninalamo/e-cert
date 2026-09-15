@@ -3,28 +3,24 @@
 # LOA e-cert Frontend
 ## AI Development Guide
 
-**Version:** 1.0
+**Version:** 2.0
 **Audience:** AI Coding Agents, Engineers, Architects
 
 ---
 
 # Purpose
 
-This document defines the architectural rules that AI development agents must follow when generating, modifying, or refactoring code within the LOA e-cert Frontend.
+This document defines the architectural rules AI agents must follow when generating, modifying, or refactoring code in the LOA e-cert frontend.
 
-The primary objective is to ensure that all generated code respects the CSR architecture, the spec-first gate, and the dependency boundary between e-cert (consumer) and the Cert/Auth Platforms (providers).
+e-cert is a **spec-driven, client-side SPA**: it renders what the Cert API returns, delegates identity to Auth SSO, and owns no business rules, identity, or data. Spec pattern is a lightweight frontend-only adaptation of `loa-apache-server-apps` — `views` / `features` / `ui` / `services`. No kernels, domains, or contexts here.
 
-When uncertain, AI should preserve architectural integrity over implementation convenience.
+When uncertain, preserve architectural integrity over implementation convenience.
 
 ---
 
 # ⛔ MANDATORY RULE: Run Tests Before Commit
 
 **The AI agent MUST run the test suite after any code change and before committing.**
-
-This is a hard requirement. Violations are treated as failures.
-
-## The Rule
 
 ```
 Code changed
@@ -37,20 +33,17 @@ Code changed
 ## How to Run Tests
 
 ```bash
-# Unit / integration tests (Vitest)
+# Unit / integration / component (Vitest)
 npx vitest run
 
 # Single test file
 npx vitest run src/path/to/file.test.ts
 
-# Specific test name
-npx vitest run -t "test name"
-
-# E2E tests (Playwright)
+# E2E (Playwright, mock-backed)
 npx playwright test
 
 # Single e2e file
-npx playwright test tests/path/to/file.spec.ts
+npx playwright test e2e/tests/path/to/file.spec.ts
 ```
 
 ## Non-Negotiable Checklist
@@ -68,14 +61,10 @@ npx playwright test tests/path/to/file.spec.ts
 
 **The AI agent MUST check for and read the spec before writing ANY code.**
 
-This is a hard requirement. Violations are treated as failures.
-
-## The Rule
-
 ```
 Task received
-  ├── Search repo for relevant spec (.md file)
-  ├── No spec found      → WRITE THE SPEC FIRST (or ask the user)
+  ├── Search specs/views, specs/features, specs/ui, specs/services for the relevant spec
+  ├── No spec found      → WRITE THE SPEC FIRST (copy specs/_template.md) or ask the user
   ├── Spec found, Draft  → COMPLETE THE SPEC FIRST
   └── Spec found, Final  → write code that matches the spec exactly
 ```
@@ -85,7 +74,7 @@ Task received
 - [ ] I searched `specs/` for a relevant spec
 - [ ] I read the entire relevant spec file(s)
 - [ ] The spec is Final (not Draft) before I write production code
-- [ ] My code matches the spec's concepts, rules, and contracts
+- [ ] My code matches the spec's UI contract, API calls, and rules
 - [ ] No spec exists → I did NOT code; I wrote the spec or asked first
 
 **If the task has no spec and no prior user discussion, the AI agent MUST ask before writing any code.**
@@ -96,22 +85,16 @@ Task received
 
 **The AI agent MUST NOT act autonomously. Every significant action requires explicit user confirmation.**
 
-This is a strict behavioral rule, not a suggestion. Violations are treated as failures.
-
-## What Requires User Confirmation
-
-Before taking ANY of the following actions, the AI agent MUST ask and receive an explicit "yes" or specific instruction from the user:
+Before taking ANY of the following actions, the AI agent MUST ask and receive an explicit "yes" or specific instruction:
 
 - Writing, modifying, or deleting code files
 - Creating, modifying, or deleting spec files
-- Installing or updating packages (npm, pnpm)
+- Installing or updating packages (npm)
 - Updating `.env` files or secrets
 - Running tests (Playwright, Vitest)
 - Committing or pushing changes
 - Running the dev server (`npm run dev`)
 - Any action that changes the state of the repository or running services
-
-## What This Means in Practice
 
 ```
 User gives a task
@@ -122,15 +105,7 @@ User gives a task
   └── Only then proceed with confirmed action
 ```
 
-## The Rule
-
 **No auto-piloting. No assumption-based action. No "I'll just do this real quick."**
-
-If unsure whether an action requires confirmation → **ask anyway**.
-
-If the user says "do X" and you think Y is also needed → **ask about Y, don't just do it**.
-
-If you've already started and realize you should have asked → **stop, report what you did, ask for confirmation on remaining work**.
 
 ---
 
@@ -138,76 +113,70 @@ If you've already started and realize you should have asked → **stop, report w
 
 e-cert is a **consumer** of the Cert Platform API and Auth Platform SSO. It owns presentation logic and client-side state — never business rules, identity, or data ownership.
 
-The frontend is a thin client: it renders what the API returns, delegates auth to the SSO flow, and stores nothing sensitive beyond an in-memory access token.
-
----
-
-# Architecture
-
 ```
 ┌───────────────────────────────────────────────────────┐
 │                    e-cert (Next.js CSR)                │
 │                                                       │
-│  Pages / Components  →  API Client  →  BFF Proxy      │
-│       (UI)              (typed)       (path+qs pass)  │
+│  Views → Features → UI primitives                     │
+│       └→ Services (api-client, auth) → BFF → Cert API │
 │                                                       │
-│  Auth: SSO redirect → in-memory token → JWT claims    │
+│  Auth: SSO redirect → in-memory token → JWT display   │
 └───────────────────────────────────────────────────────┘
-         │                              │
-         ▼                              ▼
+          │                              │
+          ▼                              ▼
 ┌──────────────────┐     ┌──────────────────────────┐
 │  Auth Platform   │     │     Cert Platform API     │
 │  (SSO + users)   │     │     (certs, events, etc.) │
 └──────────────────┘     └──────────────────────────┘
 ```
 
-## Dependency Direction
-
-```
-e-cert (consumer)
-    ↓ calls
-Cert Platform API (provider)
-    ↓ calls
-Auth Platform (SSO + identity)
-```
-
-e-cert never owns business concepts. It references them by API contract only.
+e-cert never owns business concepts. It references them by API contract only (`specs/openapi/cert-api.yaml`).
 
 ---
 
-# CSR Architecture Rules
+# Spec Layers (frontend-only)
+
+| Layer | Lives in | Specs in | Owns |
+|-------|----------|----------|------|
+| `views` | `src/app/` | `specs/views/` | routes, gating, which feature renders where. No data logic. |
+| `features` | `src/features/*` | `specs/features/` | UI workflows: events, certificates, templates, dashboard, audit, faq. One spec per feature. |
+| `ui` | `src/components/` | `specs/ui/` | dumb shared primitives + empty/error states. No fetching, no feature knowledge. |
+| `services` | `src/lib/api/`, `src/lib/auth/`, config | `specs/services/` | plumbing: api-client, auth, platform (env/deploy), testing. No business logic. |
+
+Decisions: `specs/decisions/` (D1 CSR, D2 BFF, D3 JWT-display, D4 fresh-start). New spec? Copy `specs/_template.md` (Purpose, Scope, UI Contract, API Calls, Rules, Tests, Anti-Patterns — lightweight by design).
+
+---
+
+# Architecture Rules (CSR)
 
 ## No Server-Side Auth
 
-- No httpOnly session cookie
-- No server-side JWT verification
-- No proxy middleware (`src/proxy.ts` must be deleted)
+- No httpOnly session cookie, no server-side JWT verification, no `src/proxy.ts`.
 
 ## No Server Actions
 
-- All data operations through client-side API calls
-- No Next.js server actions for mutations
+- All data operations through client-side API calls (`src/lib/api/` via BFF).
 
 ## In-Memory Only
 
-- Access token lives in JS memory only
-- Never `localStorage` or `sessionStorage`
-- Refresh token stays httpOnly (Cert-managed)
+- Access token in JS memory only. Never `localStorage`/`sessionStorage`. Refresh stays httpOnly (Cert-managed).
 
 ## No Local Identity
 
-- No signing tokens
-- No password hashes
-- No users table
+- No signing tokens, no password hashes, no users table.
 
-## Env Contract (4 vars only)
+## Env Contract (canonical Vercel set + local BFF targets)
 
 | Variable | Purpose |
 |----------|---------|
 | `NEXT_PUBLIC_BASE_URL` | UI origin |
 | `NEXT_PUBLIC_AUTH_BASE_URL` | SSO login redirect |
-| `NEXT_PUBLIC_CERT_TENANT_SLUG` | JWT tenant validation |
-| `NEXT_PUBLIC_CERT_API_TARGET` | `mock` or `live` (rewriting target) |
+| `NEXT_PUBLIC_CERT_TENANT_SLUG` | JWT tenant display check |
+| `NEXT_PUBLIC_CERT_API_URL` | legacy, unread by code — do not use |
+| `CERT_API_URL` | BFF → Cert host (server-only; unset on Vercel → production fallback) |
+| `AUTH_API_URL` | BFF → Auth host (server-only; unset on Vercel → production fallback) |
+
+Exact values: `specs/services/vercel-deploy.md`.
 
 ---
 
@@ -215,65 +184,46 @@ e-cert never owns business concepts. It references them by API contract only.
 
 ```
 src/
-├── app/                    # Next.js App Router pages
-│   ├── (dashboard)/        # Authenticated routes
-│   ├── (participant)/      # Public participant routes
-│   ├── api/                # BFF proxy (path+qs pass-through)
-│   └── view/               # Public cert viewer
-├── features/               # Feature modules (co-located logic)
-│   ├── auth/               # SSO fragment, token management
-│   ├── events/             # Event management features
-│   ├── certificates/       # Certificate features
-│   └── templates/          # Template editor
-├── lib/                    # Shared utilities
-│   ├── api/                # Typed Cert API client
-│   └── env.ts              # Environment validation
-├── components/             # Shared UI components
-├── types/                  # Shared TypeScript types
-└── specs/                  # Specifications (source of truth)
+├── app/                    # views (routes; render features, no fetching)
+│   ├── (dashboard)/        # authenticated routes
+│   ├── (participant)/      # participant routes
+│   ├── api/v1/[...path]/  # BFF proxy (no logic; see specs/services/api-bff-layer.md)
+│   ├── api/events/[...path]/ # legacy bulk-ops proxy (same)
+│   ├── verify/, view/, faq/
+├── features/               # events, certificates, templates, dashboard, audit, faq
+├── lib/api/                # typed Cert API client (one module per resource)
+├── lib/auth/               # sso-fragment, token-store, session-ready, jwt, guard
+├── components/             # shared ui/ only
+└── types/                  # shared types (cross-feature sharing goes here)
+specs/
+├── _template.md  views/  features/  ui/  services/  decisions/  openapi/
 ```
 
 ---
 
 # Dependency Rules
 
+Full matrix: `dependency-rules.md`. Summary:
+
 | Allowed | Forbidden |
 |---------|-----------|
-| Components → API client | API client → Components |
-| Features → `lib/` utilities | `lib/` → Features |
-| Pages → Features | Cross-feature direct imports (use shared types) |
-| Any → Cert Platform API (via BFF) | Direct Supabase / database access |
-| Any → Auth Platform (SSO redirect) | Token storage in localStorage |
+| views → features | features → views |
+| views → services | only the two documented exceptions (users page, event bulk ops) |
+| features → ui, services, types | ui → features/services; services → features/views/ui |
+| features → `lib/api`, `lib/auth` | cross-feature direct imports |
+| any → Cert API via BFF; → Auth SSO redirect | direct Supabase/DB; `localStorage` tokens; server actions |
 
 ---
 
 # Decision Tree
 
-Before generating code, determine what you're building:
-
 ```
-1. New page?
-   ├── Authenticated → src/app/(dashboard)/
-   ├── Public participant → src/app/(participant)/
-   └── Public viewer → src/app/view/
-
-2. New feature module?
-   ├── Co-locate in src/features/{name}/
-   ├── Export only what pages/components need
-   └── API calls go through src/lib/api/
-
-3. New API call?
-   ├── Add typed method in src/lib/api/{domain}.ts
-   ├── Use the BFF proxy (src/app/api/v1/[...path]/route.ts)
-   └── Never call Cert API directly from components
-
-4. New shared component?
-   ├── src/components/ui/ for primitives (shadcn)
-   └── src/components/ for app-level shared components
-
-5. New type?
-   ├── src/types/ for shared domain types
-   └── Feature-local types stay in the feature dir
+1. New page?          → specs/views/ → src/app/ (guard + render feature; fetch only via features/services — see the two documented exceptions)
+2. New feature flow?  → specs/features/{name}.md → src/features/{name}/ (API via src/lib/api/)
+3. New API call?      → specs/services/api-client.md → src/lib/api/{resource}.ts via BFF, never direct
+4. New shared visual? → specs/ui/ → src/components/ui/ (props only, no fetch)
+5. New plumbing?      → specs/services/ (token, env, test — no business logic)
+6. No spec?           → write it first (specs/_template.md), get it to Final, then code
 ```
 
 ---
@@ -287,8 +237,8 @@ Before generating code, determine what you're building:
 | API modules | camelCase, plural | `attendees.ts`, `certificates.ts` |
 | Types | PascalCase, singular | `EventAttendee`, `Certificate` |
 | Spec files | kebab-case, `.md` | `attendee-deletion.md` |
-| Test files | `*.test.ts` or `*.spec.ts` | `attendees.test.ts` |
-| Pages | `page.tsx` (Next.js convention) | `src/app/(dashboard)/events/[id]/page.tsx` |
+| Test files | `*.test.ts` / `*.spec.ts` | `attendees.test.ts` |
+| Pages | `page.tsx` (Next.js) | `src/app/(dashboard)/events/[id]/page.tsx` |
 
 ---
 
@@ -296,61 +246,38 @@ Before generating code, determine what you're building:
 
 | Pattern | Why It's Wrong | Correct Approach |
 |---------|---------------|------------------|
-| Storing tokens in `localStorage` | XSS can read it | In-memory only |
-| Calling Cert API directly from component | Bypasses proxy, leaks origin | Use `src/lib/api/` methods |
-| Using server actions | Violates CSR architecture | Client-side API calls |
-| Adding httpOnly cookie | Violates in-memory token rule | SSO redirect flow |
-| Duplicating API types locally | Drift from backend | Import from `src/lib/api/` types |
-| Hardcoding `organization_id` | Org resolved from JWT | Use `tenant.slug` from JWT claims |
-| Using `/login` for SSO | `/login` is admin-only | Use `/sso/login` |
-| Writing code against Draft spec | Spec must be Final first | Read spec, confirm status |
+| Storing tokens in `localStorage` | XSS-readable | in-memory only |
+| Calling Cert API directly from component | bypasses BFF + typing | `src/lib/api/` module |
+| Server actions | violates CSR | client-side calls |
+| httpOnly session cookie | violates in-memory rule | SSO redirect flow |
+| Duplicating API types locally | drift | import from `src/lib/api/` types |
+| Hardcoding `organization_id` | org from JWT | omit; server resolves |
+| Using `/login` for SSO | admin-only | `/sso/login` |
+| Coding against a Draft spec | gate violation | finalize spec first |
 
 ---
 
 # Testing Strategy
 
-| Layer | Tool | What It Tests |
-|-------|------|---------------|
-| Unit | Vitest | Pure functions, utilities, type guards |
-| Component | Vitest + React Testing Library | Component rendering, user interactions |
-| Integration | Vitest | API client ↔ mocked responses |
-| E2E | Playwright | Full user flows in browser |
+| Layer | Tool | What |
+|-------|------|------|
+| Unit | Vitest | pure functions, guards, parsers |
+| Component | Vitest + RTL | rendering, interaction, states |
+| Integration | Vitest | api-client ↔ mocked envelope |
+| E2E | Playwright + mock (`mock/server.ts`) | full flows in browser |
 
-## Test File Location
-
-- Co-located with source: `src/features/events/components/__tests__/attendees.test.ts`
-- Or in `e2e/` for Playwright specs
+Tests live in `src/__tests__/` (Vitest, `src/**/*.test.ts`) and `e2e/tests/` (Playwright). Mock (`mock/server.ts` + `mock/db.json`) mirrors the Cert contract. Known gap: BFF port alignment for mock-backed runs — see `specs/services/testing.md` §4.
 
 ---
 
 # Recurring Gotchas
 
-## BFF Proxy
-
-The BFF proxy (`src/app/api/v1/[...path]/route.ts`) forwards requests to the Cert API with path+query-string intact. It does NOT transform, validate, or enrich. If you see unexpected data, the issue is upstream (Cert API), not the proxy.
-
-## JWT Claims
-
-All role/permission checks derive from the JWT `permissions` claim — never from a database lookup. The `tenant.slug` claim resolves the organization. If you need a new permission, it must be added to the Cert Platform permission registry, not hardcoded in e-cert.
-
-## Environment Variables
-
-Only 4 `NEXT_PUBLIC_*` vars are allowed. If you need a new env var, ask first — the contract is tight by design.
+- **BFF is dumb (two routes).** They forward path+query as-is (`/api/v1/*`, legacy `/api/events/*`). Bad data = upstream (Cert API), not the proxy. Auth routing detail: only non-callback/refresh/logout `auth/*` goes to Auth; the rest goes to Cert.
+- **JWT is display-only.** Roles/tenant from claims gate UI; Cert API enforces. New permission = Cert catalog change, never hardcoded.
+- **Fixed env set.** New var needed? Ask first — values table is `specs/services/vercel-deploy.md`.
 
 ---
 
 # Guiding Principle
 
-Every piece of generated code should strengthen the architecture rather than weaken it.
-
-If a solution is easier but violates the CSR boundary, the spec-first gate, or the dependency direction, it is the wrong solution.
-
-Correct architecture takes precedence over implementation convenience.
-
-When uncertain:
-
-Specs before code.
-
-Client-side only.
-
-Ask before acting.
+> Specs before code. Client-side only. Ask before acting.

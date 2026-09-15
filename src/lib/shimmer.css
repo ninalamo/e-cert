@@ -1,5 +1,0 @@
-export const shimmer = {
-  "--shimmer-base": "hsl(var(--color-surface))",
-  "--shimmer-highlight": "hsl(var(--color-surface-hover))",
-  "--shimmer-width": "100%"
-};

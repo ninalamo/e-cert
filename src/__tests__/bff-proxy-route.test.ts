@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
-import { POST, GET } from "@/app/api/v1/[...path]/route.ts";
+import { POST, GET } from "@/app/api/v1/[...path]/route";
 
 const CERT_API = "https://cert-api.lyceumalabang.edu.ph";
 const AUTH_API = "https://auth.lyceumalabang.edu.ph";
@@ -261,7 +261,7 @@ describe("BFF proxy route handler", () => {
       body: JSON.stringify({ name: "updated" }),
     });
 
-    const { PATCH } = await import("@/app/api/v1/[...path]/route.ts");
+    const { PATCH } = await import("@/app/api/v1/[...path]/route");
     await PATCH(req, { params: Promise.resolve({ path: ["events", "123"] }) });
 
     const [, init] = fetchSpy.mock.calls[0];

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { parseAccessToken, type JwtPayload } from "@/lib/auth/jwt";
 import { resolveRoleFromPermissions } from "@/lib/permissions";
 
-function encodePayload(payload: Record<string, unknown>): string {
+function encodePayload(payload: JwtPayload | Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: "none", typ: "JWT" }));
   const body = btoa(JSON.stringify(payload));
   return `${header}.${body}.`;
@@ -112,7 +112,7 @@ describe("JWT Validation — Cross-app Token Integrity", () => {
       const token = encodePayload(payload);
       const result = parseAccessToken(token);
       expect(result).not.toBeNull();
-      expect(result!.exp).toBeGreaterThan(result!.iat);
+      expect(result!.exp!).toBeGreaterThan(result!.iat!);
     });
   });
 

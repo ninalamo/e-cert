@@ -6,6 +6,8 @@ export interface JwtPayload {
   permissions: string[];
   tenant: { id: string; slug: string };
   exp?: number;
+  iat?: number;
+  type?: string;
 }
 
 export function parseAccessToken(token: string): JwtPayload | null {
