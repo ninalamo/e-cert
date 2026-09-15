@@ -52,6 +52,7 @@ export default function AttendeesManager({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectedAttendees, setSelectedAttendees] = useState<Map<string, EventAttendee>>(new Map());
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -186,7 +187,13 @@ export default function AttendeesManager({
   }, [showAddDialog, onAddDialogHandled]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const pageRows = attendees;
+  const pageRows = (() => {
+    const filteredIds = new Set(attendees.map((a) => a.id));
+    const extraSelected = Array.from(selectedAttendees.values()).filter(
+      (a) => !filteredIds.has(a.id) && selected.has(a.id)
+    );
+    return extraSelected.length > 0 ? [...attendees, ...extraSelected] : attendees;
+  })();
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   const allPageSelected =
@@ -205,11 +212,21 @@ export default function AttendeesManager({
   function toggleSelectAll() {
     if (allPageSelected) {
       const next = new Set(selected);
-      pageRows.forEach((r) => next.delete(r.id));
+      pageRows.forEach((r) => {
+        next.delete(r.id);
+        setSelectedAttendees((prevMap) => {
+          const nextMap = new Map(prevMap);
+          nextMap.delete(r.id);
+          return nextMap;
+        });
+      });
       setSelected(next);
     } else {
       const next = new Set(selected);
-      pageRows.forEach((r) => next.add(r.id));
+      pageRows.forEach((r) => {
+        next.add(r.id);
+        setSelectedAttendees((prevMap) => new Map(prevMap).set(r.id, r));
+      });
       setSelected(next);
     }
   }
@@ -217,8 +234,20 @@ export default function AttendeesManager({
   function toggleSelect(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        setSelectedAttendees((prevMap) => {
+          const nextMap = new Map(prevMap);
+          nextMap.delete(id);
+          return nextMap;
+        });
+      } else {
+        next.add(id);
+        const attendee = attendees.find((a) => a.id === id);
+        if (attendee) {
+          setSelectedAttendees((prevMap) => new Map(prevMap).set(id, attendee));
+        }
+      }
       return next;
     });
   }
@@ -324,12 +353,22 @@ export default function AttendeesManager({
           next.delete(id);
           return next;
         });
+        setSelectedAttendees((prevMap) => {
+          const nextMap = new Map(prevMap);
+          nextMap.delete(id);
+          return nextMap;
+        });
         await fetchPage(page, pageSize, debouncedSearch, filter);
       } else {
         setSelected((prev) => {
           const next = new Set(prev);
           next.delete(id);
           return next;
+        });
+        setSelectedAttendees((prevMap) => {
+          const nextMap = new Map(prevMap);
+          nextMap.delete(id);
+          return nextMap;
         });
         await fetchPage(page, pageSize, debouncedSearch, filter);
       }
@@ -347,6 +386,8 @@ export default function AttendeesManager({
       toast.warning("User has already been issued a certificate for this event.");
       return;
     }
+    setError(null);
+    setMessage(null);
     setIssuingAttendeeId(attendee.id);
     try {
       const { data: result } = await certificatesApi.issueFromEvent({
@@ -357,13 +398,13 @@ export default function AttendeesManager({
         send_email: true,
       });
       if (result?.error) {
-        toast.error(result.error);
+        setError(result.error);
       } else if (result?.certificate) {
-        toast.success(`Certificate ${result.certificate.certificate_number} issued to ${attendee.name}`);
+        setMessage(`Certificate ${result.certificate.certificate_number} issued to ${attendee.name}`);
         void fetchPage(page, pageSize, debouncedSearch, filter);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to issue certificate");
+      setError(err instanceof Error ? err.message : "Failed to issue certificate");
     } finally {
       setIssuingAttendeeId(null);
     }
@@ -435,6 +476,15 @@ export default function AttendeesManager({
           {selected.size > 0 && (
             <span className="badge-brand">{selected.size} selected</span>
           )}
+          {selected.size > 0 && (
+            <button
+              type="button"
+              onClick={() => { setSelected(new Set()); setSelectedAttendees(new Map()); }}
+              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+            >
+              Unselect all
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -460,6 +510,12 @@ export default function AttendeesManager({
           </select>
         </div>
       </div>
+
+      {selected.size > 0 && (debouncedSearch.trim() || filter !== "all") && (
+        <p className="text-xs text-[var(--color-text-muted)]">
+          Selected attendees are shown regardless of the current search or filter.
+        </p>
+      )}
 
       {totalItems > 0 && (
         <Paginator
