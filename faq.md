@@ -125,3 +125,18 @@ their own area.
 
 **My role looks wrong.** Roles are set by an Admin in the Users screen. Contact an
 Admin if your access does not match your responsibilities.
+
+**My Certificates page says "No certificates have been issued to you yet."**
+Verify the following:
+
+1. The certificate's `recipient_email` in the database matches your login email
+   exactly (including case).
+2. Your user account has the `cert-user` group permission assigned. Without it,
+   the `GET /api/v1/me/certificates` endpoint is inaccessible and the page
+   silently returns an empty list.
+3. The certificate is linked to an existing event (the `event_id` on the
+   certificate row must reference a valid event).
+
+The backend (`MeController::certificates()`) queries the `certificates` table
+directly by `recipient_email` — it does **not** go through the `event_attendees`
+table. So a missing attendee linkage does not affect this page.
