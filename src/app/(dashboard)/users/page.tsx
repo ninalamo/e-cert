@@ -31,6 +31,7 @@ import {
   canPromoteToAdmin,
   filterableRoleGroups,
   getCertRoleNames,
+  LATERAL_ROLES,
   lateralRoleTargets,
   roleEditBlockReason,
   roleLabel,
@@ -399,7 +400,7 @@ export default function UsersPage() {
                                   aria-label="Change role"
                                   className="inline-flex rounded-full border border-border bg-surface p-0.5"
                                 >
-                                  {lateral.map((option) => {
+                                  {LATERAL_ROLES.map((option) => {
                                     const active = option === primaryRole;
                                     return (
                                       <button

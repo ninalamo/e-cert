@@ -13,7 +13,7 @@ export const EDITABLE_ROLES = ["cert-staff", "cert-user"] as const;
 export type EditableRole = (typeof EDITABLE_ROLES)[number] | "cert-admin";
 
 /** Lateral (non-elevating) targets shown in the segmented control. */
-const LATERAL_ROLES = ["cert-staff", "cert-user"] as const;
+export const LATERAL_ROLES = ["cert-staff", "cert-user"] as const;
 
 const CERT_ROLE_ORDER = ["cert-admin", "cert-staff", "cert-user"] as const;
 
@@ -52,7 +52,7 @@ export function roleEditBlockReason(
 
 /**
  * Allowed reassignment targets for the e-cert UI.
- * - cert-user  → cert-staff (lateral)
+ * - cert-user  → cert-staff (lateral) or cert-admin (promotion)
  * - cert-staff → cert-user (lateral) or cert-admin (promotion)
  * - cert-admin → none here (demote/revoke only in Auth admin)
  * - self / no / multiple cert roles → none
@@ -65,7 +65,7 @@ export function roleTargets(
   const certRoles = getCertRoleNames(user.groups);
   if (certRoles.length !== 1) return [];
   const current = certRoles[0];
-  if (current === "cert-user") return ["cert-staff"];
+  if (current === "cert-user") return ["cert-staff", "cert-admin"];
   if (current === "cert-staff") return ["cert-user", "cert-admin"];
   return [];
 }
