@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   AwardIcon,
-  CalendarCheckIcon,
   ChevronDownIcon,
 } from "lucide-react";
 import {
   userActivityApi,
+  certificatesInactive,
   type UserActivityDetail,
 } from "@/lib/api/user-activity";
 
@@ -70,41 +70,23 @@ export function UserActivityBadges({
   }
 
   const hasActive = detail.certificatesActive > 0;
+  const inactive = certificatesInactive(detail);
 
   const badges = (
     <>
-      <span className="flex items-center gap-1" title={`${detail.certificatesActive} active / ${detail.certificatesRevoked} revoked certificates`}>
+      <span className="flex items-center gap-1" title={`${detail.certificatesActive} active / ${inactive} inactive certificates`}>
         <AwardIcon
           className={`size-3.5 shrink-0 ${
             hasActive ? "text-[var(--color-success)]" : "opacity-40"
           }`}
         />
         <span className="tabular-nums">{detail.certificatesActive}</span>
-        {detail.certificatesRevoked > 0 ? (
-          <span className="tabular-nums opacity-60 line-through">
-            {detail.certificatesRevoked}
+        {inactive > 0 ? (
+          <span className="tabular-nums opacity-60">
+            {inactive}
           </span>
         ) : null}
       </span>
-      {detail.eventsTotal > 0 ? (
-        <span
-          className="flex items-center gap-1"
-          title={`Attended ${detail.eventsAttended} of ${detail.eventsTotal} event${
-            detail.eventsTotal === 1 ? "" : "s"
-          }`}
-        >
-          <CalendarCheckIcon
-            className={`size-3.5 shrink-0 ${
-              detail.eventsAttended > 0
-                ? "text-[var(--color-success)]"
-                : "opacity-40"
-            }`}
-          />
-          <span className="tabular-nums">
-            {detail.eventsAttended}/{detail.eventsTotal}
-          </span>
-        </span>
-      ) : null}
     </>
   );
 
@@ -168,26 +150,24 @@ export function UserActivityDetailPanel({ email }: { email: string }) {
             {event.name || "Unnamed event"}
           </span>
           <span className="flex shrink-0 items-center gap-2 text-tertiary">
-            <span className={event.attended ? "text-[var(--color-success)]" : "opacity-50"}>
-              {event.attended ? "attended" : "not attended"}
-            </span>
-            {event.completed ? (
-              <span className="text-[var(--color-success)]">completed</span>
-            ) : null}
             <span
               className={
                 !event.hasCertificate
                   ? "opacity-50"
                   : event.certificateRevoked
                     ? "text-[var(--color-danger-text)]"
-                    : "text-[var(--color-success)]"
+                    : event.certificateExpired
+                      ? "opacity-70"
+                      : "text-[var(--color-success)]"
               }
             >
               {!event.hasCertificate
                 ? "no certificate"
                 : event.certificateRevoked
                   ? "certificate revoked"
-                  : "certificate active"}
+                  : event.certificateExpired
+                    ? "certificate expired"
+                    : "certificate active"}
             </span>
           </span>
         </div>

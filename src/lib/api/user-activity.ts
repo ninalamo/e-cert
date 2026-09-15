@@ -4,8 +4,14 @@ export interface UserActivitySummary {
   email: string;
   certificatesActive: number;
   certificatesRevoked: number;
+  certificatesExpired: number;
   eventsTotal: number;
   eventsAttended: number;
+}
+
+/** Inactive = revoked or expired (never re-issued). */
+export function certificatesInactive(summary: UserActivitySummary): number {
+  return summary.certificatesRevoked + summary.certificatesExpired;
 }
 
 export interface UserActivityEvent {
@@ -17,6 +23,7 @@ export interface UserActivityEvent {
   completedAt: string | null;
   hasCertificate: boolean;
   certificateRevoked: boolean;
+  certificateExpired: boolean;
 }
 
 export interface UserActivityDetail extends UserActivitySummary {
@@ -40,12 +47,14 @@ interface LookupEnvelope {
       completed_at: string | null;
       has_certificate: boolean;
       certificate_revoked: boolean;
+      certificate_expired?: boolean;
     }>;
     totals: {
       events: number;
       attended: number;
       certificates_active: number;
       certificates_revoked: number;
+      certificates_expired?: number;
     };
   };
 }
@@ -60,7 +69,7 @@ function normalizeEmail(email: string): string {
 
 async function countByEmail(
   email: string,
-  status: "active" | "revoked"
+  status: "active" | "revoked" | "expired"
 ): Promise<number> {
   const res = await api.get<CertificateListEnvelope>(
     `/certificates?recipient_email=${encodeURIComponent(email)}&status=${status}&limit=1`
@@ -77,6 +86,7 @@ async function fetchLookup(email: string): Promise<UserActivityDetail> {
     email,
     certificatesActive: res.data.totals.certificates_active,
     certificatesRevoked: res.data.totals.certificates_revoked,
+    certificatesExpired: res.data.totals.certificates_expired ?? 0,
     eventsTotal: res.data.totals.events,
     eventsAttended: res.data.totals.attended,
     events: res.data.events.map((event) => ({
@@ -88,6 +98,7 @@ async function fetchLookup(email: string): Promise<UserActivityDetail> {
       completedAt: event.completed_at,
       hasCertificate: event.has_certificate,
       certificateRevoked: event.certificate_revoked,
+      certificateExpired: event.certificate_expired ?? false,
     })),
   };
 }
@@ -96,14 +107,16 @@ async function fetchSummaryFallback(
   email: string
 ): Promise<UserActivityDetail> {
   try {
-    const [active, revoked] = await Promise.all([
+    const [active, revoked, expired] = await Promise.all([
       countByEmail(email, "active"),
       countByEmail(email, "revoked"),
+      countByEmail(email, "expired"),
     ]);
     return {
       email,
       certificatesActive: active,
       certificatesRevoked: revoked,
+      certificatesExpired: expired,
       eventsTotal: 0,
       eventsAttended: 0,
       events: [],
@@ -115,6 +128,7 @@ async function fetchSummaryFallback(
       email,
       certificatesActive: 0,
       certificatesRevoked: 0,
+      certificatesExpired: 0,
       eventsTotal: 0,
       eventsAttended: 0,
       events: [],
