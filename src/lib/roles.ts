@@ -85,6 +85,65 @@ export function canPromoteToAdmin(user: ManagedUser, isSelf: boolean): boolean {
   return roleTargets(user, isSelf).includes("cert-admin");
 }
 
+export function isCertAdminCaller(callerGroups: string[]): boolean {
+  return callerGroups.includes("cert-admin");
+}
+
+export function isStaffCaller(callerGroups: string[]): boolean {
+  return (
+    !callerGroups.includes("cert-admin") &&
+    callerGroups.includes("cert-staff")
+  );
+}
+
+/** Re-assignment is a cert-admin-only feature (segmented control + promote). */
+export function canReassignRole(
+  user: ManagedUser,
+  isSelf: boolean,
+  callerGroups: string[],
+  canManage: boolean
+): boolean {
+  if (!canManage || isSelf) return false;
+  if (!isCertAdminCaller(callerGroups)) return false;
+  return roleTargets(user, isSelf).length > 0;
+}
+
+export function reassignBlockReason(
+  user: ManagedUser,
+  isSelf: boolean,
+  callerGroups: string[]
+): string | null {
+  if (isSelf) return "You cannot change your own role.";
+  if (!isCertAdminCaller(callerGroups)) {
+    return "Only Vericert Admins can change roles.";
+  }
+  return roleEditBlockReason(user, false);
+}
+
+/** Staff may only revoke (disable) active accounts holding only cert-user. */
+export function isStaffRevocableTarget(user: ManagedUser): boolean {
+  const certRoles = getCertRoleNames(user.groups);
+  return certRoles.length === 1 && certRoles[0] === "cert-user";
+}
+
+export function canChangeStatus(
+  user: ManagedUser,
+  isSelf: boolean,
+  callerGroups: string[],
+  canManage: boolean,
+  next: "active" | "disabled"
+): boolean {
+  if (!canManage || isSelf) return false;
+  if (isCertAdminCaller(callerGroups)) return true;
+  // Staff: revoke-only, no restores, Vericert User targets only.
+  if (next !== "disabled") return false;
+  return (
+    isStaffCaller(callerGroups) &&
+    user.status === "active" &&
+    isStaffRevocableTarget(user)
+  );
+}
+
 export function sortCertGroupsFirst(groups: ManagedGroup[]): ManagedGroup[] {
   return [...groups].sort((a, b) => {
     const ai = CERT_ROLE_ORDER.indexOf(a.name as (typeof CERT_ROLE_ORDER)[number]);

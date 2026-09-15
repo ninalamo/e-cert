@@ -26,14 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { canManageUserStatus, canViewUsers, getCurrentSession, getCurrentTenantId } from "@/lib/permissions";
+import { canManageUserStatus, canViewUsers, getCurrentGroups, getCurrentSession, getCurrentTenantId } from "@/lib/permissions";
 import {
+  canChangeStatus,
   canPromoteToAdmin,
+  canReassignRole,
   filterableRoleGroups,
   getCertRoleNames,
+  isCertAdminCaller,
   LATERAL_ROLES,
-  lateralRoleTargets,
-  roleEditBlockReason,
+  reassignBlockReason,
   roleLabel,
   roleTargets,
   type EditableRole,
@@ -59,6 +61,7 @@ export default function UsersPage() {
   const canView = canViewUsers();
   const canManage = canManageUserStatus();
   const currentSub = getCurrentSession()?.id ?? null;
+  const callerGroups = getCurrentGroups();
 
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [metaTotal, setMetaTotal] = useState(0);
@@ -168,8 +171,13 @@ export default function UsersPage() {
 
   async function applyRole() {
     if (!roleTarget) return;
-    // Guard: lateral swaps cert-staff <-> cert-user, plus staff -> admin
-    // promotion. cert-admin can never be demoted here.
+    // Guard: re-assignment is cert-admin only; lateral swaps plus staff/user
+    // -> admin promotion. cert-admin can never be demoted here.
+    if (!isCertAdminCaller(getCurrentGroups())) {
+      setActionError("Only Vericert Admins can change roles.");
+      setRoleTarget(null);
+      return;
+    }
     const allowed = roleTargets(
       roleTarget.user,
       roleTarget.user.id === currentSub
@@ -337,10 +345,11 @@ export default function UsersPage() {
                   const isSelf = user.id === currentSub;
                   const certRoles = getCertRoleNames(user.groups);
                   const primaryRole = certRoles[0] ?? null;
-                  const lateral = lateralRoleTargets(user, isSelf);
                   const promotable = canPromoteToAdmin(user, isSelf);
-                  const canReassign = lateral.length > 0 || promotable;
-                  const blockReason = roleEditBlockReason(user, isSelf);
+                  const canReassign = canReassignRole(user, isSelf, callerGroups, canManage);
+                  const blockReason = reassignBlockReason(user, isSelf, callerGroups);
+                  const canDisable = canChangeStatus(user, isSelf, callerGroups, canManage, "disabled");
+                  const canEnable = canChangeStatus(user, isSelf, callerGroups, canManage, "active");
                   return (
                     <TableRow key={user.id}>
                       <TableCell>
@@ -391,7 +400,7 @@ export default function UsersPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        {canManage && !isSelf ? (
+                        {canReassign || canDisable || canEnable ? (
                           <div className="flex items-center justify-end gap-2">
                             {canReassign && primaryRole ? (
                               <>
@@ -433,7 +442,7 @@ export default function UsersPage() {
                                   </Button>
                                 ) : null}
                               </>
-                            ) : (
+                            ) : canManage && !isSelf ? (
                               <span
                                 className="text-xs text-tertiary"
                                 title={blockReason ?? undefined}
@@ -442,8 +451,8 @@ export default function UsersPage() {
                                   ? "Manage in Auth admin"
                                   : "Role locked"}
                               </span>
-                            )}
-                            {user.status === "active" ? (
+                            ) : null}
+                            {canDisable && user.status === "active" ? (
                               <Button
                                 variant="destructive"
                                 size="sm"
@@ -454,7 +463,8 @@ export default function UsersPage() {
                                 <ShieldIcon className="mr-1 size-3.5" />
                                 Revoke
                               </Button>
-                            ) : (
+                            ) : null}
+                            {canEnable && user.status === "disabled" ? (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -464,7 +474,7 @@ export default function UsersPage() {
                               >
                                 Enable
                               </Button>
-                            )}
+                            ) : null}
                           </div>
                         ) : null}
                       </TableCell>
