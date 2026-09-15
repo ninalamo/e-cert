@@ -27,6 +27,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { canManageUserStatus, canViewUsers, getCurrentSession, getCurrentTenantId } from "@/lib/permissions";
+import {
+  filterableRoleGroups,
+  getCertRoleNames,
+  isRoleEditable,
+  roleEditBlockReason,
+  roleLabel,
+  type EditableRole,
+} from "@/lib/roles";
 import { UserActivityBadges } from "./user-activity-badges";
 import {
   Dialog,
@@ -67,6 +75,11 @@ export default function UsersPage() {
     next: StatusAction;
   } | null>(null);
   const [working, setWorking] = useState(false);
+  const [roleTarget, setRoleTarget] = useState<{
+    user: ManagedUser;
+    next: EditableRole;
+  } | null>(null);
+  const [roleWorking, setRoleWorking] = useState(false);
 
   useEffect(() => {
     if (!canView) return;
@@ -150,8 +163,45 @@ export default function UsersPage() {
     }
   }
 
+  async function applyRole() {
+    if (!roleTarget) return;
+    // Guard: only cert-staff <-> cert-user swaps are allowed.
+    if (!isRoleEditable(roleTarget.user)) {
+      setActionError("Only Staff/User roles can be changed.");
+      setRoleTarget(null);
+      return;
+    }
+    setRoleWorking(true);
+    setActionError(null);
+    try {
+      const nextGroups = await usersAdminApi.changeUserRole(
+        roleTarget.user,
+        roleTarget.next,
+        groups
+      );
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === roleTarget.user.id ? { ...u, groups: nextGroups } : u
+        )
+      );
+      setRoleTarget(null);
+    } catch (err: unknown) {
+      const msg =
+        typeof err === "object" && err && "message" in err
+          ? String((err as { message?: string }).message)
+          : "Failed to update user role.";
+      setActionError(msg);
+      setRoleTarget(null);
+    } finally {
+      setRoleWorking(false);
+    }
+  }
+
   const groupFilterNode = useMemo(() => {
     if (!canManage || groups.length === 0) return null;
+    // Dropdown value stays the backend group id; only the display text is friendly.
+    const roleGroups = filterableRoleGroups(groups);
+    if (roleGroups.length === 0) return null;
     return (
         <Select
           value={groupFilter}
@@ -166,16 +216,18 @@ export default function UsersPage() {
             <SelectValue>
               {(value: string) =>
                 value === "all"
-                  ? "All groups"
-                  : (groups.find((g) => g.id === value)?.name ?? value)
+                  ? "All roles"
+                  : (roleLabel(
+                      roleGroups.find((g) => g.id === value)?.name ?? value
+                    ))
               }
             </SelectValue>
           </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All groups</SelectItem>
-          {groups.map((group) => (
+          <SelectItem value="all">All roles</SelectItem>
+          {roleGroups.map((group) => (
             <SelectItem key={group.id} value={group.id}>
-              {group.name}
+              {roleLabel(group.name)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -237,6 +289,7 @@ export default function UsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Groups</TableHead>
                   <TableHead>Activity</TableHead>
                   <TableHead>Status</TableHead>
@@ -255,6 +308,9 @@ export default function UsersPage() {
                           <Skeleton className="h-4 w-24" />
                         </TableCell>
                         <TableCell>
+                          <Skeleton className="h-4 w-24" />
+                        </TableCell>
+                        <TableCell>
                           <Skeleton className="h-4 w-14" />
                         </TableCell>
                         <TableCell>
@@ -267,6 +323,10 @@ export default function UsersPage() {
                     ))
                   : users.map((user) => {
                   const isSelf = user.id === currentSub;
+                  const certRoles = getCertRoleNames(user.groups);
+                  const primaryRole = certRoles[0] ?? null;
+                  const editable = isRoleEditable(user);
+                  const blockReason = roleEditBlockReason(user, isSelf);
                   return (
                     <TableRow key={user.id}>
                       <TableCell>
@@ -279,6 +339,15 @@ export default function UsersPage() {
                         <p className="mt-0.5 truncate text-xs text-tertiary">{user.email}</p>
                       </TableCell>
                       <TableCell>
+                        {primaryRole ? (
+                          <span className="status-pill" title={primaryRole}>
+                            {roleLabel(primaryRole)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-tertiary">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {(user.groups ?? []).map((group) => (
                             <span
@@ -289,7 +358,7 @@ export default function UsersPage() {
                                   : ""
                               }`}
                             >
-                              {group.name}
+                              {roleLabel(group.name)}
                             </span>
                           ))}
                           {(user.groups ?? []).length === 0 ? (
@@ -309,28 +378,67 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         {canManage && !isSelf ? (
-                          user.status === "active" ? (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() =>
-                                setConfirmTarget({ user, next: "disabled" })
-                              }
-                            >
-                              <ShieldIcon className="mr-1 size-3.5" />
-                              Revoke
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setConfirmTarget({ user, next: "active" })
-                              }
-                            >
-                              Enable
-                            </Button>
-                          )
+                          <div className="flex items-center justify-end gap-2">
+                            {editable && primaryRole ? (
+                              <Select
+                                value={primaryRole}
+                                onValueChange={(value) => {
+                                  if (
+                                    (value === "cert-staff" || value === "cert-user") &&
+                                    value !== primaryRole
+                                  ) {
+                                    setRoleTarget({
+                                      user,
+                                      next: value as EditableRole,
+                                    });
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="w-[150px]">
+                                  <SelectValue>
+                                    {() => roleLabel(primaryRole)}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="cert-staff">
+                                    {roleLabel("cert-staff")}
+                                  </SelectItem>
+                                  <SelectItem value="cert-user">
+                                    {roleLabel("cert-user")}
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span
+                                className="text-xs text-tertiary"
+                                title={blockReason ?? undefined}
+                              >
+                                Role locked
+                              </span>
+                            )}
+                            {user.status === "active" ? (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() =>
+                                  setConfirmTarget({ user, next: "disabled" })
+                                }
+                              >
+                                <ShieldIcon className="mr-1 size-3.5" />
+                                Revoke
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  setConfirmTarget({ user, next: "active" })
+                                }
+                              >
+                                Enable
+                              </Button>
+                            )}
+                          </div>
                         ) : null}
                       </TableCell>
                     </TableRow>
@@ -401,6 +509,34 @@ export default function UsersPage() {
                 : confirmTarget?.next === "disabled"
                   ? "Yes, revoke"
                   : "Yes, enable"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!roleTarget}
+        onOpenChange={(open) => {
+          if (!open) setRoleTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Role</DialogTitle>
+            <DialogDescription>
+              Change role for <strong>{roleTarget?.user.email}</strong> to{" "}
+              <strong>
+                {roleTarget ? roleLabel(roleTarget.next) : ""}
+              </strong>
+              ? Their permissions take effect on next login/refresh.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={applyRole} disabled={roleWorking}>
+              {roleWorking ? "Saving..." : "Yes, change role"}
             </Button>
           </DialogFooter>
         </DialogContent>

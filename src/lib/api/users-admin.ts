@@ -60,4 +60,68 @@ export const usersAdminApi = {
 
   setStatus: (id: string, status: "active" | "disabled") =>
     api.patch<{ message: string }>(`/service/users/${id}/status`, { status }),
+
+  listUserGroups: (id: string) =>
+    api.get<{ user_id: string; groups: UserGroupRef[] }>(
+      `/service/users/${encodeURIComponent(id)}/groups`
+    ),
+
+  addUserGroup: (id: string, group_id: string) =>
+    api.post<{ status: string; user_id: string; group_id: string }>(
+      `/service/users/${encodeURIComponent(id)}/groups`,
+      { group_id }
+    ),
+
+  removeUserGroup: (id: string, groupId: string) =>
+    api.delete(
+      `/service/users/${encodeURIComponent(id)}/groups/${encodeURIComponent(groupId)}`
+    ),
+
+  changeUserRole: async (
+    user: ManagedUser,
+    targetRole: "cert-staff" | "cert-user",
+    groups: ManagedGroup[]
+  ): Promise<UserGroupRef[]> => {
+    const groupByName = new Map(groups.map((g) => [g.name, g]));
+    const target = groupByName.get(targetRole);
+    if (!target) throw { message: `Group "${targetRole}" not found.` };
+
+    const currentCertGroupIds = new Set(
+      (user.groups ?? [])
+        .filter((g) => g.name === "cert-staff" || g.name === "cert-user")
+        .map((g) => g.id)
+    );
+
+    // Remove old cert-staff/cert-user memberships first, keep non-cert groups untouched.
+    for (const groupId of currentCertGroupIds) {
+      if (groupId === target.id) continue;
+      await api.delete(
+        `/service/users/${encodeURIComponent(user.id)}/groups/${encodeURIComponent(groupId)}`
+      );
+    }
+
+    // Add target (409 = already a member → treat as success).
+    try {
+      await api.post(
+        `/service/users/${encodeURIComponent(user.id)}/groups`,
+        { group_id: target.id }
+      );
+    } catch (err: unknown) {
+      const status =
+        typeof err === "object" && err !== null && "status" in err
+          ? (err as { status?: number }).status
+          : undefined;
+      const message =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message?: unknown }).message)
+          : "";
+      const alreadyMember =
+        status === 409 || /already in this group/i.test(message);
+      if (!alreadyMember) throw err;
+    }
+
+    return (user.groups ?? [])
+      .filter((g) => g.name !== "cert-staff" && g.name !== "cert-user")
+      .concat([{ id: target.id, name: target.name }]);
+  },
 };
