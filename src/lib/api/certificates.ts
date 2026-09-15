@@ -89,9 +89,14 @@ export const certificatesApi = {
     api.get<Blob>(`/certificates/${id}/pdf`),
 
   revoke: (id: string, reason: string) =>
-    api.patch<ApiResponse<Certificate>>(`/certificates/${id}/revoke`, {
+    api.post<ApiResponse<Certificate>>(`/certificates/${id}/revoke`, {
       reason,
     }),
+
+  expireAll: () =>
+    api.post<{ data: { revoked: number; expiring_count: number } }>(
+      "/certificates/expire"
+    ),
 
   delete: (id: string) => api.delete(`/certificates/${id}`),
 

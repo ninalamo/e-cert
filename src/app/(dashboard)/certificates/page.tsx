@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import CertificatesList from "@/features/certificates/components/certificates-list";
 import { certificatesApi } from "@/lib/api/certificates";
-import { canManageCertificates, getCurrentGroups, getCurrentSession, DEFAULT_ROLE } from "@/lib/permissions";
+import { getCurrentGroups } from "@/lib/permissions";
 import { ORG_ID } from "@/lib/org";
 import type { CertificateWithEvent } from "@/lib/api/certificates";
 
@@ -12,8 +12,6 @@ export default function CertificatesPage() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
 
-  const role = getCurrentSession()?.role ?? DEFAULT_ROLE;
-  const isAdmin = canManageCertificates(role);
   const isAdminGroup = getCurrentGroups().includes("cert-admin");
 
   const [certificates, setCertificates] = useState<CertificateWithEvent[]>([]);
@@ -54,7 +52,7 @@ export default function CertificatesPage() {
         <CertificatesList
           initialCertificates={certificates}
           initialQuery={q}
-          isAdmin={isAdmin}
+          isCertAdmin={isAdminGroup}
         />
       )}
     </div>

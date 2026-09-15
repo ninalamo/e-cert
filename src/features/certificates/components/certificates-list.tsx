@@ -29,7 +29,7 @@ interface CertificateWithEvent extends Certificate {
 interface CertificatesListProps {
   initialCertificates: CertificateWithEvent[];
   initialQuery?: string;
-  isAdmin?: boolean;
+  isCertAdmin?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -40,7 +40,7 @@ const STATUS_OPTIONS = [
 export default function CertificatesList({
   initialCertificates,
   initialQuery = "",
-  isAdmin = false,
+  isCertAdmin = false,
 }: CertificatesListProps) {
   const [certificates, setCertificates] = useState<CertificateWithEvent[]>(initialCertificates);
   const [search, setSearch] = useState(initialQuery);
@@ -53,6 +53,11 @@ export default function CertificatesList({
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [certRevokeDialogOpen, setCertRevokeDialogOpen] = useState(false);
+  const [certRevokeTarget, setCertRevokeTarget] = useState<CertificateWithEvent | null>(null);
+  const [certRevokeReason, setCertRevokeReason] = useState("");
+  const [certRevoking, setCertRevoking] = useState(false);
+  const [certRevokeError, setCertRevokeError] = useState<string | null>(null);
 
   async function loadCertificates() {
     try {
@@ -100,17 +105,10 @@ export default function CertificatesList({
     setRevoking(true);
     setRevokeError(null);
     try {
-      const res = await fetch("/api/certificates/expire", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error ?? `Request failed (${res.status})`);
-      }
-      const result = await res.json();
+      const res = await certificatesApi.expireAll();
+      const revoked = res.data?.revoked ?? 0;
       setRevokeDialogOpen(false);
-      if (result.revoked > 0) {
+      if (revoked > 0) {
         const updated = await loadCertificates();
         if (updated.length > 0) {
           setCertificates(updated);
@@ -120,6 +118,53 @@ export default function CertificatesList({
       setRevokeError(err instanceof Error ? err.message : "Failed to revoke expired certificates");
     } finally {
       setRevoking(false);
+    }
+  }
+
+  function openCertRevokeDialog(cert: CertificateWithEvent) {
+    setCertRevokeTarget(cert);
+    setCertRevokeReason("");
+    setCertRevokeError(null);
+    setCertRevokeDialogOpen(true);
+  }
+
+  function closeCertRevokeDialog() {
+    setCertRevokeDialogOpen(false);
+    setCertRevokeTarget(null);
+    setCertRevokeReason("");
+    setCertRevokeError(null);
+  }
+
+  async function handleCertRevoke() {
+    if (!certRevokeTarget || !certRevokeReason.trim()) return;
+    setCertRevoking(true);
+    setCertRevokeError(null);
+    try {
+      const res = await certificatesApi.revoke(
+        certRevokeTarget.id,
+        certRevokeReason.trim()
+      );
+      const updated = (res as { data?: CertificateWithEvent })?.data;
+      setCertificates((prev) =>
+        prev.map((c) =>
+          c.id === certRevokeTarget.id
+            ? {
+                ...c,
+                revoked_at: updated?.revoked_at ?? new Date().toISOString(),
+                revoke_reason: certRevokeReason.trim(),
+              }
+            : c
+        )
+      );
+      closeCertRevokeDialog();
+    } catch (err: unknown) {
+      const msg =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message?: unknown }).message)
+          : "Failed to revoke certificate";
+      setCertRevokeError(msg);
+    } finally {
+      setCertRevoking(false);
     }
   }
 
@@ -168,7 +213,7 @@ export default function CertificatesList({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
-        {isAdmin && expiredCount > 0 && (
+        {isCertAdmin && expiredCount > 0 && (
           <button
             type="button"
             onClick={openRevokeDialog}
@@ -270,7 +315,16 @@ export default function CertificatesList({
                 <Link href={`/certificates/${cert.id}`} className="btn-disclosure">
                   View
                 </Link>
-                {cert.revoked_at ? (
+                {isCertAdmin && !cert.revoked_at ? (
+                  <button
+                    onClick={() => openCertRevokeDialog(cert)}
+                    className="btn-icon"
+                    title="Revoke certificate"
+                  >
+                    <ShieldIcon className="size-4" />
+                  </button>
+                ) : null}
+                {isCertAdmin && cert.revoked_at ? (
                   <button
                     onClick={() => openDeleteDialog(cert)}
                     className="btn-icon btn-icon-danger"
@@ -278,15 +332,7 @@ export default function CertificatesList({
                   >
                     <Trash2Icon className="size-4" />
                   </button>
-                ) : (
-                  <span
-                    title="Only revoked certificates can be deleted"
-                    className="btn-icon opacity-50 cursor-not-allowed"
-                    aria-disabled="true"
-                  >
-                    <Trash2Icon className="size-4" />
-                  </span>
-                )}
+                ) : null}
               </div>
             </div>
           ))}
@@ -313,8 +359,8 @@ export default function CertificatesList({
               This will permanently delete{" "}
               <strong>
                 {deleteTarget?.certificate_number ?? "this certificate"}
-              </strong>{" "}
-              and all associated data.
+              </strong>
+              . The attendee roster entry is kept — only the certificate is removed.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -340,6 +386,56 @@ export default function CertificatesList({
               disabled={deleting}
             >
               {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke Confirmation Dialog (marks revoked — does NOT delete) */}
+      <Dialog open={certRevokeDialogOpen} onOpenChange={closeCertRevokeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke Certificate</DialogTitle>
+            <DialogDescription>
+              This will mark{" "}
+              <strong>
+                {certRevokeTarget?.certificate_number ?? "this certificate"}
+              </strong>{" "}
+              as revoked. The certificate record is kept — it is not deleted.
+              A reason is required.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="revoke-reason" className="block text-sm font-medium">
+                Reason *
+              </label>
+              <textarea
+                id="revoke-reason"
+                value={certRevokeReason}
+                onChange={(e) => setCertRevokeReason(e.target.value)}
+                required
+                rows={3}
+                placeholder="e.g. Issued with incorrect recipient name"
+                className="input mt-1"
+              />
+            </div>
+          </div>
+          {certRevokeError && (
+            <p className="text-xs text-[var(--color-danger-text)]">
+              {certRevokeError}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeCertRevokeDialog}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCertRevoke}
+              disabled={certRevoking || !certRevokeReason.trim()}
+            >
+              {certRevoking ? "Revoking..." : "Revoke"}
             </Button>
           </DialogFooter>
         </DialogContent>
