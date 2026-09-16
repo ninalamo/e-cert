@@ -214,7 +214,23 @@ export default function Sidebar({ role }: { role: UserRole }) {
 
       {/* Mobile bottom tab bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden flex items-stretch justify-around bg-surface-muted/95 backdrop-blur-xl border-t border-[var(--color-border)] px-2" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-        {visibleNav.filter(item => !item.children).map((item) => {
+        {(role === "participant"
+          ? [
+              { label: "Dashboard", href: "/my", icon: <DashboardIcon /> },
+              { label: "Certificates", href: "/my/certificates", icon: <CertIcon /> },
+            ]
+          : visibleNav.flatMap((item) => {
+              if (!item.children) return [item];
+              const allowed = item.children.filter(
+                (c) => (!c.roles || c.roles.includes(role)) && (!c.claim || hasAuthClaim(c.claim))
+              );
+              return allowed.map((c) => ({
+                label: c.label,
+                href: c.href,
+                icon: item.icon,
+              }));
+            })
+        ).map((item) => {
           const active = isActivePath(pathname, item.href);
           return (
             <Link
