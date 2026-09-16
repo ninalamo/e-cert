@@ -9,9 +9,9 @@ interface StatsCardsProps {
 export default function StatsCards({ initialStats, isLoading = false }: StatsCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-5 gap-4" aria-hidden="true">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4" aria-hidden="true">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="app-card p-4 space-y-2">
+          <div key={i} className="app-card p-3 sm:p-4 space-y-2">
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-8 w-12" />
           </div>
@@ -31,11 +31,11 @@ export default function StatsCards({ initialStats, isLoading = false }: StatsCar
   ];
 
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
       {cards.map((card) => (
-        <div key={card.label} className="app-card app-card-hover p-4">
-          <p className="text-sm text-muted-foreground">{card.label}</p>
-          <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
+        <div key={card.label} className="app-card app-card-hover p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">{card.label}</p>
+          <p className={`text-xl sm:text-2xl font-bold ${card.color}`}>{card.value}</p>
         </div>
       ))}
     </div>

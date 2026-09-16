@@ -168,11 +168,12 @@ export default function MobileNav({
 
   return (
     <>
+      {/* Hamburger hidden on mobile — bottom tab bar in sidebar.tsx replaces it */}
       <button
         type="button"
         aria-label="Open menu"
         onClick={() => setOpen(true)}
-        className="btn-icon lg:hidden"
+        className="btn-icon hidden"
       >
         <svg
           className="size-5"
@@ -189,6 +190,7 @@ export default function MobileNav({
         </svg>
       </button>
 
+      {/* Keep drawer accessible for programmatic open if needed */}
       {open && (
         <div key={pathname} className="fixed inset-0 z-50 lg:hidden">
           <div

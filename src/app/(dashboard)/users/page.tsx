@@ -304,7 +304,8 @@ export default function UsersPage() {
         <NotFoundState title="No users found" />
       ) : (
         <>
-          <div className="app-card overflow-hidden">
+          {/* Desktop: Table */}
+          <div className="hidden md:block app-card overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -483,6 +484,144 @@ export default function UsersPage() {
                 })}
               </TableBody>
             </Table>
+          </div>
+
+          {/* Mobile: Card list */}
+          <div className="md:hidden space-y-3">
+            {isFetching
+              ? Array.from({ length: Math.min(pageSize, 4) }).map((_, i) => (
+                  <div key={`skeleton-card-${i}`} className="app-card p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    </div>
+                    <Skeleton className="h-3 w-48" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-6 w-16 rounded-full" />
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                  </div>
+                ))
+              : users.map((user) => {
+                const isSelf = user.id === currentSub;
+                const certRoles = getCertRoleNames(user.groups);
+                const primaryRole = certRoles[0] ?? null;
+                const promotable = canPromoteToAdmin(user, isSelf);
+                const canReassign = canReassignRole(user, isSelf, callerGroups, canManage);
+                const blockReason = reassignBlockReason(user, isSelf, callerGroups);
+                const canDisable = canChangeStatus(user, isSelf, callerGroups, canManage, "disabled");
+                const canEnable = canChangeStatus(user, isSelf, callerGroups, canManage, "active");
+                return (
+                  <div key={user.id} className="app-card p-4 space-y-3">
+                    {/* Header: name + status */}
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-[var(--color-text)]">
+                        {user.name || "—"}
+                        {isSelf ? (
+                          <span className="ml-1.5 text-xs font-normal text-tertiary">(you)</span>
+                        ) : null}
+                      </p>
+                      {user.status === "disabled" ? (
+                        <span className="status-pill status-revoked">Disabled</span>
+                      ) : (
+                        <span className="status-pill status-active">Active</span>
+                      )}
+                    </div>
+                    {/* Email */}
+                    <p className="truncate text-xs text-tertiary">{user.email}</p>
+                    {/* Role + groups */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {primaryRole ? (
+                        <span className="status-pill">{roleLabel(primaryRole)}</span>
+                      ) : null}
+                      {(user.groups ?? []).map((group) => (
+                        <span
+                          key={group.id}
+                          className={`status-pill ${
+                            group.name === "loa-auth-admin" ? "status-revoked" : ""
+                          }`}
+                        >
+                          {roleLabel(group.name)}
+                        </span>
+                      ))}
+                    </div>
+                    {/* Activity */}
+                    <UserActivityBadges email={user.email} />
+                    {/* Actions */}
+                    {(canReassign || canDisable || canEnable) && (
+                      <div className="flex flex-wrap gap-2 pt-1 border-t border-[var(--color-border)]">
+                        {canReassign && primaryRole ? (
+                          <div
+                            role="group"
+                            aria-label="Change role"
+                            className="inline-flex rounded-full border border-border bg-surface p-0.5"
+                          >
+                            {LATERAL_ROLES.map((option) => {
+                              const active = option === primaryRole;
+                              return (
+                                <button
+                                  key={option}
+                                  type="button"
+                                  disabled={active}
+                                  onClick={() =>
+                                    setRoleTarget({ user, next: option })
+                                  }
+                                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                                    active
+                                      ? "bg-[var(--color-brand-600)] text-white"
+                                      : "text-tertiary"
+                                  }`}
+                                >
+                                  {roleLabel(option).replace("Vericert ", "")}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                        {promotable ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setRoleTarget({ user, next: "cert-admin" })
+                            }
+                          >
+                            Make Admin
+                          </Button>
+                        ) : null}
+                        {canManage && !isSelf && !canReassign ? (
+                          <span className="text-xs text-tertiary self-center" title={blockReason ?? undefined}>
+                            {primaryRole === "cert-admin" ? "Manage in Auth admin" : "Role locked"}
+                          </span>
+                        ) : null}
+                        {canDisable && user.status === "active" ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() =>
+                              setConfirmTarget({ user, next: "disabled" })
+                            }
+                          >
+                            <ShieldIcon className="mr-1 size-3.5" />
+                            Revoke
+                          </Button>
+                        ) : null}
+                        {canEnable && user.status === "disabled" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setConfirmTarget({ user, next: "active" })
+                            }
+                          >
+                            Enable
+                          </Button>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
           </div>
 
           <Paginator

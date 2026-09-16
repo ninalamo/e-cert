@@ -51,7 +51,7 @@ export default function DashboardShell({
             <UserMenu name={name ?? email} />
           </div>
         </header>
-        <main className="p-4 pb-safe lg:p-6">
+        <main className="p-4 pb-24 lg:p-6 lg:pb-6">
           {children}
         </main>
       </div>

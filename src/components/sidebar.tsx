@@ -73,142 +73,165 @@ export default function Sidebar({ role }: { role: UserRole }) {
     .filter((item) => !item.roles || item.roles.includes(role));
 
   return (
-    <aside
-      className={`sticky top-0 hidden h-screen shrink-0 overflow-y-auto border-r border-default bg-surface-muted transition-all duration-200 lg:block ${
-        collapsed ? "w-16 py-4 px-2" : "w-64 p-4"
-      }`}
-    >
-      <div className={`mb-6 flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
-        <Link href="/dashboard" className={`font-bold text-brand-700 ${collapsed ? "text-sm" : "text-lg"}`}>
-          {collapsed ? "" : "LOA VERICERT"}
-        </Link>
-        {/* {!collapsed && <p className="text-xs text-tertiary mt-1">{ORG_NAME}</p>} */}
-        <button
-          type="button"
-          onClick={() => setCollapsed((c) => !c)}
-          className={`rounded-md p-1 text-tertiary transition-colors hover:bg-surface-hover hover:text-secondary ${collapsed ? "mt-2" : ""}`}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {collapsed ? (
-              <><path d="m9 18 6-6-6-6"/></>
-            ) : (
-              <><path d="m15 18-6-6 6-6"/></>
-            )}
-          </svg>
-        </button>
-      </div>
-      <nav className="space-y-1">
-        {visibleNav.map((item) => {
-          if (!("children" in item)) {
-            const active = isActivePath(pathname, item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={collapsed ? item.label : undefined}
-                className={`flex items-center gap-3 rounded-lg transition-colors ${
-                  collapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2"
-                } text-sm ${
-                  active
-                    ? "bg-brand-600 text-black font-medium"
-                    : "text-secondary hover:bg-surface-hover"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  {item.icon}
-                  {!collapsed && <span>{item.label}</span>}
-                </span>
-              </Link>
+    <>
+      {/* Desktop sidebar */}
+      <aside
+        className={`sticky top-0 hidden lg:block h-screen shrink-0 overflow-y-auto border-r border-default bg-surface-muted transition-all duration-200 ${
+          collapsed ? "w-16 py-4 px-2" : "w-64 p-4"
+        }`}
+      >
+        <div className={`mb-6 flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
+          <Link href="/dashboard" className={`font-bold text-brand-700 ${collapsed ? "text-sm" : "text-lg"}`}>
+            {collapsed ? "" : "LOA VERICERT"}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className={`rounded-md p-1 text-tertiary transition-colors hover:bg-surface-hover hover:text-secondary ${collapsed ? "mt-2" : ""}`}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {collapsed ? (
+                <><path d="m9 18 6-6-6-6"/></>
+              ) : (
+                <><path d="m15 18-6-6 6-6"/></>
+              )}
+            </svg>
+          </button>
+        </div>
+        <nav className="space-y-1">
+          {visibleNav.map((item) => {
+            if (!("children" in item)) {
+              const active = isActivePath(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={collapsed ? item.label : undefined}
+                  className={`flex items-center gap-3 rounded-lg transition-colors ${
+                    collapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2"
+                  } text-sm ${
+                    active
+                      ? "bg-brand-600 text-black font-medium"
+                      : "text-secondary hover:bg-surface-hover"
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    {item.icon}
+                    {!collapsed && <span>{item.label}</span>}
+                  </span>
+                </Link>
+              );
+            }
+
+            const children = (item.children ?? []).filter(
+              (c) =>
+                (!c.roles || c.roles.includes(role)) &&
+                (!c.claim || hasAuthClaim(c.claim))
             );
-          }
+            if (item.label === "Settings" && children.length === 0) {
+              return null;
+            }
+            const childActive = children.some((c) =>
+              isActivePath(pathname, c.href)
+            );
+            const parentActive =
+              isActivePath(pathname, item.href, true) || childActive;
 
-          const children = (item.children ?? []).filter(
-            (c) =>
-              (!c.roles || c.roles.includes(role)) &&
-              (!c.claim || hasAuthClaim(c.claim))
-          );
-          if (item.label === "Settings" && children.length === 0) {
-            return null;
-          }
-          const childActive = children.some((c) =>
-            isActivePath(pathname, c.href)
-          );
-          const parentActive =
-            isActivePath(pathname, item.href, true) || childActive;
-
-          return (
-            <div key={item.href}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (collapsed) setCollapsed(false);
-                  if (item.label === "Settings") {
-                    setSettingsOpen((o) => !o);
-                  } else {
-                    setCertOpen((o) => !o);
-                  }
-                }}
-                title={collapsed ? item.label : undefined}
-                className={`flex w-full items-center gap-3 rounded-lg transition-colors ${
-                  collapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2"
-                } text-sm ${
-                  parentActive
-                    ? "bg-brand-600 text-black font-medium"
-                    : "text-secondary hover:bg-surface-hover"
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  {item.icon}
-                  {!collapsed && <span>{item.label}</span>}
-                </span>
-                {!collapsed && (
-                  <div className="flex items-center gap-2">
-                    <svg
-                      className={`size-4 transition-transform ${
-                        certOpen ? "rotate-90" : ""
-                      }`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
+            return (
+              <div key={item.href}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (collapsed) setCollapsed(false);
+                    if (item.label === "Settings") {
+                      setSettingsOpen((o) => !o);
+                    } else {
+                      setCertOpen((o) => !o);
+                    }
+                  }}
+                  title={collapsed ? item.label : undefined}
+                  className={`flex w-full items-center gap-3 rounded-lg transition-colors ${
+                    collapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2"
+                  } text-sm ${
+                    parentActive
+                      ? "bg-brand-600 text-black font-medium"
+                      : "text-secondary hover:bg-surface-hover"
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    {item.icon}
+                    {!collapsed && <span>{item.label}</span>}
+                  </span>
+                  {!collapsed && (
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className={`size-4 transition-transform ${
+                          certOpen ? "rotate-90" : ""
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+                {!collapsed && (item.label === "Settings" ? settingsOpen : certOpen) && (
+                  <div className="mt-1 space-y-1 pl-3">
+                    {children
+                      .map((child) => {
+                      const active = isActivePath(pathname, child.href);
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
+                            active
+                              ? "bg-brand-600 text-black font-medium"
+                              : "text-secondary hover:bg-surface-hover"
+                          }`}
+                        >
+                          <span className="border-l border-default pl-3 -ml-3">
+                            {child.label}
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
-              </button>
-              {!collapsed && (item.label === "Settings" ? settingsOpen : certOpen) && (
-                <div className="mt-1 space-y-1 pl-3">
-                  {children
-                    .map((child) => {
-                    const active = isActivePath(pathname, child.href);
-                    return (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors ${
-                          active
-                            ? "bg-brand-600 text-black font-medium"
-                            : "text-secondary hover:bg-surface-hover"
-                        }`}
-                      >
-                        <span className="border-l border-default pl-3 -ml-3">
-                          {child.label}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+              </div>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden flex items-stretch justify-around bg-surface-muted/95 backdrop-blur-xl border-t border-[var(--color-border)] px-2" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        {visibleNav.filter(item => !item.children).map((item) => {
+          const active = isActivePath(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[52px] text-[10px] font-medium transition-colors ${
+                active
+                  ? "text-[var(--color-system-blue)]"
+                  : "text-[var(--color-text-muted)]"
+              }`}
+            >
+              <span className="[&_svg]:w-[22px] [&_svg]:h-[22px]">{item.icon}</span>
+              <span className="leading-tight">{item.label}</span>
+            </Link>
           );
         })}
       </nav>
-    </aside>
+    </>
   );
 }
