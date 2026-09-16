@@ -1285,15 +1285,15 @@ input.input, textarea.input, select.input {
   div.w-64, aside.w-64, div.lg\:w-96, div.w-96 {
     display: none !important;
   }
-  /* Canvas wrapper scale */
-  div.relative.bg-white.overflow-hidden {
+  /* Canvas wrapper scale — scoped to editor canvas only */
+  .cert-canvas div.relative.bg-white.overflow-hidden {
     transform-origin: top left !important;
     transform: scale(min(1, calc((100vw - 32px) / 1123))) !important;
     max-width: 1123px !important;
     overflow: visible !important;
   }
   /* Canvas container overflow */
-  div:has(> div.relative.bg-white.overflow-hidden) {
+  .cert-canvas div:has(> div.relative.bg-white.overflow-hidden) {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     padding-bottom: 12px !important;
