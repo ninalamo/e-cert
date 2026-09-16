@@ -154,7 +154,7 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="recipient_name" className="block text-sm font-medium">
             Recipient Name *

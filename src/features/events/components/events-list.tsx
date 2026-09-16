@@ -172,7 +172,7 @@ export default function EventsList({
           {events.map((event) => (
             <div
               key={event.id}
-              className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
             >
               <div className="min-w-0 flex-1">
                 <Link
@@ -188,7 +188,7 @@ export default function EventsList({
                   {event.location ? ` · ${event.location}` : ""}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
+              <div className="flex shrink-0 items-center gap-2 flex-wrap">
                 <span className={statusColors[event.status] ?? "status-pill status-draft"}>
                   {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                 </span>

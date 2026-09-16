@@ -60,7 +60,7 @@ export default function EmailHistory({ certificateId }: { certificateId: string 
         <div className="rounded-md border border-[var(--color-success-border)] bg-[var(--color-success-bg)] p-3 text-sm text-[var(--color-success-text)]">{success}</div>
       )}
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="text-sm">
           {loading ? (
             <span className="text-muted-foreground">Loading...</span>

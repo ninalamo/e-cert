@@ -413,7 +413,7 @@ export default function NewEventForm({
                 </button>
               </div>
               <div className="p-3 overflow-auto cert-canvas">
-                <div className="relative w-full h-full min-w-[400px] min-h-[300px] bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="relative w-full h-full min-w-0 min-h-[300px] bg-white rounded-lg shadow-md overflow-hidden">
                   <iframe
                     srcDoc={previewSrcDoc}
                     className="w-full h-full bg-white block"

@@ -331,7 +331,7 @@ export default function CertificatesList({
     return (
       <div
         key={cert.id}
-        className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--color-surface-hover)]"
       >
         <div className="min-w-0 flex-1">
           <Link
@@ -346,7 +346,7 @@ export default function CertificatesList({
             Issued {new Date(cert.issued_at).toLocaleDateString()}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex flex-wrap shrink-0 items-center gap-2 sm:gap-3">
           {status === "revoked" ? (
             <span className="status-pill status-revoked">Revoked</span>
           ) : status === "expired" ? (

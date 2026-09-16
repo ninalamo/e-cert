@@ -43,6 +43,7 @@ Dependency direction: `views → features → ui`, `features → services`. Neve
 | `features/dashboard-audit.md` | features | stats + audit + faq |
 | `ui/README.md` | ui | shared primitives, empty/error states |
 | `ui/not-found-state.md` | ui | unified not-found (detail) |
+| `ui/ios-mobile.md` | ui | CSS-only iOS native feel — all routes, no new pages |
 | `services/README.md` | services | index of technical capabilities |
 | `services/api-client.md` | services | typed `src/lib/api/` + BFF behavior |
 | `services/api-bff-layer.md` | services | BFF transport detail (implemented record) |
