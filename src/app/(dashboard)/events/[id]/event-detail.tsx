@@ -182,7 +182,7 @@ export default function EventDetail({
         {editName ? (
           <form
             onSubmit={(e) => { e.preventDefault(); handleNameSave(); }}
-            className="flex items-center gap-2"
+            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
           >
             <input
               autoFocus
@@ -199,9 +199,9 @@ export default function EventDetail({
           </form>
         ) : (
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <h1
-                className={`font-heading text-2xl font-bold tracking-tight text-[var(--color-text-primary)] ${
+                className={`font-heading text-2xl font-bold tracking-tight text-[var(--color-text-primary)] truncate ${
                   event.status === "draft"
                     ? "cursor-pointer rounded-lg px-1 -mx-1 hover:bg-surface-hover transition-colors"
                     : ""
@@ -243,7 +243,7 @@ export default function EventDetail({
             </div>
           </div>
         )}
-        <div className="mt-1 flex items-center gap-3 text-sm text-tertiary">
+        <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-tertiary">
           {event.event_date && (
             <span className="flex items-center gap-1">
               <CalendarIcon className="size-3.5" />

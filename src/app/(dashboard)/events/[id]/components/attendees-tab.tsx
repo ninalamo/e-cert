@@ -373,7 +373,7 @@ export default function AttendeesTab({
     const pct = issueProgress && issueProgress.total > 0 ? Math.round((issueProgress.current / issueProgress.total) * 100) : 0;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-        <div className="flex flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-lg min-w-[340px] max-w-[90vw]">
+        <div className="flex flex-col items-center gap-4 rounded-xl border bg-card p-8 shadow-lg w-[90vw] max-w-[400px]">
           <Loader2Icon className="size-10 animate-spin text-brand-600" />
           <div className="text-center w-full">
             <p className="text-lg font-semibold">Issuing certificates...</p>

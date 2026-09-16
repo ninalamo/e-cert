@@ -467,122 +467,124 @@ export default function UploadCsvForm({
           )}
 
           <div className="app-card divide-y divide-border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-border)]">
-                  <th className="w-8 py-3 pl-4 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Participant</th>
-                  <th className="py-3 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
-                  <th className="py-3 pr-4 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageRows.map((row, i) => {
-                  const globalIdx = page * pageSize + i;
-                  const hasFile = canFileMode(row);
-                  const uploadedFile = row.file_path ? uploadedFiles.get(row.file_path) : undefined;
-                  const fileInputId = `file-upload-${globalIdx}`;
-                  return (
-                    <tr key={globalIdx} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
-                      <td className="py-3 pl-4 text-center text-tertiary text-xs">{globalIdx + 1}</td>
-                      <td className="text-left font-medium text-[var(--color-text)]">
-                        {row.name} <span className="font-normal text-tertiary">({row.email})</span>
-                      </td>
-                      <td className="text-center">
-                        {(() => {
-                          if (row._emailError) {
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)]">
+                    <th className="w-8 py-3 pl-4 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
+                    <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Participant</th>
+                    <th className="py-3 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
+                    <th className="py-3 pr-4 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((row, i) => {
+                    const globalIdx = page * pageSize + i;
+                    const hasFile = canFileMode(row);
+                    const uploadedFile = row.file_path ? uploadedFiles.get(row.file_path) : undefined;
+                    const fileInputId = `file-upload-${globalIdx}`;
+                    return (
+                      <tr key={globalIdx} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
+                        <td className="py-3 pl-4 text-center text-tertiary text-xs">{globalIdx + 1}</td>
+                        <td className="text-left font-medium text-[var(--color-text)]">
+                          {row.name} <span className="font-normal text-tertiary">({row.email})</span>
+                        </td>
+                        <td className="text-center">
+                          {(() => {
+                            if (row._emailError) {
+                              return (
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-danger-text)]"
+                                  title={row._emailError}
+                                >
+                                  <AlertTriangleIcon className="size-3" />
+                                  {row._emailError}
+                                </span>
+                              );
+                            }
+                            if (!row.file_path) {
+                              return (
+                                <span className="inline-flex items-center rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-muted)]">
+                                  Ready — generated from template
+                                </span>
+                              );
+                            }
+                            const err = rowFileError(row);
+                            if (!err) {
+                              return (
+                                <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-success-text)]">
+                                  Ready — with attached file
+                                </span>
+                              );
+                            }
+                            if (err === "Certificate not attached") {
+                              return (
+                                <span className="inline-flex items-center rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-muted)]">
+                                  Certificate not attached
+                                </span>
+                              );
+                            }
                             return (
                               <span
-                                className="inline-flex items-center gap-1 rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-danger-text)]"
-                                title={row._emailError}
+                                className="inline-flex items-center gap-1 rounded-full bg-[var(--color-warning-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-warning-text)]"
+                                title={err}
                               >
                                 <AlertTriangleIcon className="size-3" />
-                                {row._emailError}
+                                {err}
                               </span>
                             );
-                          }
-                          if (!row.file_path) {
-                            return (
-                              <span className="inline-flex items-center rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-muted)]">
-                                Ready — generated from template
-                              </span>
-                            );
-                          }
-                          const err = rowFileError(row);
-                          if (!err) {
-                            return (
-                              <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-success-text)]">
-                                Ready — with attached file
-                              </span>
-                            );
-                          }
-                          if (err === "Certificate not attached") {
-                            return (
-                              <span className="inline-flex items-center rounded-full bg-[var(--color-surface-muted)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-muted)]">
-                                Certificate not attached
-                              </span>
-                            );
-                          }
-                          return (
-                            <span
-                              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-warning-bg)] px-2 py-0.5 text-[0.6875rem] font-medium text-[var(--color-warning-text)]"
-                              title={err}
-                            >
-                              <AlertTriangleIcon className="size-3" />
-                              {err}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                       <td className="text-center">
-                         <div className="flex items-center justify-center gap-2">
-                          {hasFile ? (
-                            <>
-                              <span className="hidden sm:inline truncate max-w-[120px] text-[var(--color-success-text)] text-xs mr-1">
-                                {uploadedFile?.name}
-                              </span>
-                               <button
-                                 onClick={() => removeRowFile(globalIdx)}
-                                 className="btn-danger-text inline-flex items-center gap-1 px-2 py-1 text-xs"
-                                 title="Clear attached certificate"
+                          })()}
+                        </td>
+                         <td className="text-center">
+                           <div className="flex items-center justify-center gap-2">
+                            {hasFile ? (
+                              <>
+                                <span className="hidden sm:inline truncate max-w-[120px] text-[var(--color-success-text)] text-xs mr-1">
+                                  {uploadedFile?.name}
+                                </span>
+                                 <button
+                                   onClick={() => removeRowFile(globalIdx)}
+                                   className="btn-danger-text inline-flex items-center gap-1 px-2 py-1 text-xs"
+                                   title="Clear attached certificate"
+                                 >
+                                   <XIcon className="size-3.5" />
+                                   Clear
+                                 </button>
+                              </>
+                            ) : (
+                               <label
+                                 htmlFor={fileInputId}
+                                 className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-brand-100)] px-3 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] cursor-pointer transition-colors hover:bg-[var(--color-brand-200)] active:scale-[0.97]"
                                >
-                                 <XIcon className="size-3.5" />
-                                 Clear
-                               </button>
-                            </>
-                          ) : (
-                             <label
-                               htmlFor={fileInputId}
-                               className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-brand-100)] px-3 py-1.5 text-xs font-semibold text-[var(--color-brand-700)] cursor-pointer transition-colors hover:bg-[var(--color-brand-200)] active:scale-[0.97]"
+                                <UploadIcon className="size-3" />
+                                Attach Certificate
+                              </label>
+                            )}
+                            <input
+                              id={fileInputId}
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleRowFileUpload(globalIdx, file);
+                                e.target.value = "";
+                              }}
+                            />
+                             <button
+                               onClick={() => removeRow(globalIdx)}
+                               className="btn-danger-text"
                              >
-                              <UploadIcon className="size-3" />
-                              Attach Certificate
-                            </label>
-                          )}
-                          <input
-                            id={fileInputId}
-                            type="file"
-                            accept=".pdf,.png,.jpg,.jpeg"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleRowFileUpload(globalIdx, file);
-                              e.target.value = "";
-                            }}
-                          />
-                           <button
-                             onClick={() => removeRow(globalIdx)}
-                             className="btn-danger-text"
-                           >
-                             Remove
-                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                               Remove
+                             </button>
+                         </div>
+                       </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {totalPages > 1 && (
@@ -678,34 +680,36 @@ export default function UploadCsvForm({
           )}
 
           <div className="app-card divide-y divide-border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-border)]">
-                  <th className="w-8 py-3 pl-4 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
-                  <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Participant</th>
-                  <th className="py-3 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resultsPagination.paginatedItems.map((r, i) => (
-                  <tr key={resultsPagination.page * resultsPagination.pageSize + i} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
-                    <td className="py-3 pl-4 text-center text-tertiary text-xs">{resultsPagination.page * resultsPagination.pageSize + i + 1}</td>
-                    <td className="text-left font-medium text-[var(--color-text)]">
-                      {r.name} <span className="font-normal text-tertiary">({r.email})</span>
-                    </td>
-                    <td className="py-3 text-center">
-                      {r.success ? (
-                        <span className="status-badge status-badge--active">Added</span>
-                      ) : (
-                        <span className="status-badge status-badge--danger">
-                          {isAdmin ? (r.error ?? "Failed") : "Failed"}
-                        </span>
-                      )}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)]">
+                    <th className="w-8 py-3 pl-4 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">#</th>
+                    <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Participant</th>
+                    <th className="py-3 text-center text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {resultsPagination.paginatedItems.map((r, i) => (
+                    <tr key={resultsPagination.page * resultsPagination.pageSize + i} className="border-b border-[var(--color-border)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-hover)]">
+                      <td className="py-3 pl-4 text-center text-tertiary text-xs">{resultsPagination.page * resultsPagination.pageSize + i + 1}</td>
+                      <td className="text-left font-medium text-[var(--color-text)]">
+                        {r.name} <span className="font-normal text-tertiary">({r.email})</span>
+                      </td>
+                      <td className="py-3 text-center">
+                        {r.success ? (
+                          <span className="status-badge status-badge--active">Added</span>
+                        ) : (
+                          <span className="status-badge status-badge--danger">
+                            {isAdmin ? (r.error ?? "Failed") : "Failed"}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {resultsPagination.totalPages > 1 && (

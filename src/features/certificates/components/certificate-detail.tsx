@@ -117,14 +117,14 @@ export default function CertificateDetail({
               {certificate.recipient_email}
             </span>
           </div>
-          <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3.5 gap-1 sm:gap-0">
             <span className="text-sm text-[var(--color-text-muted)]">Certificate Generated Date</span>
             <span className="text-sm font-medium">
               {fmtDate(certificate.issued_at)}
             </span>
           </div>
           {certificate.expires_at && (
-            <div className="flex items-center justify-between px-4 py-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3.5 gap-1 sm:gap-0">
               <span className="text-sm text-[var(--color-text-muted)]">Certificate Expiry Date</span>
               <span className="text-sm font-medium">
                 {fmtDate(certificate.expires_at)}

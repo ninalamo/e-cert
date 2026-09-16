@@ -547,14 +547,14 @@ export default function AttendeesManager({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-tertiary" />
             <input
               type="text"
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search name or email..."
-              className="input pl-8 py-1.5 text-xs w-48"
+              className="input pl-8 py-1.5 text-xs w-full sm:w-48"
             />
           </div>
           <select
@@ -613,7 +613,9 @@ export default function AttendeesManager({
               </div>
             </div>
           )}
-          <table className={`w-full text-sm ${fetching ? "opacity-40" : ""}`}>
+
+          {/* Desktop table (sm+) */}
+          <table className={`hidden sm:table w-full text-sm ${fetching ? "opacity-40" : ""}`}>
             <thead>
               <tr className="border-b border-[var(--color-border)]">
                 <th className="w-12 py-3 pl-4 text-left">
@@ -630,7 +632,7 @@ export default function AttendeesManager({
                 </th>
                 <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Name (Email)</th>
                 <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Certificate Issue</th>
-                <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hidden sm:table-cell">Document Type</th>
+                <th className="py-3 text-left text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Document Type</th>
                 {!readOnly && (
                   <th className="py-3 pr-4 text-right text-[0.6875rem] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Actions</th>
                 )}
@@ -662,7 +664,7 @@ export default function AttendeesManager({
                       <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">No</span>
                     )}
                   </td>
-                  <td className="py-3 px-2 hidden sm:table-cell">
+                  <td className="py-3 px-2">
                     {a.metadata?.generation_mode === "file" ? (
                       <span className="inline-flex items-center rounded-full bg-[var(--color-brand-100)] px-2 py-0.5 text-xs font-medium text-[var(--color-brand-700)]">Uploaded</span>
                     ) : (
@@ -752,6 +754,103 @@ export default function AttendeesManager({
               ))}
             </tbody>
           </table>
+
+          {/* Mobile card list */}
+          <div className={`sm:hidden divide-y divide-[var(--color-border)] ${fetching ? "opacity-40" : ""}`}>
+            {pageRows.map((a) => (
+              <div key={a.id} className="px-4 py-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-[var(--color-text)] truncate">{a.name}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] truncate">{a.email}</p>
+                  </div>
+                  {!readOnly && (
+                    <input
+                      type="checkbox"
+                      checked={selected.has(a.id)}
+                      disabled={readOnly}
+                      onChange={() => toggleSelect(a.id)}
+                      className="size-5 mt-0.5 rounded border-border-strong accent-[var(--color-brand-600)] disabled:opacity-50"
+                    />
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {a.certificate_id ? (
+                    <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-success-text)]">Issued</span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">Not Issued</span>
+                  )}
+                  {a.metadata?.generation_mode === "file" && (
+                    <span className="inline-flex items-center rounded-full bg-[var(--color-brand-100)] px-2 py-0.5 text-xs font-medium text-[var(--color-brand-700)]">Uploaded</span>
+                  )}
+                </div>
+                {!readOnly && (
+                  <div className="flex items-center gap-1 pt-1">
+                    {a.certificate_id && (
+                      <Link
+                        href={`/certificates/${a.certificate_id}?eventId=${eventId}`}
+                        className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
+                      >
+                        <EyeIcon className="size-3.5" /> View
+                      </Link>
+                    )}
+                    {a.certificate_id && (
+                      <button
+                        type="button"
+                        onClick={() => handleResendEmail(a)}
+                        disabled={resendingAttendeeId === a.id}
+                        className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)] disabled:opacity-50"
+                      >
+                        {resendingAttendeeId === a.id ? <Loader2Icon className="size-3.5 animate-spin" /> : <SendIcon className="size-3.5" />} Resend
+                      </button>
+                    )}
+                    {!a.certificate_id && (
+                      <button
+                        type="button"
+                        onClick={() => handleIssueSingle(a)}
+                        disabled={issuingAttendeeId === a.id}
+                        className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-success-bg)] hover:text-[var(--color-success-text)] disabled:opacity-50"
+                      >
+                        {issuingAttendeeId === a.id ? <Loader2Icon className="size-3.5 animate-spin" /> : <CheckCircle2Icon className="size-3.5" />} Issue
+                      </button>
+                    )}
+                    {!a.certificate_id && (
+                      <button
+                        type="button"
+                        onClick={() => openEdit(a)}
+                        className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)]"
+                      >
+                        <PencilIcon className="size-3.5" /> Edit
+                      </button>
+                    )}
+                    {(isAdmin || !a.certificate_id) && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setRemoveTarget(a);
+                          setPreviewLoading(true);
+                          setDeletePreview(null);
+                          setPreviewError(null);
+                          try {
+                            const { data: preview } = await attendeesApi.getDeletePreview(a.id);
+                            setDeletePreview(preview);
+                          } catch {
+                            setPreviewError("Could not load preview. The backend will re-validate at delete time.");
+                          } finally {
+                            setPreviewLoading(false);
+                          }
+                        }}
+                        title={a.certificate_id ? "This will also delete the issued certificate" : undefined}
+                        className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger-text)]"
+                      >
+                        <Trash2Icon className="size-3.5" /> Remove
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
