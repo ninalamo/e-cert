@@ -461,6 +461,13 @@ export default function AttendeesManager({
         setError(result.error);
       } else if (result?.certificate) {
         setMessage(`Certificate ${result.certificate.certificate_number} issued to ${attendee.name}`);
+        setAttendees((prev) =>
+          prev.map((a) =>
+            a.id === attendee.id
+              ? { ...a, certificate_id: result.certificate.id, certificate_number: result.certificate.certificate_number }
+              : a
+          )
+        );
         void fetchPage(page, pageSize, debouncedSearch, filter);
       }
     } catch (err) {
