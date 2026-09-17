@@ -6,14 +6,14 @@ import type { ApiResponse } from "./types";
 export interface VerifyResult {
   valid: boolean;
   certificate?: Certificate;
-  event?: { name: string; event_date: string | null; location: string | null };
+  event?: { name: string; event_date: string | null; location: string | null; organizer?: string | null };
   attendee?: EventAttendee;
   error?: string;
 }
 
 export interface ViewResult {
   certificate: Certificate;
-  event?: { name: string; event_date: string | null; location: string | null };
+  event?: { name: string; event_date: string | null; location: string | null; organizer?: string | null };
   qr_data_url?: string;
 }
 
