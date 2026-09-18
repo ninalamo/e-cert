@@ -46,16 +46,19 @@ export default function CertificateViewPage() {
           setQrDataUrl(data.qr_data_url);
         }
 
-        if (cert.file_path && cert.event_id) {
+        if (cert.event_id) {
           const { data: attendees } = await attendeesApi.list(cert.event_id);
           if (revoked) return;
           const match = attendees?.find((a) => a.certificate_id === cert.id);
           if (match) {
-            const blob = await attendeesApi.getFileBlob(match.id);
-            if (!revoked && blob instanceof Blob) {
-              const url = URL.createObjectURL(blob);
-              setFileBlobUrl(url);
-              setFileType(blob.type);
+            const mode = (match.metadata as Record<string, unknown> | null)?.generation_mode;
+            if (mode === "file") {
+              const blob = await attendeesApi.getFileBlob(match.id);
+              if (!revoked && blob instanceof Blob) {
+                const url = URL.createObjectURL(blob);
+                setFileBlobUrl(url);
+                setFileType(blob.type);
+              }
             }
           }
         }
