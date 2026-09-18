@@ -443,7 +443,7 @@ export default function AttendeesManager({
 
   async function handleIssueSingle(attendee: EventAttendee) {
     if (attendee.certificate_id) {
-      toast.warning("User has already been issued a certificate for this event.");
+      toast.error(` ${attendee.name} already has a certificate for this event.`);
       return;
     }
     setError(null);
@@ -706,7 +706,7 @@ export default function AttendeesManager({
                             )}
                           </button>
                         )}
-                        {!a.certificate_id && (
+                        {/* {!a.certificate_id && (
                           <button
                             type="button"
                             id="issue-row-button"
@@ -721,7 +721,7 @@ export default function AttendeesManager({
                               <CheckCircle2Icon className="size-4" />
                             )}
                           </button>
-                        )}
+                        )} */}
                         {!a.certificate_id && (
                           <button
                             type="button"

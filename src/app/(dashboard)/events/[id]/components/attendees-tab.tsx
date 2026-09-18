@@ -514,7 +514,7 @@ export default function AttendeesTab({
           <button
             type="button"
             onClick={() => setConfirmIssueOpen(true)}
-            disabled={issueBusy || !canIssue}
+            disabled={issueBusy}
             title={
               canIssue
                 ? undefined
