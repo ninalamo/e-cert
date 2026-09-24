@@ -944,12 +944,16 @@ function applyVerifyHandlers(server: any, envelope: any, db: any) {
     const event = db.events.find((e: any) => e.id === cert.event_id);
     res.json({
       data: {
+        id: cert.id,
+        valid: true,
         certificate_number: cert.certificate_number,
         attendee_name: cert.attendee_name,
+        recipient_name: cert.attendee_name,
         event_name: event?.name || "Unknown Event",
         issued_at: cert.issued_at,
         status: "valid",
         template_name: cert.template_name,
+        generation_mode: cert.generation_mode ?? "template",
       },
     });
   });
@@ -959,6 +963,40 @@ function applyVerifyHandlers(server: any, envelope: any, db: any) {
     if (!cert) {
       return res.status(404).json({ status: "error", message: "Certificate not found" });
     }
-    res.json({ data: { id: cert.id, certificate_number: cert.certificate_number, attendee_name: cert.attendee_name, attendee_email: cert.attendee_email, event_id: cert.event_id, template_id: cert.template_id, issued_at: cert.issued_at, status: cert.status } });
+    res.json({
+      data: {
+        certificate: {
+          id: cert.id,
+          certificate_number: cert.certificate_number,
+          status: cert.status,
+          recipient_name: cert.attendee_name,
+          issued_at: cert.issued_at,
+          expires_at: null,
+          revoked_at: null,
+          event_id: cert.event_id,
+        },
+        generation_mode: cert.generation_mode ?? "template",
+        template: cert.template_id
+          ? { name: cert.template_name ?? "Template", html_content: "<div>{{recipient_name}}</div>", css_content: "" }
+          : null,
+        event: cert.event_id ? { id: cert.event_id, name: "Mock Event" } : null,
+        qr_data_url: "data:image/png;base64,",
+        organization: { name: "Mock Org" },
+      },
+    });
+  });
+
+  server.get("/api/v1/public/certificates/:id/download", (req: any, res: any) => {
+    const cert = db.certificates.find((c: any) => c.id === req.params.id);
+    if (!cert) {
+      return res.status(404).json({ status: "error", message: "Certificate not found" });
+    }
+    const fakePdf = Buffer.from(
+      "%PDF-1.4 1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj xref 0 4 Trailer<</Size 4/Root 1 0 R>>",
+      "latin1"
+    );
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="certificate-${req.params.id}.pdf"`);
+    res.send(fakePdf);
   });
 }

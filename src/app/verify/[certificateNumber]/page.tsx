@@ -213,7 +213,7 @@ export default function VerifyCertificatePage({
           </div>
         )}
 
-        {result && result.id && (
+        {result && result.id && result.generation_mode !== "file" && (
           <div className="mt-6 text-center">
             <Link
               href={`/view/${result.id}`}

@@ -13,6 +13,7 @@ export interface VerifyResult {
 
 export interface ViewResult {
   certificate: Certificate;
+  generation_mode?: "template" | "file";
   event?: { name: string; event_date: string | null; location: string | null; organizer?: string | null };
   qr_data_url?: string;
 }

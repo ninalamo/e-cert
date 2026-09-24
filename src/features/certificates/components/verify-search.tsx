@@ -17,6 +17,7 @@ export interface VerificationResult {
     name: string;
   } | null;
   event_name?: string | null;
+  generation_mode?: "template" | "file";
 }
 
 function VerifySearchInner() {

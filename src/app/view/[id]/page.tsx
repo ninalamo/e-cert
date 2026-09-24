@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { attendeesApi } from "@/lib/api/attendees";
 import { ORG_NAME } from "@/lib/org";
 import CertificateViewer from "./certificate-viewer";
 import { NotFoundState } from "@/components/not-found-state";
@@ -46,20 +45,19 @@ export default function CertificateViewPage() {
           setQrDataUrl(data.qr_data_url);
         }
 
-        if (cert.event_id) {
-          const { data: attendees } = await attendeesApi.list(cert.event_id);
-          if (revoked) return;
-          const match = attendees?.find((a) => a.certificate_id === cert.id);
-          if (match) {
-            const mode = (match.metadata as Record<string, unknown> | null)?.generation_mode;
-            if (mode === "file") {
-              const blob = await attendeesApi.getFileBlob(match.id);
-              if (!revoked && blob instanceof Blob) {
+        if (data.generation_mode === "file") {
+          try {
+            const resPdf = await fetch(`/api/v1/public/certificates/${cert.id}/download`);
+            if (!revoked && resPdf.ok) {
+              const blob = await resPdf.blob();
+              if (!revoked && blob instanceof Blob && blob.size > 0) {
                 const url = URL.createObjectURL(blob);
                 setFileBlobUrl(url);
-                setFileType(blob.type);
+                setFileType(blob.type || "application/pdf");
               }
             }
+          } catch {
+            // Fall back to template render when upload bytes unavailable
           }
         }
       } catch {
