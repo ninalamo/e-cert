@@ -66,7 +66,7 @@ export default function MyCertificatesPage() {
                 <CardContent className="flex items-center justify-between py-4">
                   <div className="space-y-1">
                     <p className="font-medium text-primary">
-                      {eventName ? `${eventName} ("${cert.certificate_number}")` : cert.certificate_number}
+                      {eventName ? `${eventName} (${cert.certificate_number})` : cert.certificate_number}
                     </p>
                     <p className="text-xs text-tertiary">
                       Issued {new Date(cert.issued_at).toLocaleDateString()}
