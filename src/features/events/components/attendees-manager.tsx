@@ -26,6 +26,13 @@ const PAGE_SIZE = 25;
 
 type FilterStatus = "all" | "not_issued" | "issued" | "revoked" | "expired";
 
+// Linked-certificate revocation state. Backend may serialize the relation
+// under `certificate` or `certificates`; absent → not revoked (current
+// binary behavior preserved until the backend ships the field).
+function isCertRevoked(a: EventAttendee): boolean {
+  return Boolean(a.certificate?.revoked_at ?? a.certificates?.revoked_at ?? null);
+}
+
 export default function AttendeesManager({
   eventId,
   organizationId,
@@ -482,6 +489,10 @@ export default function AttendeesManager({
       toast.error("No certificate to resend");
       return;
     }
+    if (isCertRevoked(attendee)) {
+      toast.error("Cannot resend email for a revoked certificate");
+      return;
+    }
     setResendingAttendeeId(attendee.id);
     try {
       await certificatesApi.sendEmail(attendee.certificate_id);
@@ -665,10 +676,12 @@ export default function AttendeesManager({
                     <p className="text-xs text-[var(--color-text-muted)]">({a.email})</p>
                   </td>
                   <td className="py-3 px-2">
-                    {a.certificate_id ? (
-                      <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-success-text)]">Yes</span>
-                    ) : (
+                    {!a.certificate_id ? (
                       <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">No</span>
+                    ) : isCertRevoked(a) ? (
+                      <span className="inline-flex items-center rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-danger-text)]">Revoked</span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-success-text)]">Yes</span>
                     )}
                   </td>
                   <td className="py-3 px-2">
@@ -691,11 +704,15 @@ export default function AttendeesManager({
                           </Link>
                         )}
                         {a.certificate_id && (
+                          <span
+                            className="inline-flex"
+                            title={isCertRevoked(a) ? "Disabled because the certificate is revoked" : undefined}
+                          >
                           <button
                             type="button"
                             id="resend-row-button"
                             onClick={() => handleResendEmail(a)}
-                            disabled={resendingAttendeeId === a.id}
+                            disabled={isCertRevoked(a) || resendingAttendeeId === a.id}
                             title="Resend Certificate Email"
                             className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)] disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -705,6 +722,7 @@ export default function AttendeesManager({
                               <SendIcon className="size-4" />
                             )}
                           </button>
+                          </span>
                         )}
                         {/* {!a.certificate_id && (
                           <button
@@ -782,10 +800,12 @@ export default function AttendeesManager({
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {a.certificate_id ? (
-                    <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-success-text)]">Issued</span>
-                  ) : (
+                  {!a.certificate_id ? (
                     <span className="inline-flex items-center rounded-full bg-[var(--color-surface-tertiary)] px-2 py-0.5 text-xs font-medium text-[var(--color-text-muted)]">Not Issued</span>
+                  ) : isCertRevoked(a) ? (
+                    <span className="inline-flex items-center rounded-full bg-[var(--color-danger-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-danger-text)]">Revoked</span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-[var(--color-success-bg)] px-2 py-0.5 text-xs font-medium text-[var(--color-success-text)]">Issued</span>
                   )}
                   {a.metadata?.generation_mode === "file" && (
                     <span className="inline-flex items-center rounded-full bg-[var(--color-brand-100)] px-2 py-0.5 text-xs font-medium text-[var(--color-brand-700)]">Uploaded</span>
@@ -802,14 +822,20 @@ export default function AttendeesManager({
                       </Link>
                     )}
                     {a.certificate_id && (
+                      <span
+                        className="inline-flex"
+                        title={isCertRevoked(a) ? "Disabled because the certificate is revoked" : undefined}
+                      >
                       <button
                         type="button"
                         onClick={() => handleResendEmail(a)}
-                        disabled={resendingAttendeeId === a.id}
+                        disabled={isCertRevoked(a) || resendingAttendeeId === a.id}
+                        title="Resend Certificate Email"
                         className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-brand-bg)] hover:text-[var(--color-brand-text)] disabled:opacity-50"
                       >
                         {resendingAttendeeId === a.id ? <Loader2Icon className="size-3.5 animate-spin" /> : <SendIcon className="size-3.5" />} Resend
                       </button>
+                      </span>
                     )}
                     {!a.certificate_id && (
                       <button

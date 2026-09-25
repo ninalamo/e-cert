@@ -22,4 +22,6 @@ export interface EventAttendee {
   created_at: string;
   updated_at: string;
   certificates?: { revoked_at: string | null; expires_at: string | null } | null;
+  // Backend may serialize the linked certificate under either key.
+  certificate?: { revoked_at: string | null; expires_at: string | null } | null;
 }
