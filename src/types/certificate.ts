@@ -11,6 +11,7 @@ export interface Certificate {
   revoked_at: string | null;
   revoke_reason: string | null;
   file_path: string | null;
+  generation_mode?: "template" | "file" | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;

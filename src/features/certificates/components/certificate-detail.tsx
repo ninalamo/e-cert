@@ -134,7 +134,13 @@ export default function CertificateDetail({
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="text-sm text-[var(--color-text-muted)]">Source</span>
             <span className="text-sm font-medium">
-              {certificate.file_path ? "File Upload" : "System Generated"}
+              {certificate.generation_mode === "file"
+                ? "Uploaded"
+                : certificate.generation_mode === "template"
+                  ? "System-generated"
+                  : certificate.file_path
+                    ? "Uploaded"
+                    : "System-generated"}
             </span>
           </div>
         </div>

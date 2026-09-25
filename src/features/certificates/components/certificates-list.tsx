@@ -27,9 +27,12 @@ import {
   SearchIcon,
   Trash2Icon,
   ShieldIcon,
+  UploadIcon,
+  SparklesIcon,
 } from "lucide-react";
 
 type StatusFilter = "all" | "active" | "revoked" | "expired";
+type SourceFilter = "all" | "uploaded" | "system-generated";
 
 interface CertificatesListProps {
   initialQuery?: string;
@@ -52,10 +55,24 @@ const STATUS_OPTIONS: Array<{ value: Exclude<StatusFilter, "all">; label: string
   { value: "expired", label: "Expired" },
 ];
 
+const SOURCE_OPTIONS: Array<{ value: Exclude<SourceFilter, "all">; label: string }> = [
+  { value: "uploaded", label: "Uploaded" },
+  { value: "system-generated", label: "System-generated" },
+];
+
 function displayStatus(cert: CertificateWithEvent): Exclude<StatusFilter, "all"> {
   if (cert.revoked_at) return "revoked";
   if (cert.expires_at && new Date(cert.expires_at).getTime() < Date.now()) return "expired";
   return "active";
+}
+
+function displaySource(cert: CertificateWithEvent): Exclude<SourceFilter, "all"> {
+  // Backend contract (CertificateSource::resolve): generation_mode=file →
+  // uploaded, anything else → system-generated. Fall back to the legacy
+  // file_path heuristic only when generation_mode is absent (e.g. stale cache).
+  if (cert.generation_mode === "file") return "uploaded";
+  if (cert.generation_mode === "template") return "system-generated";
+  return cert.file_path && cert.file_path.trim() !== "" ? "uploaded" : "system-generated";
 }
 
 function eventNameOf(cert: CertificateWithEvent): string {
@@ -104,6 +121,7 @@ export default function CertificatesList({
   const debouncedSearchRef = useRef(initialQuery);
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_DEFAULT);
 
@@ -136,6 +154,7 @@ export default function CertificatesList({
         search: searchInput.trim() || undefined,
         event_id: eventFilter !== "all" ? eventFilter : undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
+        source: sourceFilter !== "all" ? sourceFilter : undefined,
         limit: pageSize,
         offset: page * pageSize,
       });
@@ -158,6 +177,7 @@ export default function CertificatesList({
             search: searchInput.trim() || undefined,
             event_id: eventFilter !== "all" ? eventFilter : undefined,
             status: statusFilter !== "all" ? statusFilter : undefined,
+            source: sourceFilter !== "all" ? sourceFilter : undefined,
             limit: pageSize,
             offset: page * pageSize,
           })
@@ -181,7 +201,7 @@ export default function CertificatesList({
       active = false;
       clearTimeout(timer);
     };
-  }, [searchInput, eventFilter, statusFilter, page, pageSize]);
+  }, [searchInput, eventFilter, statusFilter, sourceFilter, page, pageSize]);
 
   // Visible-events filter options + expired badge count.
   useEffect(() => {
@@ -328,6 +348,7 @@ export default function CertificatesList({
 
   function renderRow(cert: CertificateWithEvent) {
     const status = displayStatus(cert);
+    const source = displaySource(cert);
     return (
       <div
         key={cert.id}
@@ -353,6 +374,17 @@ export default function CertificatesList({
             <span className="status-pill status-revoked">Expired</span>
           ) : (
             <span className="status-pill status-active">Active</span>
+          )}
+          {source === "uploaded" ? (
+            <span className="status-pill" title="Uploaded certificate file">
+              <UploadIcon className="size-3" />
+              Uploaded
+            </span>
+          ) : (
+            <span className="status-pill" title="System-generated from template">
+              <SparklesIcon className="size-3" />
+              System-generated
+            </span>
           )}
           <Link href={`/certificates/${cert.id}`} className="btn-disclosure">
             View
@@ -461,11 +493,33 @@ export default function CertificatesList({
               </button>
             );
           })}
-          {statusFilter !== "all" && (
+          <span className="mx-1 hidden h-4 w-px bg-[var(--color-border)] sm:inline-block" aria-hidden="true" />
+          {SOURCE_OPTIONS.map((opt) => {
+            const active = sourceFilter === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setSourceFilter(active ? "all" : opt.value);
+                  setPage(0);
+                }}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                  active
+                    ? "border-[var(--color-brand-600)] bg-[var(--color-brand-600)] text-white"
+                    : "border-[var(--color-border-strong)] bg-[var(--color-surface)] text-tertiary hover:border-[var(--color-brand-300)]"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+          {(statusFilter !== "all" || sourceFilter !== "all") && (
             <button
               type="button"
               onClick={() => {
                 setStatusFilter("all");
+                setSourceFilter("all");
                 setPage(0);
               }}
               className="text-xs text-tertiary hover:text-secondary cursor-pointer"
@@ -491,7 +545,7 @@ export default function CertificatesList({
       {showEmpty && (
         <div className="app-card p-12 text-center">
           <p className="text-sm text-tertiary">
-            {searchInput || statusFilter !== "all" || eventFilter !== "all"
+            {searchInput || statusFilter !== "all" || sourceFilter !== "all" || eventFilter !== "all"
               ? "No certificates match your filters."
               : "No certificates found."}
           </p>

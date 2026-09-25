@@ -64,6 +64,7 @@ export const certificatesApi = {
     search?: string;
     event_id?: string;
     status?: "active" | "revoked" | "expired";
+    source?: "uploaded" | "system-generated";
     limit?: number;
     offset?: number;
   }) => {
@@ -71,6 +72,7 @@ export const certificatesApi = {
     if (params?.search?.trim()) qs.set("search", params.search.trim());
     if (params?.event_id) qs.set("event_id", params.event_id);
     if (params?.status) qs.set("status", params.status);
+    if (params?.source) qs.set("source", params.source);
     if (params?.limit != null) qs.set("limit", String(params.limit));
     if (params?.offset != null) qs.set("offset", String(params.offset));
     const q = qs.toString();
