@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
+import { TriangleAlertIcon } from "lucide-react";
 import { ORG_NAME } from "@/lib/org";
+import { getCurrentGroups } from "@/lib/permissions";
+import { hasDashboardAccess } from "@/lib/roles";
 import CertificateViewer from "./certificate-viewer";
 import { NotFoundState } from "@/components/not-found-state";
 import type { Certificate } from "@/types/certificate";
@@ -19,20 +23,29 @@ export default function CertificateViewPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [fileBlobUrl, setFileBlobUrl] = useState<string | null>(null);
   const [fileType, setFileType] = useState<string | null>(null);
+  const [isRevoked, setIsRevoked] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let revoked = false;
+    let cancelled = false;
     async function load() {
       try {
         const res = await fetch(`/api/v1/view/${id}`);
-        if (!res.ok || revoked) return;
+        if (cancelled) return;
+        // Backend distinguishes revoked (410) from missing (404); the UI
+        // must too — a revoked cert is not a "not found".
+        if (res.status === 410) {
+          setIsRevoked(true);
+          setLoading(false);
+          return;
+        }
+        if (!res.ok) return;
         const json = await res.json();
         const data = json.data;
-        if (!data || revoked) return;
+        if (!data || cancelled) return;
 
         const cert = data.certificate as Certificate;
-        if (!cert || revoked) return;
+        if (!cert || cancelled) return;
         setCertificate(cert);
 
         if (data.template) {
@@ -48,9 +61,9 @@ export default function CertificateViewPage() {
         if (data.generation_mode === "file") {
           try {
             const resPdf = await fetch(`/api/v1/public/certificates/${cert.id}/download`);
-            if (!revoked && resPdf.ok) {
+            if (!cancelled && resPdf.ok) {
               const blob = await resPdf.blob();
-              if (!revoked && blob instanceof Blob && blob.size > 0) {
+              if (!cancelled && blob instanceof Blob && blob.size > 0) {
                 const url = URL.createObjectURL(blob);
                 setFileBlobUrl(url);
                 setFileType(blob.type || "application/pdf");
@@ -63,10 +76,10 @@ export default function CertificateViewPage() {
       } catch {
         // ignore
       }
-      if (!revoked) setLoading(false);
+      if (!cancelled) setLoading(false);
     }
     load();
-    return () => { revoked = true; };
+    return () => { cancelled = true; };
   }, [id]);
 
   useEffect(() => {
@@ -74,6 +87,35 @@ export default function CertificateViewPage() {
   }, [fileBlobUrl]);
 
   if (loading) return <div className="p-8 text-center text-sm text-tertiary">Loading...</div>;
+  if (isRevoked) {
+    const groups = getCurrentGroups();
+    const back = hasDashboardAccess(groups)
+      ? { href: "/certificates", label: "Back to Certificates" }
+      : groups.length > 0
+        ? { href: "/my/certificates", label: "Back to My Certificates" }
+        : { href: "/verify", label: "Verify another certificate" };
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-surface-muted p-4 light-overflow">
+        <div className="w-full max-w-md text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-900/30 mb-6">
+            <TriangleAlertIcon className="w-8 h-8 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+          </div>
+          <h1 className="text-2xl font-bold text-primary tracking-tight">
+            This certificate has been revoked.
+          </h1>
+          <p className="mt-3 text-sm text-tertiary">
+            This certificate is no longer valid.
+          </p>
+          <Link
+            href={back.href}
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand/90 active:scale-[0.97]"
+          >
+            {back.label}
+          </Link>
+        </div>
+      </div>
+    );
+  }
   if (!certificate)
     return (
       <NotFoundState
