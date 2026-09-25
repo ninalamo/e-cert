@@ -372,17 +372,12 @@ export default function CertificatesList({
           <p className="mt-0.5 truncate text-xs text-tertiary">
             <span className="font-mono">{cert.certificate_number}</span>
             {" · "}
+            {cert.recipient_email || "—"}
+            {" · "}
             Issued {new Date(cert.issued_at).toLocaleDateString()}
           </p>
         </div>
         <div className="flex flex-wrap shrink-0 items-center gap-2 sm:gap-3">
-          {status === "revoked" ? (
-            <span className="status-pill status-revoked">Revoked</span>
-          ) : status === "expired" ? (
-            <span className="status-pill status-revoked">Expired</span>
-          ) : (
-            <span className="status-pill status-active">Active</span>
-          )}
           {source === "uploaded" ? (
             <span className="status-pill" title="Uploaded certificate file">
               <UploadIcon className="size-3" />
@@ -393,6 +388,13 @@ export default function CertificatesList({
               <SparklesIcon className="size-3" />
               System-generated
             </span>
+          )}
+          {status === "revoked" ? (
+            <span className="status-pill status-revoked">Revoked</span>
+          ) : status === "expired" ? (
+            <span className="status-pill status-revoked">Expired</span>
+          ) : (
+            <span className="status-pill status-active">Active</span>
           )}
           <Link href={`/certificates/${cert.id}`} className="btn-disclosure">
             View

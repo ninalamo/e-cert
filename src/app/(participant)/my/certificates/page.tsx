@@ -59,17 +59,17 @@ export default function MyCertificatesPage() {
         <div className="space-y-3">
           {certificates.map((cert) => {
             const source = sourceOf(cert);
+            const eventName = cert.events?.name ?? cert.event?.name ?? cert.event_name ?? null;
             return (
             <Link key={cert.id} href={`/my/certificates/${cert.id}`}>
               <Card className="transition-colors hover:border-brand-600">
                 <CardContent className="flex items-center justify-between py-4">
                   <div className="space-y-1">
                     <p className="font-medium text-primary">
-                      {cert.events?.name ?? cert.certificate_number}
+                      {eventName ? `${eventName} ("${cert.certificate_number}")` : cert.certificate_number}
                     </p>
                     <p className="text-xs text-tertiary">
-                      {cert.certificate_number}
-                      · Issued {new Date(cert.issued_at).toLocaleDateString()}
+                      Issued {new Date(cert.issued_at).toLocaleDateString()}
                       {cert.expires_at &&
                         ` · Expires ${new Date(cert.expires_at).toLocaleDateString()}`}
                     </p>

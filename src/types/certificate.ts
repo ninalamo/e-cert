@@ -12,6 +12,8 @@ export interface Certificate {
   revoke_reason: string | null;
   file_path: string | null;
   generation_mode?: "template" | "file" | null;
+  // Returned by /me/certificates endpoints (flat); admin list uses event/events objects.
+  event_name?: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
