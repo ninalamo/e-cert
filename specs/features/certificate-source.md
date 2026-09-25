@@ -42,7 +42,7 @@ Staff filter and badge certificates by source on the dashboard; participants see
 | Source pills | `CertificatesList` filter bar | `Uploaded` / `System-generated`, toggle, `?source=` server filter + client safety-net re-filter; joint Clear with status |
 | Row | `CertificatesList.renderRow` | Order: source pill → status pill → View → revoke/delete icon; sub-line `{number} · {email} · Issued {date}` |
 | Source row | `certificate-detail.tsx` | `generation_mode` first, `file_path` fallback; labels `Uploaded` / `System-generated` |
-| My list | `my/certificates/page.tsx` | Source badge + title `Event (number)` (resolves `events?.name → event?.name → event_name`); sub-line deduped |
+| My list | `my/certificates/page.tsx` | Table (Certificate / Source / Status / View); title `Event (number)` (resolves `events?.name → event?.name → event_name`); search by event/number + status pills, client-side over fetch-all (`limit=100` loop); fixed 25/page, no size selector |
 | My detail | `my/certificates/[id]/page.tsx` | Shared `CertificateDetail`; no local logic |
 | Verify | `verify-search.tsx`, `verify/[certificateNumber]/page.tsx` | Source badge; Preview only when `valid && id` (both modes) |
 | View revoked | `view/[id]/page.tsx` | 410 → warning + role-aware back link (`/certificates` admin/staff, `/my/certificates` participant, `/verify` logged-out); 404 unchanged |

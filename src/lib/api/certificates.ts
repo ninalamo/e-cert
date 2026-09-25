@@ -82,7 +82,15 @@ export const certificatesApi = {
 
   get: (id: string) => api.get<ApiResponse<Certificate>>(`/certificates/${id}`),
 
-  getMy: () => api.get<{ data: CertificateWithEvent[] }>("/me/certificates"),
+  getMy: (params?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit != null) qs.set("limit", String(params.limit));
+    if (params?.offset != null) qs.set("offset", String(params.offset));
+    const q = qs.toString();
+    return api.get<{ data: CertificateWithEvent[]; meta: PaginationMeta }>(
+      `/me/certificates${q ? `?${q}` : ""}`
+    );
+  },
 
   getMyById: (id: string) =>
     api.get<ApiResponse<Certificate>>(`/me/certificates/${id}`),
