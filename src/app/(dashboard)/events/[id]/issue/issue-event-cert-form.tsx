@@ -50,10 +50,10 @@ export default function IssueEventCertForm({ eventId }: { eventId: string }) {
         send_email: sendEmail,
       });
 
-      if (result?.error) {
-        setError(result.error);
-      } else if (result?.certificate) {
-        setSuccess(`Certificate ${result.certificate.certificate_number} issued!`);
+      if (!result?.certificate_number) {
+        setError("Failed to issue certificate.");
+      } else {
+        setSuccess(`Certificate ${result.certificate_number} issued!`);
         setName("");
         setEmail("");
       }

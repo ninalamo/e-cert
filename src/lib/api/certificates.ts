@@ -21,7 +21,6 @@ export interface IssueCertificateInput {
   recipient_name: string;
   recipient_email: string;
   expires_at?: string;
-  file_path?: string;
   metadata?: Record<string, unknown>;
   send_email?: boolean;
 }
@@ -89,13 +88,13 @@ export const certificatesApi = {
     api.get<ApiResponse<Certificate>>(`/me/certificates/${id}`),
 
   issue: (data: IssueCertificateInput) =>
-    api.post<ApiResponse<{ certificate: Certificate; error?: string }>>(
+    api.post<ApiResponse<Certificate & { email_sent?: boolean }>>(
       "/certificates",
       data
     ),
 
   issueFromEvent: (data: IssueFromEventInput) =>
-    api.post<ApiResponse<{ certificate: Certificate; error?: string }>>(
+    api.post<ApiResponse<Certificate & { email_sent?: boolean }>>(
       "/certificates",
       data
     ),

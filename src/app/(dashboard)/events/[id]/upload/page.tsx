@@ -6,9 +6,7 @@ import { getCurrentGroups } from "@/lib/permissions";
 import { hasDashboardAccess } from "@/lib/roles";
 import { NotFoundState } from "@/components/not-found-state";
 import { eventsApi } from "@/lib/api/events";
-import { templatesApi } from "@/lib/api/templates";
 import type { Event } from "@/types/event";
-import type { CertificateTemplate } from "@/types/template";
 import dynamic from "next/dynamic";
 
 const UploadCsvForm = dynamic(() => import("./upload-csv-form"));
@@ -25,7 +23,6 @@ export default function UploadCsvPage({
 
   const [id, setId] = useState<string>("");
   const [event, setEvent] = useState<Event | null>(null);
-  const [initialTemplate, setInitialTemplate] = useState<CertificateTemplate | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,17 +35,9 @@ export default function UploadCsvPage({
 
     eventsApi
       .get(id)
-      .then(async (result) => {
+      .then((result) => {
         if (!active) return;
-        const ev = result.data ?? null;
-        setEvent(ev);
-        if (ev?.template_id && ev?.organization_id) {
-          const templates = await templatesApi.list(ev.organization_id);
-          const found = (templates.data ?? []).find(
-            (t) => t.id === ev.template_id
-          );
-          if (active) setInitialTemplate(found ?? null);
-        }
+        setEvent(result.data ?? null);
         if (active) setLoading(false);
       })
       .catch(() => {
@@ -78,7 +67,6 @@ export default function UploadCsvPage({
       eventId={id}
       isAdmin={isAdmin}
       initialEvent={event}
-      initialTemplate={initialTemplate}
     />
   );
 }

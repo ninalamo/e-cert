@@ -5,6 +5,13 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { certificatesApi } from "@/lib/api/certificates";
 import type { CertificateWithEvent } from "@/lib/api/certificates";
+import { UploadIcon, SparklesIcon } from "lucide-react";
+
+function sourceOf(cert: CertificateWithEvent): "uploaded" | "system-generated" {
+  if (cert.generation_mode === "file") return "uploaded";
+  if (cert.generation_mode === "template") return "system-generated";
+  return cert.file_path && cert.file_path.trim() !== "" ? "uploaded" : "system-generated";
+}
 
 export default function MyCertificatesPage() {
   const [certificates, setCertificates] = useState<CertificateWithEvent[]>([]);
@@ -50,7 +57,9 @@ export default function MyCertificatesPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {certificates.map((cert) => (
+          {certificates.map((cert) => {
+            const source = sourceOf(cert);
+            return (
             <Link key={cert.id} href={`/my/certificates/${cert.id}`}>
               <Card className="transition-colors hover:border-brand-600">
                 <CardContent className="flex items-center justify-between py-4">
@@ -66,6 +75,17 @@ export default function MyCertificatesPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {source === "uploaded" ? (
+                      <span className="status-pill" title="Uploaded certificate file">
+                        <UploadIcon className="size-3" />
+                        Uploaded
+                      </span>
+                    ) : (
+                      <span className="status-pill" title="System-generated from template">
+                        <SparklesIcon className="size-3" />
+                        System-generated
+                      </span>
+                    )}
                     {cert.revoked_at ? (
                       <span className="status-pill status-danger">REVOKED</span>
                     ) : cert.expires_at &&
@@ -78,7 +98,8 @@ export default function MyCertificatesPage() {
                 </CardContent>
               </Card>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

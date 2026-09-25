@@ -457,14 +457,14 @@ export default function AttendeesManager({
         recipient_email: attendee.email,
         send_email: true,
       });
-      if (result?.error) {
-        setError(result.error);
-      } else if (result?.certificate) {
-        setMessage(`Certificate ${result.certificate.certificate_number} issued to ${attendee.name}`);
+      if (!result?.certificate_number) {
+        setError("Failed to issue certificate");
+      } else {
+        setMessage(`Certificate ${result.certificate_number} issued to ${attendee.name}`);
         setAttendees((prev) =>
           prev.map((a) =>
             a.id === attendee.id
-              ? { ...a, certificate_id: result.certificate.id, certificate_number: result.certificate.certificate_number }
+              ? { ...a, certificate_id: result.id, certificate_number: result.certificate_number }
               : a
           )
         );

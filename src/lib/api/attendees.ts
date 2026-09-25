@@ -107,7 +107,7 @@ export const attendeesApi = {
     }>
   ) =>
     api.patch<ApiResponse<EventAttendee>>(
-      `/events/${eventId}/attendees/${attendeeId}`,
+      `/attendees/${attendeeId}`,
       data
     ),
 

@@ -231,7 +231,7 @@ export default function CertificatesList({
       await certificatesApi.delete(deleteTarget.id);
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
-      if (certificates.length <= 1 && page > 0) {
+      if (displayedItems.length <= 1 && page > 0) {
         // Deleted the last row on this page — step back, effect refetches.
         setPage(page - 1);
       } else {
@@ -334,7 +334,15 @@ export default function CertificatesList({
     setRevokeError(null);
   };
 
-  const displayedItems = certificates;
+  // Safety net: the server filters by ?source= when supported, but an older
+  // backend silently ignores it. Re-applying the same predicate client-side
+  // is a no-op on filtered data and keeps pills truthful otherwise. Note:
+  // meta.total still reflects the server count, so pages may look sparse on
+  // backends without source support.
+  const displayedItems =
+    sourceFilter === "all"
+      ? certificates
+      : certificates.filter((c) => displaySource(c) === sourceFilter);
   const groups = useMemo(() => groupByEvent(displayedItems), [displayedItems]);
 
   const totalPages = Math.max(1, Math.ceil(metaTotal / pageSize));
@@ -342,9 +350,9 @@ export default function CertificatesList({
 
   const filterEvents: Event[] = events;
 
-  const showInitialLoading = isFetching && certificates.length === 0 && !loadError;
+  const showInitialLoading = isFetching && displayedItems.length === 0 && certificates.length === 0 && !loadError;
   const showEmpty =
-    !isFetching && !loadError && certificates.length === 0;
+    !isFetching && !loadError && displayedItems.length === 0;
 
   function renderRow(cert: CertificateWithEvent) {
     const status = displayStatus(cert);

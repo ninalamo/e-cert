@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ORG_ID } from "@/lib/org";
 import { attendeesApi } from "@/lib/api/attendees";
 import type { Event } from "@/types/event";
-import type { CertificateTemplate } from "@/types/template";
 import type { AttendeeMetadata } from "@/types/event-attendee";
 import { usePagination, Paginator } from "@/components/ui/paginator";
 import { SkeletonUpload } from "@/components/ui/skeleton";
@@ -66,15 +65,12 @@ export default function UploadCsvForm({
   eventId,
   isAdmin = false,
   initialEvent = null,
-  initialTemplate = null,
 }: {
   eventId: string;
   isAdmin?: boolean;
   initialEvent?: Event | null;
-  initialTemplate?: CertificateTemplate | null;
 }) {
   const event = initialEvent;
-  const template = initialTemplate;
 
   const [step, setStep] = useState<"upload" | "preview" | "submitting" | "results">("upload");
   const [rows, setRows] = useState<CsvRow[]>([]);
@@ -247,18 +243,16 @@ export default function UploadCsvForm({
 
     const attendees = rows.map((r) => {
       const useFile = !!r.file_path && uploadedFiles.has(r.file_path);
-      let metadata: AttendeeMetadata | undefined;
-      if (useFile) {
-        const f = uploadedFiles.get(r.file_path);
-        if (f) {
-          metadata = {
-            generation_mode: "file",
-            file_data: f.data,
-            file_name: f.name,
-            file_type: f.type,
-          };
-        }
-      } else if (template) {
+      let metadata: AttendeeMetadata;
+      const f = useFile ? uploadedFiles.get(r.file_path) : undefined;
+      if (f) {
+        metadata = {
+          generation_mode: "file",
+          file_data: f.data,
+          file_name: f.name,
+          file_type: f.type,
+        };
+      } else {
         metadata = { generation_mode: "template" };
       }
       return { name: r.name, email: r.email, metadata };

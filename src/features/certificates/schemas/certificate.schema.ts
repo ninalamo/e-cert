@@ -6,7 +6,6 @@ export const issueCertificateSchema = z.object({
   recipient_name: z.string().min(1, "Recipient name is required"),
   recipient_email: z.string().email("Invalid recipient email"),
   expires_at: z.string().optional(),
-  file_path: z.string().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   send_email: z.boolean().optional(),
 });

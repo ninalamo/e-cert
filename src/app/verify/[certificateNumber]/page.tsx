@@ -149,6 +149,20 @@ export default function VerifyCertificatePage({
             <div className="px-6 py-5 border-b border-border bg-surface-muted/50 dark:bg-[#2c2c2e]/50">
               <div className="flex items-center justify-between gap-3">
                 {getStatusBadge(result.status)}
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                    result.generation_mode === "file"
+                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                      : "bg-surface-tertiary text-secondary"
+                  }`}
+                  title={
+                    result.generation_mode === "file"
+                      ? "Uploaded certificate file"
+                      : "System-generated from template"
+                  }
+                >
+                  {result.generation_mode === "file" ? "Uploaded" : "System-generated"}
+                </span>
               </div>
             </div>
 
@@ -213,7 +227,7 @@ export default function VerifyCertificatePage({
           </div>
         )}
 
-        {result && result.id && result.generation_mode !== "file" && (
+        {result && result.valid && result.id && (
           <div className="mt-6 text-center">
             <Link
               href={`/view/${result.id}`}

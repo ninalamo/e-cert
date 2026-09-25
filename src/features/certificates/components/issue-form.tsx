@@ -31,21 +31,6 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
     const expiresAt = (formData.get("expires_at") as string) || undefined;
     const sendEmail = formData.get("send_email") === "on";
 
-    let filePath: string | undefined;
-
-    if (mode === "file" && selectedFile) {
-      // Upload requires a certificate_number; generate a temp one for upload
-      const tempNumber = `TEMP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      try {
-        const uploadResult = await certificatesApi.upload(ORG_ID, tempNumber, selectedFile);
-        filePath = uploadResult?.data?.file_path;
-      } catch {
-        setError("Failed to upload file");
-        setLoading(false);
-        return;
-      }
-    }
-
     const templateId =
       mode === "template" ? (formData.get("template_id") as string) : undefined;
 
@@ -55,6 +40,19 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
       return;
     }
 
+    if (mode === "file" && !selectedFile) {
+      setError("Please select a file to upload");
+      setLoading(false);
+      return;
+    }
+
+    // Backend contract: /certificates/upload requires an EXISTING
+    // certificate_number, and /certificates prohibits file_path. So file mode
+    // issues first (metadata stamps the source), then uploads the bytes
+    // against the real number. Works against old backends too (upload
+    // contract unchanged; file_path was always ignored there).
+    const fileToUpload = mode === "file" ? selectedFile : null;
+
     try {
       const result = await certificatesApi.issue({
         organization_id: ORG_ID,
@@ -62,22 +60,46 @@ export default function IssueForm({ initialTemplates }: IssueFormProps) {
         recipient_name: recipientName,
         recipient_email: recipientEmail,
         expires_at: expiresAt,
-        file_path: filePath,
-        send_email: sendEmail,
+        metadata: { generation_mode: mode === "file" ? "file" : "template" },
+        // Email goes out after upload bytes exist (file mode); template mode sends now.
+        send_email: mode === "template" ? sendEmail : false,
       });
 
-      if (result?.data?.error) {
-        setError(result.data.error);
-      } else if (result?.data?.certificate) {
-        setSuccess(
-          `Certificate ${result.data.certificate.certificate_number} issued!`
-        );
-        (e.target as HTMLFormElement).reset();
-        setSelectedFile(null);
+      const issued = result?.data;
+      if (!issued?.certificate_number) {
+        setError("Failed to issue certificate");
+        setLoading(false);
+        return;
       }
+
+      if (fileToUpload) {
+        try {
+          await certificatesApi.upload(ORG_ID, issued.certificate_number, fileToUpload);
+        } catch {
+          setError(
+            `Certificate ${issued.certificate_number} issued, but upload failed. Retry the upload for this number without re-issuing.`
+          );
+          setLoading(false);
+          return;
+        }
+        if (sendEmail) {
+          try {
+            await certificatesApi.sendEmail(issued.id);
+          } catch {
+            // Non-fatal: cert + bytes exist; email can be resent from the detail page.
+          }
+        }
+      }
+
+      setSuccess(`Certificate ${issued.certificate_number} issued!`);
+      (e.target as HTMLFormElement).reset();
+      setSelectedFile(null);
     } catch (err: unknown) {
-      const errObj = err as Error & { error?: string };
-      let msg = errObj.error ?? errObj.message;
+      const errObj = err as Error & { error?: string; errors?: Record<string, string[]> };
+      const firstFieldError = errObj.errors
+        ? Object.values(errObj.errors).flat()[0]
+        : undefined;
+      let msg = errObj.error ?? firstFieldError ?? errObj.message ?? "Failed to issue certificate";
 
       // New: Specific handling for "Template is locked" 409 error
       if (msg.includes("Template is locked")) {
